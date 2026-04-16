@@ -20,6 +20,7 @@ class ChatRequest(BaseModel):
     """채팅 요청 스키마"""
     messages: List[ChatMessage] = Field(..., min_length=1, description="대화 히스토리")
     system_prompt: Optional[str] = Field(None, description="커스텀 시스템 프롬프트")
+    user_email: Optional[str] = Field(None, description="현재 사용자 이메일 (컨텍스트용)")
 
 
 class TokenUsage(BaseModel):
