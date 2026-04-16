@@ -25,6 +25,7 @@ async def send_chat(request: ChatRequest) -> ChatResponse:
         return await llm_service.chat(
             messages=request.messages,
             system_prompt=request.system_prompt,
+            user_email=request.user_email,
         )
     except Exception as e:
         error_msg = str(e)
