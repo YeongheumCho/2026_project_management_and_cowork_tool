@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -24,11 +24,16 @@ type Project = {
   created_at: string;
 };
 
-function getErrorMessage(data: any, defaultMessage: string) {
+type ErrorDetailItem = { msg?: string };
+type ErrorResponse = {
+  detail?: string | ErrorDetailItem[];
+};
+
+function getErrorMessage(data: ErrorResponse | null | undefined, defaultMessage: string) {
   if (!data) return defaultMessage;
   if (typeof data.detail === 'string') return data.detail;
   if (Array.isArray(data.detail)) {
-    return data.detail.map((item: any) => item.msg).join(', ');
+    return data.detail.map((item: ErrorDetailItem) => item.msg ?? '').join(', ');
   }
   return defaultMessage;
 }
@@ -49,7 +54,7 @@ export default function ProjectDetailPage() {
 
   const getToken = () => localStorage.getItem('access_token');
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     const token = getToken();
     if (!token) {
       router.replace('/login');
@@ -76,9 +81,9 @@ export default function ProjectDetailPage() {
     }
 
     setProject(foundProject);
-  };
+  }, [router, projectId]);
 
-  const fetchProgressLogs = async () => {
+  const fetchProgressLogs = useCallback(async () => {
     const token = getToken();
     if (!token) {
       router.replace('/login');
@@ -99,7 +104,7 @@ export default function ProjectDetailPage() {
     }
 
     setProgressLogs(data);
-  };
+  }, [router, projectId]);
 
   useEffect(() => {
     const init = async () => {
@@ -112,7 +117,7 @@ export default function ProjectDetailPage() {
     };
 
     void init();
-  }, [projectId]);
+  }, [projectId, fetchProjects, fetchProgressLogs]);
 
   const handleCreateProgressLog = async (e: FormEvent) => {
     e.preventDefault();

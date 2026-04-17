@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -22,7 +22,12 @@ type Project = {
   created_at: string;
 };
 
-function getErrorMessage(data: any, defaultMessage: string) {
+type ErrorDetailItem = { msg?: string };
+type ErrorResponse = {
+  detail?: string | ErrorDetailItem[];
+};
+
+function getErrorMessage(data: ErrorResponse | null | undefined, defaultMessage: string) {
   if (!data) return defaultMessage;
 
   if (typeof data.detail === 'string') {
@@ -30,7 +35,7 @@ function getErrorMessage(data: any, defaultMessage: string) {
   }
 
   if (Array.isArray(data.detail)) {
-    return data.detail.map((item: any) => item.msg).join(', ');
+    return data.detail.map((item: ErrorDetailItem) => item.msg ?? '').join(', ');
   }
 
   return defaultMessage;
@@ -49,7 +54,7 @@ export default function DashboardPage() {
 
   const getToken = () => localStorage.getItem('access_token');
 
-  const fetchMe = async () => {
+  const fetchMe = useCallback(async () => {
     const token = getToken();
 
     if (!token) {
@@ -72,9 +77,9 @@ export default function DashboardPage() {
     }
 
     setUser(data);
-  };
+  }, [router]);
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     const token = getToken();
 
     if (!token) {
@@ -96,14 +101,14 @@ export default function DashboardPage() {
     }
 
     setProjects(data);
-  };
+  }, [router]);
 
   useEffect(() => {
     const init = async () => {
       try {
         await fetchMe();
         await fetchProjects();
-      } catch (error) {
+      } catch {
         localStorage.removeItem('access_token');
         router.replace('/login');
       } finally {
@@ -112,7 +117,7 @@ export default function DashboardPage() {
     };
 
     void init();
-  }, [router]);
+  }, [router, fetchMe, fetchProjects]);
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
