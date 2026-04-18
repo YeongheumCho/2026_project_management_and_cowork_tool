@@ -1,0 +1,29 @@
+# Node
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js 빌드 산출물
+.next
+out
+
+# Editor / OS
+.DS_Store
+.vscode
+.idea
+*.swp
+
+# Git & env
+.git
+.gitignore
+.env*
+!.env.example
+
+# Dockerfile이 스스로를 복사할 필요 없음
+Dockerfile*
+.dockerignore
+
+# 테스트/커버리지
+coverage
+*.log

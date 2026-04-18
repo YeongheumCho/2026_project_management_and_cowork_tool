@@ -25,6 +25,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'admin' | 'member'>('member');
 
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,7 +41,7 @@ export default function SignupPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, name, password }),
+        body: JSON.stringify({ email, name, password, role }),
       });
 
       const data: ApiError = await res.json();
@@ -92,6 +93,31 @@ export default function SignupPage() {
             className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 outline-none"
             required
           />
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setRole('member')}
+              className={`flex-1 rounded-2xl border px-4 py-3 text-sm ${
+                role === 'member'
+                  ? 'border-cyan-300 bg-cyan-300 text-slate-950'
+                  : 'border-white/10 bg-slate-900 text-white'
+              }`}
+            >
+              일반 직원
+            </button>
+            <button
+              type="button"
+              onClick={() => setRole('admin')}
+              className={`flex-1 rounded-2xl border px-4 py-3 text-sm ${
+                role === 'admin'
+                  ? 'border-cyan-300 bg-cyan-300 text-slate-950'
+                  : 'border-white/10 bg-slate-900 text-white'
+              }`}
+            >
+              관리자
+            </button>
+          </div>
 
           <button
             type="submit"
