@@ -14,3 +14,4 @@ from app.models.project import (  # noqa: F401
     STATUS_COMPLETED,
     DEFAULT_SUBTASK_TEMPLATE,
 )
+from app.models.progress_log import ProgressLog  # noqa: F401

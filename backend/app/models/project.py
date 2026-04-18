@@ -88,6 +88,11 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan",
     )
+    progress_logs = relationship(
+        "ProgressLog",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
 
 
 class SubProject(Base):

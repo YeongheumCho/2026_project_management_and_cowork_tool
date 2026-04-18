@@ -33,7 +33,9 @@ from app.models.project import (
     SubProject,
     SubTask,
 )
+from app.models.progress_log import ProgressLog
 from app.models.user import User
+from app.schemas.progress_log import ProgressLogCreate, ProgressLogResponse
 from app.schemas.project import (
     ProjectCreate,
     ProjectResponse,
@@ -333,3 +335,69 @@ def update_subtask(
     db.commit()
     db.refresh(task)
     return task
+
+
+# ─────────────────────────────────────────────────────────────
+#  ProgressLog 엔드포인트 (main_branch에서 병합)
+#  사용자가 날짜별로 진행률(%)과 코멘트를 기록하는 업무 일지.
+# ─────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/projects/{project_id}/progress",
+    response_model=ProgressLogResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_progress_log(
+    project_id: int,
+    payload: ProgressLogCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """본인이 해당 프로젝트에서 오늘 한 일의 진행률을 기록한다."""
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="프로젝트를 찾을 수 없습니다.",
+        )
+
+    progress_log = ProgressLog(
+        project_id=project_id,
+        user_id=current_user.id,
+        progress_percent=payload.progress_percent,
+        comment=payload.comment,
+        work_date=payload.work_date,
+    )
+    db.add(progress_log)
+    db.commit()
+    db.refresh(progress_log)
+    return progress_log
+
+
+@router.get(
+    "/projects/{project_id}/progress",
+    response_model=list[ProgressLogResponse],
+)
+def list_project_progress_logs(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """본인이 이 프로젝트에 남긴 진행 기록 목록."""
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="프로젝트를 찾을 수 없습니다.",
+        )
+
+    logs = db.scalars(
+        select(ProgressLog)
+        .where(
+            ProgressLog.project_id == project_id,
+            ProgressLog.user_id == current_user.id,
+        )
+        .order_by(ProgressLog.work_date.desc(), ProgressLog.id.desc())
+    ).all()
+    return logs
