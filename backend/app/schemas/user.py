@@ -7,26 +7,27 @@ class UserCreate(BaseModel):
     idnum: str = Field(max_length=9)
     name: str = Field(min_length=2, max_length=50)
     password: str = Field(min_length=8, max_length=128)
-    # 가입 시 선택적으로 역할을 받음. 기본 "member".
     role: str = Field(default="member", pattern="^(admin|member)$")
 
 
 class UserResponse(BaseModel):
+    id: int
     idnum: str
     name: str
     role: str
     is_active: bool
     created_at: datetime
-    role: str
 
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserRoleUpdate(BaseModel):
+    role: str = Field(pattern="^(admin|member)$")
+
+
 class UserBrief(BaseModel):
-    """팀원 목록/담당자 표시용 경량 스키마."""
     id: int
     name: str
-    email: EmailStr
     role: str
 
     model_config = ConfigDict(from_attributes=True)

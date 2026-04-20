@@ -9,13 +9,13 @@ from app.models.base import Base
 class User(Base):
     __tablename__ = "users"
 
-    idnum: Mapped[str] = mapped_column(String(10), primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    idnum: Mapped[str] = mapped_column(String(10), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     # "admin" (관리자) | "member" (일반 직원)
     role: Mapped[str] = mapped_column(String(20), default="member", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    role: Mapped[str] = mapped_column(String(10), default="user", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

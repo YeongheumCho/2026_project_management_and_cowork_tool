@@ -21,8 +21,7 @@ def create_project(
 ):
     project = Project(
         name=payload.name,
-        description=payload.description,
-        created_by=current_user.idnum,
+        created_by=current_user.id,
     )
     db.add(project)
     db.commit()
@@ -36,7 +35,7 @@ def get_projects(
     current_user: User = Depends(get_current_user),
 ):
     projects = db.scalars(
-        select(Project).where(Project.created_by == current_user.idnum).order_by(Project.id.desc())
+        select(Project).where(Project.created_by == current_user.id).order_by(Project.id.desc())
     ).all()
     return projects
 
@@ -51,7 +50,7 @@ def create_progress_log(
     project = db.scalar(
         select(Project).where(
             Project.id == project_id,
-            Project.created_by == current_user.idnum,
+            Project.created_by == current_user.id,
         )
     )
     if not project:
@@ -62,7 +61,7 @@ def create_progress_log(
 
     progress_log = ProgressLog(
         project_id=project_id,
-        user_id=current_user.idnum,
+        user_id=current_user.id,
         progress_percent=payload.progress_percent,
         comment=payload.comment,
         work_date=payload.work_date,
@@ -82,7 +81,7 @@ def get_project_progress_logs(
     project = db.scalar(
         select(Project).where(
             Project.id == project_id,
-            Project.created_by == current_user.idnum,
+            Project.created_by == current_user.id,
         )
     )
     if not project:
@@ -95,7 +94,7 @@ def get_project_progress_logs(
         select(ProgressLog)
         .where(
             ProgressLog.project_id == project_id,
-            ProgressLog.user_id == current_user.idnum,
+            ProgressLog.user_id == current_user.id,
         )
         .order_by(ProgressLog.work_date.desc(), ProgressLog.id.desc())
     ).all()
