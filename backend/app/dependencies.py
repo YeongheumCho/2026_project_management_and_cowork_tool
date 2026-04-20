@@ -28,8 +28,8 @@ def get_current_user(
 ) -> User:
     try:
         payload = decode_token(token)
-        email = payload.get("sub")
-        if email is None:
+        userid = payload.get("sub")
+        if userid is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="유효하지 않은 토큰입니다.",
@@ -42,7 +42,7 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = db.scalar(select(User).where(User.email == email))
+    user = db.scalar(select(User).where(User.idnum == userid))
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
