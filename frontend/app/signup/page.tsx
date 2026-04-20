@@ -22,7 +22,7 @@ function getErrorMessage(data: ApiError | null, defaultMessage: string) {
 export default function SignupPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState('');
+  const [idnum, setIdnum] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
 
@@ -40,7 +40,7 @@ export default function SignupPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, name, password }),
+        body: JSON.stringify({ idnum, name, password }),
       });
 
       const data: ApiError = await res.json();
@@ -69,10 +69,10 @@ export default function SignupPage() {
 
         <form onSubmit={handleSignup} className="mt-6 space-y-4">
           <input
-            type="email"
-            placeholder="이메일"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="idnum"
+            placeholder="사번"
+            value={idnum}
+            onChange={(e) => setIdnum(e.target.value)}
             className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 outline-none"
             required
           />

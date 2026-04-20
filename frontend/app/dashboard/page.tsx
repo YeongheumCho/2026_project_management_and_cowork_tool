@@ -7,8 +7,7 @@ import Link from 'next/link';
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
 type MeResponse = {
-  id: number;
-  email: string;
+  idnum: string;
   name: string;
   is_active: boolean;
   created_at: string;
@@ -104,9 +103,10 @@ export default function DashboardPage() {
         <div className="flex items-center gap-4">
           <div className="text-right">
             <p className="text-sm">{user?.name}</p>
-            <p className="text-xs text-slate-500">{user?.email}</p>
+            <p className="text-xs text-slate-500">{user?.idnum}</p>
           </div>
           <button
+             type="button"
             onClick={handleLogout}
             className="rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-100"
           >

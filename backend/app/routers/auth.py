@@ -21,15 +21,15 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def signup(payload: UserCreate, db: Session = Depends(get_db)):
-    existing_user = db.scalar(select(User).where(User.email == payload.email))
+    existing_user = db.scalar(select(User).where(User.idnum == payload.idnum))
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="이미 사용 중인 이메일입니다.",
+            detail="이미 사용 중인 사번입니다.",
         )
 
     user = User(
-        email=payload.email,
+        idnum=payload.idnum,
         name=payload.name,
         password_hash=hash_password(payload.password),
     )
@@ -44,16 +44,16 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    user = db.scalar(select(User).where(User.email == form_data.username))
+    user = db.scalar(select(User).where(User.idnum == form_data.username))
 
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="이메일 또는 비밀번호가 올바르지 않습니다.",
+            detail="사번 또는 비밀번호가 올바르지 않습니다.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = create_access_token(subject=user.email)
+    access_token = create_access_token(subject=user.idnum)
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -64,8 +64,8 @@ def get_me(
 ):
     try:
         payload = decode_token(token)
-        email = payload.get("sub")
-        if email is None:
+        idnum = payload.get("sub")
+        if idnum is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="유효하지 않은 토큰입니다.",
@@ -78,7 +78,7 @@ def get_me(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = db.scalar(select(User).where(User.email == email))
+    user = db.scalar(select(User).where(User.idnum == idnum))
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
