@@ -22,7 +22,7 @@ function getErrorMessage(data: ApiError | null, defaultMessage: string) {
 export default function LoginPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState('');
+  const [idnum, setIdnum] = useState('');
   const [password, setPassword] = useState('');
 
   const [message, setMessage] = useState('');
@@ -35,7 +35,7 @@ export default function LoginPage() {
 
     try {
       const formData = new URLSearchParams();
-      formData.append('username', email);
+      formData.append('username', idnum);
       formData.append('password', password);
 
       const res = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -76,10 +76,10 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="mt-6 space-y-4">
           <input
-            type="email"
-            placeholder="이메일"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            placeholder="사번"
+            value={idnum}
+            onChange={(e) => setIdnum(e.target.value)}
             className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 outline-none"
             required
           />
