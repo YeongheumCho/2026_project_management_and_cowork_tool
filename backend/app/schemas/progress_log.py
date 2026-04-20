@@ -1,3 +1,6 @@
+"""
+ProgressLog Pydantic 스키마.
+"""
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -12,7 +15,7 @@ class ProgressLogCreate(BaseModel):
 class ProgressLogResponse(BaseModel):
     id: int
     project_id: int
-    user_id: str
+    user_id: int
     progress_percent: int
     comment: str | None
     work_date: date

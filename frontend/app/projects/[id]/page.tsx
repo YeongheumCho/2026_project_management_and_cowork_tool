@@ -1,10 +1,12 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { useParams } from 'next/navigation';
+import AppShell from '../../components/AppShell';
+import { apiFetch, type Project } from '../../lib/api';
+import { toISODate } from '../../lib/calendar';
+import { useMe } from '../../lib/useMe';
 
 type ProgressLog = {
   id: number;
@@ -16,249 +18,187 @@ type ProgressLog = {
   created_at: string;
 };
 
-type Project = {
-  id: number;
-  name: string;
-  description: string | null;
-  created_by: number;
-  created_at: string;
-};
-
-type ErrorDetailItem = { msg?: string };
-type ErrorResponse = {
-  detail?: string | ErrorDetailItem[];
-};
-
-function getErrorMessage(data: ErrorResponse | null | undefined, defaultMessage: string) {
-  if (!data) return defaultMessage;
-  if (typeof data.detail === 'string') return data.detail;
-  if (Array.isArray(data.detail)) {
-    return data.detail.map((item: ErrorDetailItem) => item.msg ?? '').join(', ');
-  }
-  return defaultMessage;
-}
-
 export default function ProjectDetailPage() {
   const params = useParams();
-  const router = useRouter();
-  const projectId = params.id as string;
+  const projectId = Number(params?.id);
+  const { me, loading: meLoading } = useMe();
 
   const [project, setProject] = useState<Project | null>(null);
-  const [progressLogs, setProgressLogs] = useState<ProgressLog[]>([]);
-  const [message, setMessage] = useState('');
+  const [logs, setLogs] = useState<ProgressLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
 
   const [progressPercent, setProgressPercent] = useState('');
-  const [progressComment, setProgressComment] = useState('');
-  const [workDate, setWorkDate] = useState(new Date().toISOString().slice(0, 10));
+  const [comment, setComment] = useState('');
+  const [workDate, setWorkDate] = useState(toISODate(new Date()));
 
-  const getToken = () => localStorage.getItem('access_token');
-
-  const fetchProjects = useCallback(async () => {
-    const token = getToken();
-    if (!token) {
-      router.replace('/login');
-      return;
+  const load = useCallback(async () => {
+    if (!Number.isFinite(projectId)) return;
+    setLoading(true);
+    try {
+      const [projects, fetchedLogs] = await Promise.all([
+        apiFetch<Project[]>('/projects'),
+        apiFetch<ProgressLog[]>(`/projects/${projectId}/progress`),
+      ]);
+      const found = projects.find((p) => p.id === projectId) ?? null;
+      setProject(found);
+      setLogs(fetchedLogs);
+      if (!found) setMessage('프로젝트를 찾을 수 없습니다.');
+      else setMessage('');
+    } catch (err) {
+      setMessage((err as Error).message);
+    } finally {
+      setLoading(false);
     }
-
-    const res = await fetch(`${API_BASE_URL}/projects`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setMessage(getErrorMessage(data, '프로젝트 목록을 불러오지 못했습니다.'));
-      return;
-    }
-
-    const foundProject = data.find((item: Project) => item.id === Number(projectId));
-    if (!foundProject) {
-      setMessage('프로젝트를 찾을 수 없습니다.');
-      return;
-    }
-
-    setProject(foundProject);
-  }, [router, projectId]);
-
-  const fetchProgressLogs = useCallback(async () => {
-    const token = getToken();
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
-
-    const res = await fetch(`${API_BASE_URL}/projects/${projectId}/progress`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setMessage(getErrorMessage(data, '진행 기록을 불러오지 못했습니다.'));
-      return;
-    }
-
-    setProgressLogs(data);
-  }, [router, projectId]);
+  }, [projectId]);
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        await fetchProjects();
-        await fetchProgressLogs();
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (me) void load();
+  }, [me, load]);
 
-    void init();
-  }, [projectId, fetchProjects, fetchProgressLogs]);
-
-  const handleCreateProgressLog = async (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    setMessage('');
-
+    if (!Number.isFinite(projectId)) return;
+    const n = Number(progressPercent);
+    if (!Number.isFinite(n) || n < 0 || n > 100) {
+      setMessage('진행률은 0~100 사이 숫자여야 합니다.');
+      return;
+    }
     try {
-      const token = getToken();
-      if (!token) {
-        router.replace('/login');
-        return;
-      }
-
-      const res = await fetch(`${API_BASE_URL}/projects/${projectId}/progress`, {
+      await apiFetch<ProgressLog>(`/projects/${projectId}/progress`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
-          progress_percent: Number(progressPercent),
-          comment: progressComment || null,
+          progress_percent: n,
+          comment: comment.trim() || null,
           work_date: workDate,
         }),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage(getErrorMessage(data, '진행 기록 저장에 실패했습니다.'));
-        return;
-      }
-
-      setMessage('진행 기록이 저장되었습니다.');
       setProgressPercent('');
-      setProgressComment('');
-      await fetchProgressLogs();
-    } catch (error) {
-      setMessage(`진행 기록 저장 실패: ${String(error)}`);
+      setComment('');
+      setMessage('진행 기록이 저장되었습니다.');
+      await load();
+    } catch (err) {
+      setMessage((err as Error).message);
     }
   };
 
-  if (loading) {
+  if (meLoading || !me) {
     return <main className="p-8 text-slate-900">불러오는 중...</main>;
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-6 py-10 text-slate-900">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <Link
-              href="/dashboard"
-              className="text-sm text-blue-600 hover:underline"
-            >
-              ← 대시보드로 돌아가기
-            </Link>
-            <h1 className="mt-2 text-3xl font-bold">{project?.name}</h1>
-            <p className="mt-2 text-sm text-slate-500">
-              {project?.description || '설명 없음'}
-            </p>
-          </div>
+    <AppShell me={me}>
+      <div className="mb-4">
+        <Link href="/projects" className="text-sm text-blue-600 hover:underline">
+          ← 프로젝트 목록
+        </Link>
+      </div>
+
+      {project ? (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">{project.name}</h1>
+          <p className="mt-1 text-xs text-slate-500">
+            생성 {new Date(project.created_at).toLocaleDateString('ko-KR')} · 유형:{' '}
+            {project.project_type}
+          </p>
         </div>
+      ) : (
+        <p className="mb-6 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-500">
+          {loading ? '불러오는 중...' : '프로젝트 정보를 표시할 수 없습니다.'}
+        </p>
+      )}
 
-        {message && (
-          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-            {message}
-          </div>
-        )}
+      {message && (
+        <p className="mb-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
+          {message}
+        </p>
+      )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">진행률 기록 작성</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              오늘 프로젝트에서 진행한 내용을 기록하세요.
-            </p>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold">진행률 기록 추가</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            오늘 이 프로젝트에서 진행한 내용을 기록하세요.
+          </p>
 
-            <form onSubmit={handleCreateProgressLog} className="mt-4 space-y-4">
+          <form onSubmit={submit} className="mt-4 space-y-3">
+            <label className="block">
+              <span className="text-xs font-medium text-slate-600">진행률 (%)</span>
               <input
                 type="number"
-                min="0"
-                max="100"
-                placeholder="진행률 (%)"
+                min={0}
+                max={100}
                 value={progressPercent}
                 onChange={(e) => setProgressPercent(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none"
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 required
               />
+            </label>
 
+            <label className="block">
+              <span className="text-xs font-medium text-slate-600">날짜</span>
               <input
                 type="date"
                 value={workDate}
                 onChange={(e) => setWorkDate(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none"
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 required
               />
+            </label>
 
+            <label className="block">
+              <span className="text-xs font-medium text-slate-600">메모</span>
               <textarea
-                placeholder="오늘 한 일 / 메모"
-                value={progressComment}
-                onChange={(e) => setProgressComment(e.target.value)}
-                className="min-h-32 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="오늘 한 일 / 이슈 / 다음 계획"
+                className="mt-1 min-h-24 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
               />
+            </label>
 
-              <button
-                type="submit"
-                className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+            <button
+              type="submit"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              기록 저장
+            </button>
+          </form>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold">내 진행 기록</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            이 프로젝트에서 내가 남긴 진행 기록입니다.
+          </p>
+
+          <div className="mt-4 space-y-2">
+            {loading && (
+              <p className="py-6 text-center text-sm text-slate-400">
+                불러오는 중...
+              </p>
+            )}
+            {!loading && logs.length === 0 && (
+              <p className="py-6 text-center text-sm text-slate-400">
+                아직 진행 기록이 없습니다.
+              </p>
+            )}
+            {logs.map((log) => (
+              <div
+                key={log.id}
+                className="rounded-xl border border-slate-100 bg-slate-50 p-3"
               >
-                진행 기록 저장
-              </button>
-            </form>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">{log.progress_percent}%</p>
+                  <p className="text-[11px] text-slate-500">{log.work_date}</p>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">
+                  {log.comment || '메모 없음'}
+                </p>
+              </div>
+            ))}
           </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">진행 기록 목록</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              이 프로젝트에 대한 내 진행 기록
-            </p>
-
-            <div className="mt-4 space-y-3">
-              {progressLogs.length === 0 ? (
-                <p className="text-sm text-slate-500">아직 기록이 없습니다.</p>
-              ) : (
-                progressLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium">{log.progress_percent}%</p>
-                      <p className="text-xs text-slate-500">{log.work_date}</p>
-                    </div>
-                    <p className="mt-2 text-sm text-slate-600">
-                      {log.comment || '메모 없음'}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
-    </main>
+    </AppShell>
   );
 }
