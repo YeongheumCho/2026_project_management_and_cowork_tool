@@ -239,40 +239,6 @@ export default function DashboardPage() {
           <p className="mt-3 text-3xl font-bold text-blue-600">25</p>
         </div>
       </div>
-      <div className="flex min-h-screen">
-        <aside className="w-64 border-r border-slate-200 bg-white p-6">
-          <h1 className="text-2xl font-bold text-blue-600">KPI Tool</h1>
-          <p className="mt-2 text-sm text-slate-400">협업 툴 관리자 화면</p>
-
-          <nav className="mt-8 space-y-2">
-            <Link
-              href="/dashboard"
-              className="block rounded-xl px-4 py-3 text-sm hover:bg-blue-50"
-            >
-              대시보드
-            </Link>
-            <Link
-              href="/projects"
-              className="block rounded-xl px-4 py-3 text-sm hover:bg-blue-50"
-            >
-              프로젝트
-            </Link>
-            <Link
-              href="/tasks"
-              className="block rounded-xl px-4 py-3 text-sm hover:bg-blue-50"
-            >
-              할 일
-            </Link>
-            <Link
-              href="/team"
-              className="block rounded-xl px-4 py-3 text-sm hover:bg-blue-50"
-            >
-              팀 관리
-            </Link>
-          </nav>
-        </aside>
-
-        <section className="flex-1 p-8">
           <header className="flex items-center justify-between border-b border-slate-200 pb-6">
             <div>
               <h2 className="text-3xl font-bold">대시보드</h2>
@@ -284,7 +250,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm">{user?.name}</p>
-                <p className="text-xs text-slate-500">{user?.email}</p>
+                <p className="text-xs text-slate-500">{user?.idnum}</p>
               </div>
               <button
                 onClick={handleLogout}
@@ -382,9 +348,9 @@ export default function DashboardPage() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <p className="text-sm text-slate-500">이메일</p>
+              <p className="text-sm text-slate-500">사번</p>
               <p className="mt-3 text-sm font-medium text-slate-700">
-                {user?.email || '-'}
+                {user?.idnum ?? '-'}
               </p>
             </div>
           </div>
