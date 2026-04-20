@@ -14,6 +14,8 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="KPI Collaboration Tool API")
 
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[

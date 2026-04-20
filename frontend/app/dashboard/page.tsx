@@ -18,6 +18,20 @@ const STATUS_BADGE: Record<SubProject['status'], string> = {
   completed: 'bg-emerald-100 text-emerald-700',
 };
 
+function getErrorMessage(data: ErrorResponse | null | undefined, defaultMessage: string) {
+  if (!data) return defaultMessage;
+
+  if (typeof data.detail === 'string') {
+    return data.detail;
+  }
+
+  if (Array.isArray(data.detail)) {
+    return data.detail.map((item: ErrorDetailItem) => item.msg ?? '').join(', ');
+  }
+
+  return defaultMessage;
+}
+
 export default function DashboardPage() {
   const { me, loading: meLoading } = useMe();
 
@@ -123,6 +137,13 @@ export default function DashboardPage() {
           loading={loading}
         />
       </div>
+          <header className="flex items-center justify-between border-b border-slate-200 pb-6">
+            <div>
+              <h2 className="text-3xl font-bold">대시보드</h2>
+              <p className="mt-2 text-sm text-slate-500">
+                프로젝트를 생성하고 진행 상황을 관리하는 공간
+              </p>
+            </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

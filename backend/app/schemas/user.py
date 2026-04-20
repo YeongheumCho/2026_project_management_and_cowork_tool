@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserCreate(BaseModel):
-    email: EmailStr
+    idnum: str = Field(max_length=9)
     name: str = Field(min_length=2, max_length=50)
     password: str = Field(min_length=8, max_length=128)
     # 가입 시 선택적으로 역할을 받음. 기본 "member".
@@ -12,12 +12,12 @@ class UserCreate(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: int
-    email: EmailStr
+    idnum: str
     name: str
     role: str
     is_active: bool
     created_at: datetime
+    role: str
 
     model_config = ConfigDict(from_attributes=True)
 
