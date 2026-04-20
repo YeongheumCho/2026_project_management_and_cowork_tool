@@ -3,6 +3,7 @@ from typing import List
 
 from app.core.config import settings
 from app.schemas.chat import ChatMessage, ChatResponse, TokenUsage
+from app.services.context import fetch_context_for_user
 
 
 class LLMService:
@@ -21,23 +22,30 @@ class LLMService:
         self,
         messages: List[ChatMessage],
         system_prompt: str | None = None,
+        user_email: str | None = None,
     ) -> ChatResponse:
         """
         Claude API에 메시지를 전송하고 응답을 반환합니다.
+        DB에서 실시간 컨텍스트를 가져와 system prompt에 주입합니다.
 
         Args:
             messages: 대화 히스토리
             system_prompt: 커스텀 시스템 프롬프트 (None이면 기본값)
+            user_email: 현재 사용자 이메일 (개인화 컨텍스트용)
 
         Returns:
             ChatResponse: AI 응답 + 토큰 사용량
         """
-        system = system_prompt or settings.SYSTEM_PROMPT
+        base_prompt = system_prompt or settings.SYSTEM_PROMPT
+
+        # DB에서 실시간 데이터 컨텍스트 가져오기
+        db_context = fetch_context_for_user(user_email)
+        full_system = f"{base_prompt}\n{db_context}"
 
         response = await self.client.messages.create(
             model=settings.CLAUDE_MODEL,
             max_tokens=settings.CLAUDE_MAX_TOKENS,
-            system=system,
+            system=full_system,
             messages=[
                 {"role": msg.role.value, "content": msg.content}
                 for msg in messages
