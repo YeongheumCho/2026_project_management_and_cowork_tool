@@ -1,37 +1,18 @@
-import uuid
 from datetime import datetime
-from pydantic import BaseModel
-from app.models.project import ProjectStatus, ProjectMemberRole
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProjectCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=100)
     description: str | None = None
-    color: str | None = None
-    start_date: datetime | None = None
-    end_date: datetime | None = None
-
-
-class ProjectUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    status: ProjectStatus | None = None
-    color: str | None = None
-    start_date: datetime | None = None
-    end_date: datetime | None = None
 
 
 class ProjectResponse(BaseModel):
-    id: uuid.UUID
-    workspace_id: uuid.UUID
+    id: int
     name: str
     description: str | None
-    status: ProjectStatus
-    color: str | None
-    start_date: datetime | None
-    end_date: datetime | None
-    created_by: uuid.UUID
+    created_by: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

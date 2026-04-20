@@ -1,83 +1,42 @@
-# 2026 프로젝트 관리 & 협업 툴
+# Windows PowerShell 배포 가이드 (초보자용)
 
-Flow(flow.team)와 유사한 사내 업무 협업 및 프로젝트 관리 서비스입니다.
-
-## 서비스 구성
-
-| 서비스 | 경로 | 포트 | 담당 |
-|--------|------|------|------|
-| Backend REST API | `./backend` | 8000 | 개발자 1 |
-| Realtime Server (WebSocket) | `./realtime` | 8001 | 개발자 2 |
-| Frontend (Next.js + React 19) | `./frontend` | 3000 | 개발자 3 |
-| AI Chatbot | `./ai-chatbot` | 8002 | 개발자 4 |
-| PostgreSQL | - | 5432 | 개발자 3 (DB 관리) |
-| Redis | - | 6379 | - |
-
-## 기술 스택
-
-- **Backend**: FastAPI (Python 3.11+)
-- **Realtime**: FastAPI + WebSocket + Redis Pub/Sub
-- **Frontend**: Next.js 15 + React 19 + TypeScript
-- **AI Chatbot**: FastAPI + LLM API
-- **DB**: PostgreSQL 16
-- **Cache/Pub-Sub**: Redis 7
-- **Containerization**: Docker + Docker Compose
-
-## 서비스 간 통신
-
-```
-Frontend (3000)
-  ├── REST API  →  Backend (8000)
-  ├── WebSocket →  Realtime (8001)
-  └── REST API  →  AI Chatbot (8002)
-
-Backend (8000)
-  ├── DB        →  PostgreSQL (5432)
-  └── Pub/Sub   →  Redis (6379)
-
-Realtime (8001)
-  ├── DB        →  PostgreSQL (5432)
-  └── Pub/Sub   →  Redis (6379)
-
-AI Chatbot (8002)
-  └── DB        →  PostgreSQL (5432)
-```
-
-## 폴더 구조
-
-```
-.
-├── backend/          # FastAPI REST API (개발자 1)
-├── realtime/         # WebSocket 실시간 서버 (개발자 2)
-├── frontend/         # Next.js 프론트엔드 (개발자 3)
-├── ai-chatbot/       # AI 챗봇 서비스 (개발자 4)
-├── database/         # DB 마이그레이션 & 시드 (개발자 3)
-├── docs/             # 공통 문서
-├── docker-compose.yml
-├── docker-compose.dev.yml
-└── .env.example
-```
-
-## 브랜치 전략
-
-- `main`: 프로덕션 배포 브랜치
-- `develop`: 통합 개발 브랜치
-- `feature/<이름>/<기능>`: 기능 개발 브랜치
-- 예시: `feature/backend/auth`, `feature/frontend/dashboard`
+이 문서는 **2026 프로젝트 관리 & 협업 툴**을 Windows PC의 PowerShell 환경에서 배포하는 전체 과정을 안내합니다.
 
 ---
 
-## Windows 배포 가이드 (초보자용)
+## 프로젝트 개요
+
+Flow(flow.team)와 유사한 사내 업무 협업 및 프로젝트 관리 서비스로, 총 6개의 서비스가 Docker로 구성되어 있습니다.
+
+| 서비스 | 역할 | 포트 |
+|--------|------|------|
+| Backend (FastAPI) | REST API 서버 | 8000 |
+| Realtime (FastAPI + WebSocket) | 실시간 알림/채팅 | 8001 |
+| AI Chatbot (FastAPI + LLM) | AI 챗봇 | 8002 |
+| Frontend (Next.js + React 19) | 웹 화면 | 3000 |
+| PostgreSQL 16 | 데이터베이스 | 5432 |
+| Redis 7 | 캐시 / Pub-Sub | 6379 |
+
+서비스 간 통신 구조:
+
+```
+Frontend (3000)
+  ├── REST  --> Backend (8000)  --> PostgreSQL + Redis
+  ├── WS   --> Realtime (8001) --> PostgreSQL + Redis
+  └── REST --> AI Chatbot (8002) --> PostgreSQL
+```
+
+---
+
+## 1단계: 사전 준비 (Rancher Desktop 설치)
 
 이 프로젝트는 **Docker Compose**로 모든 서비스를 한 번에 띄우므로, 컨테이너 런타임만 설치하면 됩니다. Python, Node.js 등을 별도로 설치할 필요가 없습니다.
-
-### 1단계: 사전 준비 (Rancher Desktop 설치)
 
 > **왜 Docker Desktop이 아닌가요?**
 > Docker Desktop은 직원 250명 이상 또는 연 매출 $10M 이상인 회사에서 유료 구독이 필요합니다.
 > **Rancher Desktop**은 SUSE에서 제공하는 완전 무료/오픈소스 대안으로, 상업적 사용에 제한이 없습니다.
 
-#### 1-1. WSL 2 설치 (필수 선행)
+### 1-1. WSL 2 설치 (필수 선행)
 
 PowerShell을 **관리자 권한**으로 열고 실행합니다:
 
@@ -93,7 +52,7 @@ wsl --install
 wsl --version
 ```
 
-#### 1-2. Rancher Desktop 설치
+### 1-2. Rancher Desktop 설치
 
 1. https://rancherdesktop.io/ 에 접속
 2. **"Download for Windows"** 클릭하여 MSI 설치 파일 다운로드
@@ -101,7 +60,7 @@ wsl --version
 4. 라이선스 동의 후 설치 진행 (Privileged Service 설치를 허용해주세요)
 5. 설치 완료 후 Rancher Desktop 실행
 
-#### 1-3. Rancher Desktop 초기 설정 (중요!)
+### 1-3. Rancher Desktop 초기 설정 (중요!)
 
 Rancher Desktop을 처음 실행하면 설정 화면이 나옵니다. 아래와 같이 설정합니다:
 
@@ -111,7 +70,7 @@ Rancher Desktop을 처음 실행하면 설정 화면이 나옵니다. 아래와 
 2. **Kubernetes** 는 이 프로젝트에서 사용하지 않으므로 **비활성화(체크 해제)** 해도 됩니다
 3. 설정이 완료되면 Rancher Desktop이 WSL 2 위에 가상 머신을 생성합니다 (1~3분 소요)
 
-#### 1-4. Docker 정상 동작 확인
+### 1-4. Docker 정상 동작 확인
 
 Rancher Desktop이 완전히 시작된 후 (시스템 트레이에 아이콘이 뜨면) PowerShell을 **새로** 열고:
 
@@ -126,15 +85,33 @@ docker compose version
 - PowerShell을 닫고 새로 열어보세요 (PATH가 갱신되어야 합니다)
 - Rancher Desktop > Preferences > Application > PATH에서 "Manual" 대신 "Automatic"이 선택되어 있는지 확인하세요
 
-### 2단계: 환경 변수 파일 설정
+---
 
-#### 2-1. .env 파일 생성
+## 2단계: 프로젝트 폴더로 이동
+
+PowerShell에서 프로젝트가 있는 폴더로 이동합니다:
+
+```powershell
+cd "C:\경로\2026_project_management_and_cowork_tool"
+```
+
+> 본인의 실제 프로젝트 경로를 넣으세요. 탐색기에서 폴더를 열고 주소창을 클릭하면 전체 경로를 복사할 수 있습니다.
+
+---
+
+## 3단계: 환경 변수 파일 설정
+
+### 3-1. .env 파일 생성
+
+프로젝트 루트에 `.env.example` 파일이 있습니다. 이것을 복사하여 `.env` 파일을 만듭니다:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-#### 2-2. .env 파일 수정
+### 3-2. .env 파일 수정
+
+메모장으로 열어 수정합니다:
 
 ```powershell
 notepad .env
@@ -165,9 +142,13 @@ ANTHROPIC_API_KEY=sk-ant-여기에-실제-API키-입력
 
 나머지 항목(POSTGRES_HOST, REDIS_URL 등)은 Docker 내부 네트워크용이므로 **기본값 그대로** 두면 됩니다.
 
-### 3단계: 빌드 및 실행
+수정이 끝나면 메모장에서 저장(Ctrl+S)하고 닫습니다.
 
-#### 프로덕션 모드
+---
+
+## 4단계: 서비스 빌드 및 실행
+
+### 4-1. 프로덕션 모드로 실행
 
 ```powershell
 docker compose up --build
@@ -184,19 +165,25 @@ cowork_ai_chatbot| Uvicorn running on http://0.0.0.0:8002
 cowork_frontend  | Ready on http://0.0.0.0:3000
 ```
 
-#### 개발 모드 (코드 수정 시 자동 반영)
+### 4-2. 개발 모드로 실행 (코드 수정 시 자동 반영)
 
 ```powershell
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-#### 백그라운드에서 실행 (터미널을 닫아도 유지)
+### 4-3. 백그라운드에서 실행 (터미널을 닫아도 유지)
 
 ```powershell
 docker compose up --build -d
 ```
 
-### 4단계: 접속 확인
+`-d` 플래그는 "detached" 모드로, 백그라운드에서 실행됩니다.
+
+---
+
+## 5단계: 접속 확인
+
+모든 서비스가 시작된 후 브라우저에서 접속합니다:
 
 | 서비스 | URL | 설명 |
 |--------|-----|------|
@@ -209,16 +196,40 @@ docker compose up --build -d
 
 ## 자주 쓰는 명령어 모음
 
+### 서비스 상태 확인
+
 ```powershell
-docker compose ps                          # 서비스 상태 확인
-docker compose logs backend                # 백엔드 로그
-docker compose logs -f backend             # 실시간 로그 (-f: follow)
-docker compose down                        # 서비스 중지
-docker compose down -v                     # 서비스 중지 + DB 데이터 삭제 (초기화)
-docker compose up --build backend          # 특정 서비스만 재빌드 후 실행
+docker compose ps
 ```
 
-> `docker compose down -v`의 `-v`는 볼륨(DB 데이터)까지 삭제합니다. DB를 완전히 초기화하고 싶을 때만 사용하세요.
+### 특정 서비스 로그 보기
+
+```powershell
+docker compose logs backend        # 백엔드 로그
+docker compose logs frontend       # 프론트엔드 로그
+docker compose logs -f backend     # 실시간 로그 (-f: follow)
+```
+
+### 서비스 중지
+
+```powershell
+docker compose down
+```
+
+### 서비스 중지 + DB 데이터 삭제 (초기화)
+
+```powershell
+docker compose down -v
+```
+
+> `-v` 는 볼륨(DB 데이터)까지 삭제합니다. DB를 완전히 초기화하고 싶을 때만 사용하세요.
+
+### 특정 서비스만 재빌드
+
+```powershell
+docker compose up --build backend      # 백엔드만 재빌드 후 실행
+docker compose up --build frontend     # 프론트엔드만 재빌드 후 실행
+```
 
 ---
 
@@ -234,6 +245,11 @@ Rancher Desktop이 실행 중인지 확인하세요. 시스템 트레이(화면 
 
 ```powershell
 netstat -ano | findstr :8000
+```
+
+출력된 PID(마지막 숫자)로 프로세스를 확인합니다:
+
+```powershell
 tasklist | findstr <PID번호>
 ```
 
@@ -271,6 +287,8 @@ docker compose up --build
 ---
 
 ## 팀원 온보딩 요약 (Quick Start)
+
+새 팀원이 이 가이드를 받았을 때, 최소한으로 실행하는 방법:
 
 ```powershell
 # 1. WSL 2 설치 (관리자 PowerShell): wsl --install → 재부팅

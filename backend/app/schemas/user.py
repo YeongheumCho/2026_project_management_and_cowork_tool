@@ -1,28 +1,18 @@
-import uuid
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
-class UserBase(BaseModel):
-    email: EmailStr
-    username: str
-    full_name: str
+class UserCreate(BaseModel):
+    idnum: str = Field(max_length=9)
+    name: str = Field(min_length=2, max_length=50)
+    password: str = Field(min_length=8, max_length=128)
 
 
-class UserCreate(UserBase):
-    password: str
-
-
-class UserUpdate(BaseModel):
-    full_name: str | None = None
-    avatar_url: str | None = None
-
-
-class UserResponse(UserBase):
-    id: uuid.UUID
-    avatar_url: str | None
+class UserResponse(BaseModel):
+    idnum: str
+    name: str
     is_active: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

@@ -1,21 +1,5 @@
 from app.models.user import User
-from app.models.workspace import Workspace, WorkspaceMember
-from app.models.project import Project, ProjectMember
-from app.models.task import Task, TaskAssignee
-from app.models.comment import Comment
-from app.models.message import Channel, Message
-from app.models.notification import Notification
+from app.models.project import Project
+from app.models.progress_log import ProgressLog
 
-__all__ = [
-    "User",
-    "Workspace",
-    "WorkspaceMember",
-    "Project",
-    "ProjectMember",
-    "Task",
-    "TaskAssignee",
-    "Comment",
-    "Channel",
-    "Message",
-    "Notification",
-]
+__all__ = ["User", "Project", "ProgressLog"]
