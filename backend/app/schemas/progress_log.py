@@ -12,7 +12,7 @@ class ProgressLogCreate(BaseModel):
 class ProgressLogResponse(BaseModel):
     id: int
     project_id: int
-    user_id: int
+    user_id: str
     progress_percent: int
     comment: str | None
     work_date: date

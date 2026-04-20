@@ -1,15 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.models import project, progress_log, user
-from app.routers.project import router as project_router
-
-
 from app.core.config import settings
 from app.db import engine
+from app.models import progress_log, project, user
 from app.models.base import Base
-from app.models import user
 from app.routers.auth import router as auth_router
+from app.routers.project import router as project_router
 
 Base.metadata.create_all(bind=engine)
 
