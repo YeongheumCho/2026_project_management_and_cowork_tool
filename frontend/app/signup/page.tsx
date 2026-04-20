@@ -41,7 +41,7 @@ export default function SignupPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, name, password, role }),
+        body: JSON.stringify({ idnum, name, password, role }),
       });
 
       const data: ApiError = await res.json();
@@ -70,7 +70,7 @@ export default function SignupPage() {
 
         <form onSubmit={handleSignup} className="mt-6 space-y-4">
           <input
-            type="idnum"
+            type="text"
             placeholder="사번"
             value={idnum}
             onChange={(e) => setIdnum(e.target.value)}
