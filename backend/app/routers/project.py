@@ -21,7 +21,6 @@ def create_project(
 ):
     project = Project(
         name=payload.name,
-        description=payload.description,
         created_by=current_user.id,
     )
     db.add(project)

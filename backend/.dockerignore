@@ -1,0 +1,38 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.venv
+venv
+env
+
+# Test DB 파일
+*.db
+*.sqlite
+*.sqlite3
+
+# Editor / OS
+.DS_Store
+.vscode
+.idea
+
+# Git & env
+.git
+.gitignore
+.env*
+!.env.example
+
+Dockerfile*
+.dockerignore
+
+# 업로드는 volume으로 주입됨
+uploads
+
+coverage
+*.log

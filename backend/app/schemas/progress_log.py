@@ -1,3 +1,6 @@
+"""
+ProgressLog Pydantic 스키마.
+"""
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
