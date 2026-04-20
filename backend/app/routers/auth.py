@@ -13,10 +13,50 @@ from app.core.security import (
 from app.dependencies import get_db
 from app.models.user import User
 from app.schemas.auth import TokenResponse
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse, UserRoleUpdate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    try:
+        payload = decode_token(token)
+        idnum = payload.get("sub")
+        if idnum is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="유효하지 않은 토큰입니다.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    except JWTError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="토큰이 만료되었거나 유효하지 않습니다.",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
+    user = db.scalar(select(User).where(User.idnum == idnum))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다.",
+        )
+
+    return user
+
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="관리자만 접근할 수 있습니다.",
+        )
+
+    return current_user
 
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -58,31 +98,40 @@ def login(
 
 
 @router.get("/me", response_model=UserResponse)
-def get_me(
-    token: str = Depends(oauth2_scheme),
+def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.get("/users", response_model=list[UserResponse])
+def list_users(
+    _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    try:
-        payload = decode_token(token)
-        idnum = payload.get("sub")
-        if idnum is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="유효하지 않은 토큰입니다.",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="토큰이 만료되었거나 유효하지 않습니다.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    users = db.scalars(select(User).order_by(User.name.asc(), User.idnum.asc())).all()
+    return users
 
-    user = db.scalar(select(User).where(User.idnum == idnum))
-    if not user:
+
+@router.patch("/users/{idnum}/role", response_model=UserResponse)
+def update_user_role(
+    idnum: str,
+    payload: UserRoleUpdate,
+    current_admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    target_user = db.scalar(select(User).where(User.idnum == idnum))
+    if not target_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="사용자를 찾을 수 없습니다.",
         )
 
-    return user
+    if current_admin.idnum == target_user.idnum and payload.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="자신의 관리자 권한은 해제할 수 없습니다.",
+        )
+
+    target_user.role = payload.role
+    db.commit()
+    db.refresh(target_user)
+    return target_user

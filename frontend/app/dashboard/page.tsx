@@ -11,6 +11,8 @@ type MeResponse = {
   name: string;
   is_active: boolean;
   created_at: string;
+  role: string;
+
 };
 
 export default function DashboardPage() {
@@ -85,6 +87,17 @@ export default function DashboardPage() {
         <Link href="/team" className="block rounded-xl px-4 py-3 text-sm hover:bg-blue-50">
           조직도 
         </Link>
+        <Link href="/admin" className="block rounded-xl px-4 py-3 text-sm hover:bg-blue-50">
+          관리자
+        </Link>
+        {/* 관리자 권한이 있는 사용자에게만 관리자 페이지 링크 표시 
+
+        {user?.role === 'admin' && (
+        <Link href="/admin" className="block rounded-xl px-4 py-3 text-sm hover:bg-blue-50">
+          관리자
+        </Link>
+      )} 
+          */}
       </nav>
     </aside>
 
