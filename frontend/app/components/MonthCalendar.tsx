@@ -10,6 +10,7 @@ import {
   toISODate,
 } from '../lib/calendar';
 import type { SubProject } from '../lib/api';
+import { SUBPROJECT_STATUS_BG } from '../lib/subprojectStatus';
 
 type Props = {
   year: number;
@@ -21,12 +22,6 @@ type Props = {
   onSelectSubProject?: (sp: SubProject) => void;
   /** 우상단 액션 버튼 (예: + 소프로젝트 추가). 관리자만 노출 */
   rightAction?: React.ReactNode;
-};
-
-const STATUS_BG: Record<SubProject['status'], string> = {
-  planned: 'bg-slate-300 text-slate-800',
-  in_progress: 'bg-blue-500 text-white',
-  completed: 'bg-emerald-500 text-white',
 };
 
 export default function MonthCalendar({
@@ -101,14 +96,14 @@ export default function MonthCalendar({
                       e.stopPropagation();
                       onSelectSubProject?.(sp);
                     }}
-                    className={`truncate rounded px-1.5 py-0.5 text-[11px] ${STATUS_BG[sp.status]}`}
+                    className={`truncate rounded px-1.5 py-0.5 text-micro ${SUBPROJECT_STATUS_BG[sp.status]}`}
                     title={`${sp.name} (${sp.assignee?.name ?? '미지정'})`}
                   >
                     {sp.name}
                   </div>
                 ))}
                 {itemsToday.length > 3 && (
-                  <div className="text-[10px] text-slate-400">
+                  <div className="text-micro text-slate-400">
                     +{itemsToday.length - 3}
                   </div>
                 )}

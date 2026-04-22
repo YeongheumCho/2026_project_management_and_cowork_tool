@@ -239,7 +239,7 @@ export default function ChatBot() {
                 </svg>
               </button>
             </div>
-            <p className="mt-1.5 text-center text-[10px] text-slate-400">
+            <p className="mt-1.5 text-center text-micro text-slate-400">
               Shift+Enter로 줄바꿈 | Enter로 전송
             </p>
           </div>

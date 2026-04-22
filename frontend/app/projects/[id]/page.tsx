@@ -189,7 +189,7 @@ export default function ProjectDetailPage() {
               >
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium">{log.progress_percent}%</p>
-                  <p className="text-[11px] text-slate-500">{log.work_date}</p>
+                  <p className="text-micro text-slate-500">{log.work_date}</p>
                 </div>
                 <p className="mt-1 text-xs text-slate-600">
                   {log.comment || '메모 없음'}

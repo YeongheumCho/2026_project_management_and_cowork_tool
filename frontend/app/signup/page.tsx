@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_BASE_URL } from '../lib/api';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
 
 type ApiError = {
   detail?: string | Array<{ msg: string }>;

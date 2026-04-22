@@ -14,6 +14,8 @@ import {
   type VerificationLevel,
   type VerifyState,
 } from '../lib/api';
+import Modal from './Modal';
+import Field from './form/Field';
 
 type Props = {
   open: boolean;
@@ -227,7 +229,7 @@ export default function TeamModal({
   const isOfficial = projectType === 'official_inspection';
   const isEtc = projectType === 'etc_task';
 
-  if (!open) return null;
+  // open 상태는 Modal 컴포넌트가 처리
 
   const invalid =
     !f.name.trim() ||
@@ -335,8 +337,7 @@ export default function TeamModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+    <Modal open={open} onClose={onClose} size="xl" scrollable ariaLabel={mode === "create" ? "소프로젝트 추가" : "소프로젝트 수정"}>
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-lg font-semibold">
@@ -801,25 +802,7 @@ export default function TeamModal({
             background: rgb(248 250 252);
           }
         `}</style>
-      </div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-  full,
-}: {
-  label: string;
-  children: React.ReactNode;
-  full?: boolean;
-}) {
-  return (
-    <div className={full ? 'sm:col-span-3' : ''}>
-      <label className="block text-xs font-medium text-slate-600">{label}</label>
-      {children}
-    </div>
+    </Modal>
   );
 }
 
@@ -894,7 +877,7 @@ function InspectionBlock({
           />
         </Field>
       </div>
-      <p className="mt-2 text-right text-[11px] text-slate-500">
+      <p className="mt-2 text-right text-micro text-slate-500">
         총 소요 {total}분
       </p>
     </div>

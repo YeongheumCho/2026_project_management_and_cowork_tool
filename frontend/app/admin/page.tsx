@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { API_BASE_URL } from '../lib/api';
 import { useEffect, useState } from 'react';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
 
 type UserResponse = {
   idnum: string;

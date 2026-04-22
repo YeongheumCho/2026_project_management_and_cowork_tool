@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import AppShell from '../components/AppShell';
 import MonthCalendar, { shiftMonth } from '../components/MonthCalendar';
 import PersonalModal from '../components/PersonalModal';
+import ProgressBar from '../components/ProgressBar';
 import { apiFetch, type SubProject, type UserBrief } from '../lib/api';
 import { useMe } from '../lib/useMe';
 
@@ -151,12 +152,11 @@ export default function PersonalCalendarPage() {
                   <div className="mt-1 text-[11px] text-slate-500">
                     {sp.start_date} ~ {sp.end_date}
                   </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full bg-blue-500"
-                      style={{ width: `${sp.progress}%` }}
-                    />
-                  </div>
+                  <ProgressBar
+                    value={sp.progress}
+                    className="mt-2"
+                    ariaLabel={`${sp.name} 진척도`}
+                  />
                 </button>
               ))}
             </div>
