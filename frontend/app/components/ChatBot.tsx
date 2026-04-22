@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-const AI_CHATBOT_URL = 'http://127.0.0.1:8002';
+const AI_CHATBOT_URL = process.env.NEXT_PUBLIC_AI_CHATBOT_URL ?? '/ai';
 
 type Message = {
   role: 'user' | 'assistant';

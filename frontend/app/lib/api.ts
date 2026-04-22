@@ -2,7 +2,7 @@
  * 공통 API 유틸 + 도메인 타입.
  */
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:8000';
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? '/backend';
 
 export type UserBrief = {
   id: number;
