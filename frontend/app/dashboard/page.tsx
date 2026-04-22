@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
 import { useMe } from '../lib/useMe';
 import CreateProjectModal from '../projects/components/CreateProjectModal';
+import { useWorkflowSelection } from '../lib/workflow-selection';
 import DashboardHeader from './components/DashboardHeader';
 import KpiGrid from './components/KpiGrid';
 import ProjectList from './components/ProjectList';
@@ -20,6 +21,13 @@ import { useDashboardData } from './hooks/useDashboardData';
 export default function DashboardPage() {
   const router = useRouter();
   const { me, loading: meLoading } = useMe();
+  const {
+    selectedMemberId,
+    setSelectedMemberId,
+    toggleSelectedMemberId,
+    selectedProjectId,
+    setSelectedProjectId,
+  } = useWorkflowSelection();
   const enabled = !!me;
   const {
     projects,
@@ -32,8 +40,6 @@ export default function DashboardPage() {
     reload,
   } = useDashboardData(enabled);
 
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [modalError, setModalError] = useState('');
 
@@ -64,7 +70,7 @@ export default function DashboardPage() {
     ) {
       setSelectedProjectId(visibleProjects[0].id);
     }
-  }, [selectedProjectId, visibleProjects]);
+  }, [selectedProjectId, setSelectedProjectId, visibleProjects]);
 
   const selectedProject = useMemo(
     () => visibleProjects.find((project) => project.id === selectedProjectId) ?? null,
@@ -123,9 +129,7 @@ export default function DashboardPage() {
       selectedProjectId={selectedProjectId}
       selectedMemberId={selectedMemberId}
       onProjectSelect={handleProjectSelect}
-      onMemberSelect={(memberId) =>
-        setSelectedMemberId((current) => (current === memberId ? null : memberId))
-      }
+      onMemberSelect={toggleSelectedMemberId}
       sidebarProjects={projects}
       sidebarUsers={users}
     >

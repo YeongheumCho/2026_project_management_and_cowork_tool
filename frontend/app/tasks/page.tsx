@@ -1,310 +1,436 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
-import ChatBot from '../components/ChatBot';
+import DatePicker from '../components/DatePicker';
+import {
+  apiFetch,
+  PROJECT_TYPE_LABEL,
+  type AssignmentRequest,
+  type ProjectType,
+  type RecommendationCandidate,
+  type RecommendationResponse,
+} from '../lib/api';
 import { useMe } from '../lib/useMe';
+import { useWorkflowSelection } from '../lib/workflow-selection';
 import { useDashboardData } from '../dashboard/hooks/useDashboardData';
-import { colorForId } from '../components/AppShell/colors';
+
+const DEFAULT_PROJECT_TYPE: ProjectType = 'regular_inspection';
 
 export default function TasksPage() {
+  const router = useRouter();
   const { me, loading: meLoading } = useMe();
-  const {
-    projects,
-    subprojects,
-    users,
-    loading,
-    error,
-  } = useDashboardData(!!me);
+  const { setSelectedMemberId } = useWorkflowSelection();
+  const { projects, users, loading, error } = useDashboardData(!!me);
+
+  const today = new Date();
+  const weekLater = new Date(today);
+  weekLater.setDate(today.getDate() + 7);
+
+  const [projectName, setProjectName] = useState('');
+  const [subprojectName, setSubprojectName] = useState('');
+  const [projectType, setProjectType] =
+    useState<ProjectType>(DEFAULT_PROJECT_TYPE);
+  const [startDate, setStartDate] = useState(toISODate(today));
+  const [endDate, setEndDate] = useState(toISODate(weekLater));
+  const [availabilityWeight, setAvailabilityWeight] = useState(60);
+  const [busy, setBusy] = useState(false);
+  const [screenError, setScreenError] = useState('');
+  const [recommendation, setRecommendation] =
+    useState<RecommendationResponse | null>(null);
+  const [assigningUserId, setAssigningUserId] = useState<number | null>(null);
+
+  const capabilityWeight = 100 - availabilityWeight;
+  const canSubmit =
+    projectName.trim().length > 0 &&
+    subprojectName.trim().length > 0 &&
+    !busy;
+
+  const projectHints = useMemo(() => projects.slice(0, 5), [projects]);
 
   if (meLoading || !me) {
     return <main className="p-8 text-slate-900">불러오는 중...</main>;
   }
 
-  const activeSubprojects = subprojects.filter(
-    (subproject) => subproject.status !== 'completed',
-  );
-  const unassigned = activeSubprojects.filter(
-    (subproject) => subproject.assignee_id === null,
-  );
-  const overdueSoon = activeSubprojects
-    .filter((subproject) => daysUntil(subproject.end_date) <= 7)
-    .sort((left, right) => daysUntil(left.end_date) - daysUntil(right.end_date))
-    .slice(0, 5);
+  if (me.role !== 'admin') {
+    return (
+      <AppShell me={me} sidebarProjects={projects} sidebarUsers={users}>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
+          <h1 className="text-xl font-semibold">AI 업무 배정은 관리자 전용입니다</h1>
+          <p className="mt-2 text-sm">
+            개인 캘린더와 팀 캘린더에서 배정된 작업을 확인해주세요.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
 
-  const memberLoad = users
-    .map((user) => ({
-      user,
-      count: activeSubprojects.filter(
-        (subproject) => subproject.assignee_id === user.id,
-      ).length,
-      avgProgress: average(
-        activeSubprojects
-          .filter((subproject) => subproject.assignee_id === user.id)
-          .map((subproject) => subproject.progress),
-      ),
-    }))
-    .filter((entry) => entry.count > 0)
-    .sort((left, right) => right.count - left.count);
+  async function handleRecommend() {
+    if (!canSubmit) return;
+    setBusy(true);
+    setScreenError('');
 
-  const projectPressure = projects
-    .map((project) => {
-      const items = activeSubprojects.filter(
-        (subproject) => subproject.project_id === project.id,
-      );
-      return {
-        project,
-        count: items.length,
-        avgProgress: average(items.map((item) => item.progress)),
-      };
-    })
-    .filter((entry) => entry.count > 0)
-    .sort((left, right) => left.avgProgress - right.avgProgress)
-    .slice(0, 4);
+    try {
+      const response = await Promise.all([
+        apiFetch<RecommendationResponse>('/ai/recommendations', {
+          method: 'POST',
+          body: JSON.stringify({
+            project_name: projectName.trim(),
+            project_type: projectType,
+            start_date: startDate,
+            end_date: endDate,
+            availability_weight: availabilityWeight / 100,
+            capability_weight: capabilityWeight / 100,
+          }),
+        }),
+        wait(1400),
+      ]);
+
+      setRecommendation(response[0]);
+    } catch (nextError) {
+      setScreenError((nextError as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleAssign(candidate: RecommendationCandidate) {
+    const payload: AssignmentRequest = {
+      project_name: projectName.trim(),
+      project_type: projectType,
+      subproject_name: subprojectName.trim(),
+      assignee_id: candidate.user_id,
+      start_date: startDate,
+      end_date: endDate,
+      apply_template: true,
+    };
+
+    setAssigningUserId(candidate.user_id);
+    setScreenError('');
+
+    try {
+      await apiFetch('/ai/assignments', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      setSelectedMemberId(candidate.user_id);
+      await wait(600);
+      router.push('/personal-calendar');
+    } catch (nextError) {
+      setScreenError((nextError as Error).message);
+    } finally {
+      setAssigningUserId(null);
+    }
+  }
 
   return (
     <AppShell me={me} sidebarProjects={projects} sidebarUsers={users}>
-      {error && (
+      {(error || screenError) && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-          {error}
+          {error || screenError}
         </p>
       )}
 
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">AI 업무 배정</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            현재 진행 중인 프로젝트를 기준으로 우선순위와 재배치 힌트를 정리했습니다.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            href="/team-calendar"
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            팀 캘린더 보기
-          </Link>
-          <Link
-            href="/projects"
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            프로젝트 관리
-          </Link>
-        </div>
-      </div>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]">
+        <section className="rounded-3xl border border-[#EAEAE4] bg-white p-6 shadow-sm">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-slate-900">AI 업무 배정</h1>
+            <p className="mt-2 text-sm text-slate-500">
+              프로젝트 조건을 입력하면 가용성과 역량을 함께 고려해 상위 3명의
+              추천 후보를 제안합니다.
+            </p>
+          </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="진행 중 업무"
-          value={loading ? '—' : String(activeSubprojects.length)}
-          hint="완료되지 않은 소프로젝트"
-        />
-        <StatCard
-          label="미배정 업무"
-          value={loading ? '—' : String(unassigned.length)}
-          hint="담당자 배정이 필요한 항목"
-        />
-        <StatCard
-          label="마감 임박"
-          value={loading ? '—' : String(overdueSoon.length)}
-          hint="7일 안에 종료되는 업무"
-        />
-        <StatCard
-          label="참여 팀원"
-          value={loading ? '—' : String(memberLoad.length)}
-          hint="현재 업무를 맡고 있는 인원"
-        />
-      </div>
+          <div className="space-y-5">
+            <Field label="프로젝트명">
+              <input
+                value={projectName}
+                onChange={(event) => setProjectName(event.target.value)}
+                placeholder="예: 2026년 3차 정기 검증"
+                className="input"
+              />
+            </Field>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
-        <section className="space-y-6">
-          <Panel
-            title="우선 조정이 필요한 프로젝트"
-            description="평균 진척률이 낮고 아직 진행 중인 프로젝트를 먼저 보여줍니다."
-          >
-            {projectPressure.length === 0 ? (
-              <EmptyState text="아직 추천할 프로젝트가 없습니다." />
-            ) : (
-              <div className="space-y-3">
-                {projectPressure.map(({ project, count, avgProgress }) => (
-                  <Link
-                    key={project.id}
-                    href={`/projects/${project.id}`}
-                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 hover:border-indigo-200 hover:bg-indigo-50/40"
-                  >
-                    <span
-                      className={`h-2.5 w-2.5 rounded-full ${colorForId(project.id)}`}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-900">
-                        {project.name}
-                      </p>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        진행 중 업무 {count}건 · 평균 진척률 {Math.round(avgProgress)}%
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-micro font-semibold text-amber-700">
-                      점검 권장
+            <Field label="배정할 업무명">
+              <input
+                value={subprojectName}
+                onChange={(event) => setSubprojectName(event.target.value)}
+                placeholder="예: 제동 제어기 검증"
+                className="input"
+              />
+            </Field>
+
+            <Field label="프로젝트 유형">
+              <select
+                value={projectType}
+                onChange={(event) =>
+                  setProjectType(event.target.value as ProjectType)
+                }
+                className="input"
+              >
+                {Object.entries(PROJECT_TYPE_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="시작일">
+                <DatePicker value={startDate} onChange={setStartDate} />
+              </Field>
+              <Field label="종료일">
+                <DatePicker value={endDate} onChange={setEndDate} min={startDate} />
+              </Field>
+            </div>
+
+            {startDate && endDate && (
+              <div className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2 text-[12px] font-semibold text-[#1D4ED8]">
+                날짜 {startDate} ~ {endDate}
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-[#EAEAE4] bg-[#FAFAFA] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[#1A1A1A]">
+                    가용성 가중치
+                  </p>
+                  <p className="mt-1 text-xs text-[#888780]">
+                    남은 업무량과 일정 여유를 더 크게 반영합니다.
+                  </p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-[#5F5E5A]">
+                  {availabilityWeight}% / 역량 {capabilityWeight}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={availabilityWeight}
+                onChange={(event) =>
+                  setAvailabilityWeight(Number(event.target.value))
+                }
+                className="mt-4 w-full accent-indigo-600"
+              />
+            </div>
+
+            <div className="rounded-2xl border border-dashed border-[#D3D1C7] bg-[#F8F8F5] p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#888780]">
+                최근 프로젝트 힌트
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {projectHints.length === 0 ? (
+                    <span className="text-sm text-[#B4B2A9]">
+                      최근 프로젝트가 없습니다.
                     </span>
-                  </Link>
-                ))}
+                  ) : (
+                  projectHints.map((project) => (
+                    <button
+                      key={project.id}
+                      type="button"
+                      onClick={() => setProjectName(project.name)}
+                      className="rounded-full border border-[#EAEAE4] bg-white px-3 py-1.5 text-sm text-[#5F5E5A] hover:border-[#AFA9EC] hover:text-[#534AB7]"
+                    >
+                      {project.name}
+                    </button>
+                  ))
+                )}
               </div>
-            )}
-          </Panel>
+            </div>
 
-          <Panel
-            title="담당자 재배치 후보"
-            description="현재 업무 수가 많은 순서대로 확인해 배분을 조정할 수 있습니다."
-          >
-            {memberLoad.length === 0 ? (
-              <EmptyState text="현재 배정된 업무가 없습니다." />
-            ) : (
-              <div className="space-y-3">
-                {memberLoad.slice(0, 5).map(({ user, count, avgProgress }) => (
-                  <div
-                    key={user.id}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {user.name}
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          진행 중 업무 {count}건 · 평균 진척률 {Math.round(avgProgress)}%
-                        </p>
-                      </div>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-micro font-semibold text-slate-600">
-                        {user.role === 'admin' ? '관리자' : '팀원'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Panel>
+            <button
+              type="button"
+              onClick={handleRecommend}
+              disabled={!canSubmit}
+              className="w-full rounded-lg bg-[#534AB7] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#433A9A] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy ? '추천 분석 중...' : 'AI 추천 실행'}
+            </button>
+          </div>
         </section>
 
-        <section className="space-y-6">
-          <Panel
-            title="즉시 배정 필요"
-            description="담당자가 비어 있는 소프로젝트입니다."
-          >
-            {unassigned.length === 0 ? (
-              <EmptyState text="현재 미배정 업무가 없습니다." />
-            ) : (
-              <div className="space-y-3">
-                {unassigned.slice(0, 6).map((subproject) => (
-                  <div
-                    key={subproject.id}
-                    className="rounded-xl border border-dashed border-rose-200 bg-rose-50 px-4 py-3"
-                  >
-                    <p className="text-sm font-semibold text-slate-900">
-                      {subproject.name}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {subproject.start_date} ~ {subproject.end_date}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Panel>
+        <section className="rounded-3xl border border-[#EAEAE4] bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">
+                추천 결과 TOP 3
+              </h2>
+              <p className="mt-2 text-sm text-slate-500">
+                후보를 확정하면 개인 캘린더로 즉시 이동하며 해당 담당자가 자동으로
+                선택됩니다.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-[#F8F8F5] px-4 py-3 text-right">
+              <p className="text-xs text-[#888780]">활성 팀원</p>
+              <p className="text-2xl font-bold text-[#1A1A1A]">
+                {loading ? '--' : users.length}
+              </p>
+            </div>
+          </div>
 
-          <Panel
-            title="마감 임박 업무"
-            description="이번 주 안에 확인이 필요한 항목입니다."
-          >
-            {overdueSoon.length === 0 ? (
-              <EmptyState text="임박한 업무가 없습니다." />
-            ) : (
-              <div className="space-y-3">
-                {overdueSoon.map((subproject) => (
-                  <div
-                    key={subproject.id}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-slate-900">
-                        {subproject.name}
+          {busy && (
+            <div className="rounded-2xl border border-[#AFA9EC] bg-[#EEEDFE] p-6 text-center">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#D9D7FB] border-t-[#534AB7]" />
+              <p className="mt-4 text-sm font-medium text-[#26215C]">
+                업무 추천을 계산하는 중입니다
+              </p>
+              <p className="mt-1 text-xs text-[#534AB7]">
+                최근 수행 이력, 잔여 업무, 프로젝트 유형 경험치를 함께 반영하고
+                있습니다.
+              </p>
+            </div>
+          )}
+
+          {!busy && !recommendation && (
+            <EmptyPanel text="왼쪽에서 조건을 입력하고 추천을 실행하면 후보 카드가 여기에 나타납니다." />
+          )}
+
+          {!busy && recommendation && recommendation.candidates.length === 0 && (
+            <EmptyPanel text="추천 가능한 후보가 없습니다. 날짜나 가중치를 조정해보세요." />
+          )}
+
+          {!busy && recommendation && recommendation.candidates.length > 0 && (
+            <div className="space-y-4">
+              {recommendation.candidates.map((candidate) => (
+                <article
+                  key={candidate.user_id}
+                  className={`rounded-xl border p-[13px] transition ${
+                    candidate.rank === 1
+                      ? 'border-[#534AB7] bg-white'
+                      : 'border-[#AFA9EC] bg-white'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <div
+                        className={`mb-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-2 text-[9px] font-bold ${
+                          candidate.rank === 1
+                            ? 'bg-[#534AB7] text-white'
+                            : 'bg-[#EEEDFE] text-[#534AB7]'
+                        }`}
+                      >
+                        {candidate.rank}
+                      </div>
+                      <h3 className="text-[13px] font-bold text-[#1A1A1A]">
+                        {candidate.name}
+                      </h3>
+                      <p className="mt-1 text-[9px] text-[#888780]">
+                        {candidate.role === 'admin' ? '관리자' : '구성원'} · 유사
+                        업무 {candidate.keyword_experience_count}건
                       </p>
-                      <span className="rounded-full bg-rose-100 px-2 py-0.5 text-micro font-semibold text-rose-700">
-                        D-{Math.max(daysUntil(subproject.end_date), 0)}
-                      </span>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">
-                      담당자 {subproject.assignee?.name ?? '미배정'} · 종료일 {subproject.end_date}
-                    </p>
+                    <div className="rounded-2xl bg-[#FAFAFA] px-4 py-3 text-right">
+                      <p className="text-xs text-[#888780]">적합도</p>
+                      <p className="text-2xl font-bold text-[#534AB7]">
+                        {Math.round(candidate.score)}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </Panel>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <MetricCard
+                      label="가용성"
+                      value={`${Math.round(candidate.availability_score)}점`}
+                    />
+                    <MetricCard
+                      label="역량"
+                      value={`${Math.round(candidate.capability_score)}점`}
+                    />
+                    <MetricCard
+                      label="잔여 업무"
+                      value={`${candidate.remaining_minutes}분`}
+                    />
+                  </div>
+
+                  <div className="mt-4 rounded-2xl bg-[#FAFAFA] p-4">
+                    <p className="text-sm font-semibold text-[#1A1A1A]">
+                      추천 이유
+                    </p>
+                    <ul className="mt-2 space-y-2 text-[10px] text-[#5F5E5A]">
+                      {candidate.reasons.map((reason, index) => (
+                        <li
+                          key={reason}
+                          className="flex items-start gap-2 rounded-xl bg-white px-3 py-2"
+                        >
+                          <span
+                            className={`mt-1 h-1 w-1 rounded-full ${
+                              index === 0
+                                ? 'bg-[#534AB7]'
+                                : index === 1
+                                  ? 'bg-[#0F6E56]'
+                                  : 'bg-[#854F0B]'
+                            }`}
+                          />
+                          {reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={assigningUserId !== null}
+                    onClick={() => handleAssign(candidate)}
+                    className="mt-4 w-full rounded-lg bg-[#534AB7] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#433A9A] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {assigningUserId === candidate.user_id
+                      ? '배정 적용 중...'
+                      : `${candidate.name}님에게 확정 배정`}
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
       </div>
-
-      <ChatBot />
     </AppShell>
   );
 }
 
-function StatCard({
+function Field({
   label,
-  value,
-  hint,
+  children,
 }: {
   label: string;
-  value: string;
-  hint: string;
+  children: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+    <label className="block">
+      <span className="mb-2 block text-sm font-medium text-[#5F5E5A]">
         {label}
-      </p>
-      <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
-      <p className="mt-1 text-xs text-slate-400">{hint}</p>
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-white p-4">
+      <p className="text-xs text-[#888780]">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-[#1A1A1A]">{value}</p>
     </div>
   );
 }
 
-function Panel({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
+function EmptyPanel({ text }: { text: string }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-        <p className="mt-1 text-sm text-slate-500">{description}</p>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function EmptyState({ text }: { text: string }) {
-  return (
-    <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+    <div className="rounded-2xl border border-dashed border-[#D3D1C7] bg-[#F8F8F5] px-6 py-12 text-center text-sm text-[#888780]">
       {text}
-    </p>
+    </div>
   );
 }
 
-function average(values: number[]) {
-  if (values.length === 0) return 0;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+function toISODate(value: Date) {
+  return value.toISOString().slice(0, 10);
 }
 
-function daysUntil(date: string) {
-  const target = new Date(`${date}T00:00:00`);
-  const now = new Date();
-  const diff = target.getTime() - now.getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }

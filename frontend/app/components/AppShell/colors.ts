@@ -1,24 +1,28 @@
-/**
- * 사이드바의 프로젝트/팀원 컬러 도트에서 사용할 색상 팔레트.
- * 결정론적 해시로 id → 색을 매핑해 재렌더/재로드 시에도 일관된다.
- */
-export const DOT_COLORS = [
-  'bg-indigo-500',
-  'bg-violet-500',
-  'bg-emerald-500',
-  'bg-amber-500',
-  'bg-blue-500',
-  'bg-rose-500',
-  'bg-teal-500',
-  'bg-fuchsia-500',
-  'bg-sky-500',
-  'bg-orange-500',
+const COLOR_PALETTE = [
+  { dot: 'bg-[#2563EB]', soft: 'bg-[#EFF6FF]', text: 'text-[#2563EB]' },
+  { dot: 'bg-[#534AB7]', soft: 'bg-[#EEEDFE]', text: 'text-[#534AB7]' },
+  { dot: 'bg-[#0F6E56]', soft: 'bg-[#E1F5EE]', text: 'text-[#0F6E56]' },
+  { dot: 'bg-[#854F0B]', soft: 'bg-[#FAEEDA]', text: 'text-[#854F0B]' },
+  { dot: 'bg-[#185FA5]', soft: 'bg-[#E6F1FB]', text: 'text-[#185FA5]' },
+  { dot: 'bg-[#993556]', soft: 'bg-[#FBEAF0]', text: 'text-[#993556]' },
 ];
 
-export function colorForId(id: number | string): string {
-  const n =
+function colorIndex(id: number | string) {
+  const seed =
     typeof id === 'number'
       ? id
-      : Array.from(id).reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return DOT_COLORS[Math.abs(n) % DOT_COLORS.length];
+      : Array.from(id).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return Math.abs(seed) % COLOR_PALETTE.length;
+}
+
+export function colorForId(id: number | string): string {
+  return COLOR_PALETTE[colorIndex(id)].dot;
+}
+
+export function softColorForId(id: number | string): string {
+  return COLOR_PALETTE[colorIndex(id)].soft;
+}
+
+export function textColorForId(id: number | string): string {
+  return COLOR_PALETTE[colorIndex(id)].text;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect } from 'react';
 
 type Size = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -15,22 +15,13 @@ type Props = {
   open: boolean;
   onClose: () => void;
   size?: Size;
-  /** true면 backdrop 클릭으로 닫힘 (기본 true) */
   closeOnBackdrop?: boolean;
-  /** true면 ESC 키로 닫힘 (기본 true) */
   closeOnEsc?: boolean;
-  /** 내용이 길어 스크롤이 필요한 폼에 사용 */
   scrollable?: boolean;
   ariaLabel?: string;
   children: ReactNode;
 };
 
-/**
- * 공통 모달 베이스
- * - PersonalModal / TeamModal 의 backdrop·container 패턴을 통합
- * - 기본 사이즈: md (max-w-lg)
- * - scrollable=true 시 max-h 92vh 와 overflow-y-auto 적용 (TeamModal 패턴)
- */
 export default function Modal({
   open,
   onClose,
@@ -43,8 +34,8 @@ export default function Modal({
 }: Props) {
   useEffect(() => {
     if (!open || !closeOnEsc) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -52,14 +43,10 @@ export default function Modal({
 
   if (!open) return null;
 
-  const handleBackdrop = () => {
-    if (closeOnBackdrop) onClose();
-  };
-
   const containerCls = [
-    'w-full rounded-2xl bg-white p-6 shadow-xl',
+    'relative w-full rounded-2xl border border-[#D3D1C7] bg-white p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]',
     SIZE_CLASS[size],
-    scrollable ? 'max-h-[92vh] overflow-y-auto' : '',
+    scrollable ? 'max-h-[88vh] overflow-y-auto' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -69,10 +56,12 @@ export default function Modal({
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={handleBackdrop}
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/35 p-4"
+      onClick={() => {
+        if (closeOnBackdrop) onClose();
+      }}
     >
-      <div className={containerCls} onClick={(e) => e.stopPropagation()}>
+      <div className={containerCls} onClick={(event) => event.stopPropagation()}>
         {children}
       </div>
     </div>

@@ -15,3 +15,11 @@ from app.models.project import (  # noqa: F401
     DEFAULT_SUBTASK_TEMPLATE,
 )
 from app.models.progress_log import ProgressLog  # noqa: F401
+from app.models.workflow import (  # noqa: F401
+    ProjectTemplate,
+    UserSetting,
+    WorkLog,
+    WORKLOG_COMPLETED,
+    WORKLOG_PAUSED,
+    WORKLOG_RUNNING,
+)

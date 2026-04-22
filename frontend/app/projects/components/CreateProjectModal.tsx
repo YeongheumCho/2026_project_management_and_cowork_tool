@@ -36,18 +36,18 @@ export default function CreateProjectModal({
 
   const disabled = useMemo(() => !name.trim() || busy, [name, busy]);
 
-  const reset = () => {
+  function reset() {
     setName('');
     setType('official_inspection');
-  };
+  }
 
-  const handleClose = () => {
+  function handleClose() {
     if (busy) return;
     reset();
     onClose();
-  };
+  }
 
-  const submit = async (event: FormEvent) => {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     if (disabled) return;
 
@@ -65,7 +65,7 @@ export default function CreateProjectModal({
     } finally {
       setBusy(false);
     }
-  };
+  }
 
   return (
     <Modal open={open} onClose={handleClose} size="md" ariaLabel="새 프로젝트 생성">
@@ -73,7 +73,8 @@ export default function CreateProjectModal({
         <div>
           <h2 className="text-xl font-semibold text-slate-900">새 프로젝트</h2>
           <p className="mt-1 text-sm text-slate-500">
-            대시보드에서 바로 프로젝트를 만들고 이어서 관리할 수 있습니다.
+            대시보드에서 바로 프로젝트를 만들고, 이후 세부 업무를 이어서 관리할
+            수 있습니다.
           </p>
         </div>
 

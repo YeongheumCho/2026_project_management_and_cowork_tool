@@ -4,25 +4,18 @@ type Props = {
   label: string;
   value: string;
   hint?: string;
-  /** 값에 사용할 색상 토큰 */
   tone?: 'indigo' | 'emerald' | 'amber' | 'rose' | 'slate';
   loading?: boolean;
 };
 
 const TONE: Record<NonNullable<Props['tone']>, string> = {
-  indigo: 'text-indigo-600',
-  emerald: 'text-emerald-600',
-  amber: 'text-amber-600',
-  rose: 'text-rose-600',
-  slate: 'text-slate-700',
+  indigo: 'text-[#534AB7]',
+  emerald: 'text-[#3B6D11]',
+  amber: 'text-[#854F0B]',
+  rose: 'text-[#185FA5]',
+  slate: 'text-[#1A1A1A]',
 };
 
-/**
- * Dashboard 상단 KPI 카드 (Figma "개요" 4-up 카드 기준).
- *
- * value 는 숫자가 아닌 "63%", "89h" 같이 단위를 포함한 문자열로 받아
- * 카드 별로 포맷을 분리하지 않고 호출부에서 책임지게 한다.
- */
 export default function KpiCard({
   label,
   value,
@@ -31,14 +24,14 @@ export default function KpiCard({
   loading,
 }: Props) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+    <div className="rounded-xl border border-[#EAEAE4] bg-white px-[18px] py-4 shadow-sm">
+      <p className="text-[9px] font-bold uppercase tracking-[0.8px] text-[#888780]">
         {label}
       </p>
-      <p className={`mt-2 text-3xl font-bold ${TONE[tone]}`}>
-        {loading ? '—' : value}
+      <p className={`mt-2 text-[26px] font-bold leading-none ${TONE[tone]}`}>
+        {loading ? '--' : value}
       </p>
-      {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
+      {hint && <p className="mt-[5px] text-[10px] text-[#888780]">{hint}</p>}
     </div>
   );
 }

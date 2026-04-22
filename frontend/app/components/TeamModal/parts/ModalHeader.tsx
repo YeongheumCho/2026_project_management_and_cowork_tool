@@ -9,10 +9,6 @@ type Props = {
   onDelete: () => void;
 };
 
-/**
- * 모달 상단 제목 + (조건부) 삭제 버튼.
- * 완료된 소프로젝트는 삭제가 금지되므로 onDelete 호출 가능 여부는 상위가 결정.
- */
 export default function ModalHeader({
   mode,
   selectedProject,
@@ -20,25 +16,30 @@ export default function ModalHeader({
   onDelete,
 }: Props) {
   return (
-    <div className="flex items-start justify-between">
+    <div className="flex items-start justify-between gap-4">
       <div>
-        <h3 className="text-lg font-semibold">
-          {mode === 'create' ? '소프로젝트 추가' : '소프로젝트 수정'}
+        <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#888780]">
+          Team calendar subproject details
+        </p>
+        <h3 className="mt-2 text-[19px] font-bold text-[#1A1A1A]">
+          {mode === 'create' ? 'Add subproject' : 'Edit subproject'}
         </h3>
         {selectedProject && (
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-1 text-[11px] text-[#888780]">
             {selectedProject.name} ·{' '}
             {PROJECT_TYPE_LABEL[selectedProject.project_type] ??
               selectedProject.project_type}
           </p>
         )}
       </div>
+
       {canDelete && (
         <button
+          type="button"
           onClick={onDelete}
-          className="rounded-lg border border-red-200 px-3 py-1 text-sm text-red-600 hover:bg-red-50"
+          className="rounded-lg border border-[#F4C9C9] px-3 py-1.5 text-[11px] font-bold text-[#A32D2D] hover:bg-[#FCEBEB]"
         >
-          × 삭제
+          Delete subproject
         </button>
       )}
     </div>

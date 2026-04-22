@@ -1,10 +1,7 @@
 'use client';
 
-import {
-  PROJECT_TYPE_LABEL,
-  type Project,
-  type SubProject,
-} from '../../lib/api';
+import { PROJECT_TYPE_LABEL, type Project, type SubProject } from '../../lib/api';
+import ProgressBar from '../../components/ProgressBar';
 import SubProjectListItem from './SubProjectListItem';
 
 type Props = {
@@ -17,9 +14,6 @@ type Props = {
   onEditSub: (sp: SubProject) => void;
 };
 
-/**
- * 프로젝트 단위 카드 — 헤더(요약 + 추가 버튼) + 펼쳐진 상태의 소프로젝트 목록.
- */
 export default function ProjectCard({
   project,
   subprojects,
@@ -31,57 +25,80 @@ export default function ProjectCard({
 }: Props) {
   const total = subprojects.length;
   const done = subprojects.filter((sp) => sp.status === 'completed').length;
+  const inProgress = subprojects.filter((sp) => sp.status === 'in_progress').length;
+  const progress = total > 0 ? (done / total) * 100 : 0;
   const typeLabel =
     PROJECT_TYPE_LABEL[project.project_type] ?? project.project_type;
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <header className="flex flex-wrap items-center gap-3 p-4">
-        <button
-          onClick={() => onToggle(project.id)}
-          className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-xs text-slate-500 hover:bg-slate-50"
-          aria-label={isOpen ? '접기' : '펼치기'}
-        >
-          {isOpen ? '−' : '+'}
-        </button>
-        <div className="flex-1 min-w-[160px]">
-          <p className="text-base font-semibold">
-            {project.name}
-            <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-micro text-slate-600">
-              {typeLabel}
-            </span>
-          </p>
-          <p className="text-micro text-slate-500">
-            생성 {new Date(project.created_at).toLocaleDateString('ko-KR')} ·
-            소프로젝트 {total}건 (완료 {done})
-          </p>
-        </div>
-        {isAdmin && (
+    <section className="overflow-hidden rounded-[24px] border border-[#E7E5DD] bg-white shadow-[0_14px_40px_rgba(28,25,23,0.06)]">
+      <header className="border-b border-[#F0EEE7] px-5 py-4">
+        <div className="flex flex-wrap items-start gap-3">
           <button
-            onClick={() => onAddSub(project.id)}
-            className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+            type="button"
+            onClick={() => onToggle(project.id)}
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#DDDAD0] bg-[#FAFAF7] text-sm font-semibold text-[#5F5E5A] transition hover:border-[#BDB8E9] hover:text-[#534AB7]"
+            aria-label={isOpen ? 'Collapse project' : 'Expand project'}
           >
-            + 소프로젝트 추가
+            {isOpen ? '-' : '+'}
           </button>
-        )}
+
+          <div className="min-w-[220px] flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#6D61FF]" />
+              <h3 className="text-[17px] font-semibold tracking-[-0.02em] text-[#1D1D1B]">
+                {project.name}
+              </h3>
+              <span className="rounded-full border border-[#E5E2FF] bg-[#F5F3FF] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#534AB7]">
+                {typeLabel}
+              </span>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[#7A786F]">
+              <span>
+                Created {new Date(project.created_at).toLocaleDateString('ko-KR')}
+              </span>
+              <span>{total} subprojects</span>
+              <span>{done} completed</span>
+              <span>{inProgress} in progress</span>
+            </div>
+          </div>
+
+          <div className="min-w-[180px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-[#5F5E5A]">
+              <span>Project progress</span>
+              <span className="text-[#1D1D1B]">{Math.round(progress)}%</span>
+            </div>
+            <ProgressBar
+              value={progress}
+              className="mt-2"
+              ariaLabel={`${project.name} progress`}
+            />
+          </div>
+
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => onAddSub(project.id)}
+              className="rounded-[14px] bg-[#534AB7] px-4 py-2 text-[11px] font-bold text-white shadow-[0_8px_20px_rgba(83,74,183,0.24)] transition hover:bg-[#473EA7]"
+            >
+              + Add subproject
+            </button>
+          )}
+        </div>
       </header>
 
       {isOpen && (
-        <div className="border-t border-slate-100 bg-slate-50/40 p-4">
+        <div className="bg-[#FBFBF8] px-5 py-5">
           {subprojects.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
-              아직 소프로젝트가 없습니다.
-              {isAdmin &&
-                ' 위의 [+ 소프로젝트 추가] 버튼으로 만들 수 있어요.'}
+            <p className="rounded-[18px] border border-dashed border-[#D7D4CA] bg-white px-5 py-8 text-center text-sm text-[#8B897F]">
+              No subprojects yet.
+              {isAdmin ? ' Add one from the button above to get started.' : ''}
             </p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {subprojects.map((sp) => (
-                <SubProjectListItem
-                  key={sp.id}
-                  sp={sp}
-                  onClick={onEditSub}
-                />
+                <SubProjectListItem key={sp.id} sp={sp} onClick={onEditSub} />
               ))}
             </ul>
           )}

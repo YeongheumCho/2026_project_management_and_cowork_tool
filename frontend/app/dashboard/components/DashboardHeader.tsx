@@ -4,11 +4,6 @@ type Props = {
   onRequestAiSuggestion?: () => void;
 };
 
-/**
- * 개요 페이지 상단 서브헤더 — "팀 대시보드" 제목 + 부제 + AI 추천 버튼.
- *
- * Figma WorkFlow AI 의 개요 탭에 맞춘 스타일.
- */
 export default function DashboardHeader({ onRequestAiSuggestion }: Props) {
   const today = new Date();
   const ym = today.toLocaleDateString('ko-KR', {
@@ -19,8 +14,10 @@ export default function DashboardHeader({ onRequestAiSuggestion }: Props) {
   return (
     <div className="mb-6 flex items-start justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">팀 대시보드</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-[20px] font-bold tracking-[-0.3px] text-[#1A1A1A]">
+          팀 대시보드
+        </h1>
+        <p className="mt-1 text-[12px] text-[#888780]">
           {ym} · 전체 프로젝트 현황
         </p>
       </div>
@@ -28,7 +25,7 @@ export default function DashboardHeader({ onRequestAiSuggestion }: Props) {
         <button
           type="button"
           onClick={onRequestAiSuggestion}
-          className="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="shrink-0 rounded-lg border border-[#D3D1C7] bg-white px-[14px] py-[7px] text-[12px] font-bold text-[#534AB7] hover:bg-[#F8F8F5]"
         >
           AI 업무 추천 받기
         </button>
