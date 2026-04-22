@@ -95,7 +95,7 @@ export default function PersonalCalendarPage() {
               }`}
             >
               {u.name}
-              <span className="ml-1 text-[11px] opacity-70">
+              <span className="ml-1 text-micro opacity-70">
                 ({u.role === 'admin' ? '관리자' : '일반'})
               </span>
             </button>
@@ -144,12 +144,12 @@ export default function PersonalCalendarPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{sp.name}</span>
                     {sp.status === 'completed' && (
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-micro font-semibold text-emerald-700">
                         완료
                       </span>
                     )}
                   </div>
-                  <div className="mt-1 text-[11px] text-slate-500">
+                  <div className="mt-1 text-micro text-slate-500">
                     {sp.start_date} ~ {sp.end_date}
                   </div>
                   <ProgressBar

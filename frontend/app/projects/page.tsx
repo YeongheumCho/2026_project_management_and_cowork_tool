@@ -205,11 +205,11 @@ export default function ProjectsPage() {
                 <div className="flex-1 min-w-[160px]">
                   <p className="text-base font-semibold">
                     {p.name}
-                    <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
+                    <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-micro text-slate-600">
                       {typeLabel}
                     </span>
                   </p>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-micro text-slate-500">
                     생성 {new Date(p.created_at).toLocaleDateString('ko-KR')} ·
                     소프로젝트 {total}건 (완료 {done})
                   </p>
@@ -258,31 +258,31 @@ export default function ProjectsPage() {
                               <div className="flex flex-wrap items-center gap-2">
                                 <p className="text-sm font-medium">{sp.name}</p>
                                 <span
-                                  className={`rounded-full px-2 py-0.5 text-[11px] ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
+                                  className={`rounded-full px-2 py-0.5 text-micro ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
                                 >
                                   {SUBPROJECT_STATUS_LABEL[sp.status]}
                                 </span>
                                 {sp.upload_done && (
-                                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-600">
+                                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-micro text-emerald-600">
                                     업로드 완
                                   </span>
                                 )}
-                                <span className="ml-auto text-[11px] text-slate-500">
+                                <span className="ml-auto text-micro text-slate-500">
                                   {sp.start_date} ~ {sp.end_date}
                                 </span>
                               </div>
                               {metaBits.length > 0 && (
-                                <p className="mt-1 text-[11px] text-slate-500">
+                                <p className="mt-1 text-micro text-slate-500">
                                   {metaBits.join(' · ')}
                                 </p>
                               )}
                               {(first || ir) && (
-                                <p className="mt-1 text-[11px] text-slate-600">
+                                <p className="mt-1 text-micro text-slate-600">
                                   1차: {first ?? '—'} &nbsp;//&nbsp; InReview:{' '}
                                   {ir ?? '—'}
                                 </p>
                               )}
-                              <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
+                              <div className="mt-1 flex items-center justify-between text-micro text-slate-500">
                                 <span>
                                   {sp.assignee?.name ?? '담당자 미지정'}
                                 </span>

@@ -135,11 +135,11 @@ export default function TeamCalendarPage() {
                 <div className="flex items-center gap-2">
                   <span className={`h-2 w-2 rounded-full ${SUBPROJECT_STATUS_DOT[sp.status]}`} />
                   <span className="text-sm font-medium">{sp.name}</span>
-                  <span className="ml-auto text-[11px] text-slate-500">
+                  <span className="ml-auto text-micro text-slate-500">
                     {SUBPROJECT_STATUS_LABEL[sp.status]}
                   </span>
                 </div>
-                <div className="mt-1 flex justify-between text-[11px] text-slate-500">
+                <div className="mt-1 flex justify-between text-micro text-slate-500">
                   <span>{sp.assignee?.name ?? '담당자 미지정'}</span>
                   <span>
                     {sp.start_date} ~ {sp.end_date}
