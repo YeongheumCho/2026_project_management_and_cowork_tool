@@ -1,0 +1,4 @@
+http://{$APP_HOSTNAME} {
+    encode gzip zstd
+    reverse_proxy frontend:3000
+}
