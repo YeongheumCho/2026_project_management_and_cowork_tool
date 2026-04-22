@@ -252,3 +252,44 @@ dashboard/page.tsx:157  text-[11px]   // STATUS_BADGE 안
 - **컴포넌트 문서화**: `/design-system document Modal` (혹은 `Button`, `ProgressBar`)
 - **새 패턴 설계**: `/design-system extend StatusBadge`
 - **완료 후 회고**: 토큰 도입 후 `/design-system audit` 재실행하여 점수 변화 추적
+
+---
+
+## 적용 진행 (2026-04-22)
+
+Critical / High / Medium 이슈를 소스에 직접 반영했습니다.
+
+| 코드 | 항목 | 상태 | 변경 요약 |
+|------|------|------|-----------|
+| C-1 | `.input` 유틸리티 정의 누락 | ✅ 적용 | `globals.css` 에 `@utility input`, `input-sm` 정의 + focus 링/disabled 상태 |
+| C-2 | 검증 10단계 라벨/색상 매핑 부재 | ✅ 적용 | `lib/verifyStatus.ts` 신설 — `lib/api.ts` 의 `VERIFY_STATE_LABEL` 재사용 + `verifyStateBadge/Dot` 톤 매핑 |
+| H-1 | `STATUS_*` 4파일 중복 | ✅ 적용 | `lib/subprojectStatus.ts` 단일 출처로 통합 후 4 파일이 import |
+| H-2 | `API_BASE_URL` 4곳 하드코딩 | ✅ 적용 | `lib/api.ts` 에서 `process.env.NEXT_PUBLIC_API_BASE_URL` fallback 노출, 나머지 파일이 re-import |
+| H-3 | `@theme` 시맨틱 토큰 부재 | ✅ 적용 | brand/surface/text/border/status/verify/radius/focus 토큰 추가 (`globals.css` `:root` + `@theme inline`) |
+| H-5 | Modal 패턴 중복 | ✅ 적용 | `components/Modal.tsx` 신설, PersonalModal/TeamModal 마이그레이션 |
+| M-1 | 둥글기 토큰 표준화 | ✅ 적용 | `--radius-sm/md/lg/pill` 정의, 베이스 유틸리티(`card/btn/input/badge`)가 토큰 사용 |
+| M-2 | 임의 픽셀값 (`text-[10/11px]`) | ✅ 적용 | `text-micro` 유틸리티 신설, 8개 사용처 일괄 치환 |
+| M-3 | Field / Label / HelperText 부재 | ✅ 적용 | `components/form/Field.tsx` 신설, TeamModal 에서 채택 |
+| M-4 | Button 컴포넌트 부재 | ✅ 적용 | `components/Button.tsx` 신설 (variant/size/loading/block 지원) |
+| M-5 | 진척도 바 인라인 반복 | ✅ 적용 | `components/ProgressBar.tsx` 신설, 5개 사용처 일괄 치환 |
+| M-6 | 타이핑 인디케이터 인라인 | ✅ 적용 | `components/TypingIndicator.tsx` 신설, `chat-dot` 유틸리티 재사용 |
+
+### 잔여 작업 (Low priority)
+
+- Button 컴포넌트를 기존 페이지 버튼(`<button className="rounded-lg bg-blue-600 ...">`) 에 점진 마이그레이션 (현재는 컴포넌트만 준비됨).
+- WCAG 2.1 AA 관점 접근성 감사는 별도로 `/design:accessibility-review` 실행 권장.
+- 제안된 환경 변수 `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_AI_CHATBOT_URL` 을 `.env.example` 에 문서화.
+
+### 검증 결과 (grep)
+
+- 잔여 `text-[10/11px]`: **0 건**
+- 잔여 인라인 진척도 바 (`h-full bg-blue-500`): **0 건** (ProgressBar 내부 정의만 남음)
+- 로컬 `STATUS_LABEL/BADGE/DOT/BG` 정의: **0 건**
+- 하드코딩 `API_BASE_URL = 'http...'`: **0 건**
+- 이전 챗봇 타이핑 패턴 (`animate-bounce ... animationDelay`): **0 건**
+
+TypeScript 빌드 검증(`tsc --noEmit`)은 `node_modules` 가 준비된 환경에서 실행해 주세요:
+```
+cd frontend && npm install && npx tsc --noEmit
+```
+

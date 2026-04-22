@@ -144,7 +144,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">{sp.name}</p>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
+                      className={`rounded-full px-2 py-0.5 text-micro ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
                     >
                       {SUBPROJECT_STATUS_LABEL[sp.status]}
                     </span>
@@ -189,7 +189,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">{sp.name}</p>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
+                      className={`rounded-full px-2 py-0.5 text-micro ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
                     >
                       {SUBPROJECT_STATUS_LABEL[sp.status]}
                     </span>
