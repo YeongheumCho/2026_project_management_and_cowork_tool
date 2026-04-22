@@ -1,0 +1,8 @@
+{
+  "name": "kpi-collab-workflows",
+  "description": "Shared Claude Code workflows for the KPI project management and cowork tool repository.",
+  "version": "1.0.0",
+  "author": {
+    "name": "OpenAI Codex"
+  }
+}
