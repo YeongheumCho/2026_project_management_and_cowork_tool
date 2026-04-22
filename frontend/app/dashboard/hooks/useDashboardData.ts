@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   apiFetch,
   type Project,
@@ -24,6 +24,7 @@ type UseDashboardDataResult = {
   loading: boolean;
   error: string;
   todayIso: string;
+  reload: () => Promise<void>;
 };
 
 /**
@@ -43,29 +44,34 @@ export function useDashboardData(enabled: boolean): UseDashboardDataResult {
   const [users, setUsers] = useState<UserBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const mountedRef = useRef(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [ps, sps, us] = await Promise.all([
+        apiFetch<Project[]>('/projects'),
+        apiFetch<SubProject[]>('/subprojects'),
+        apiFetch<UserBrief[]>('/users'),
+      ]);
+      if (!mountedRef.current) return;
+      setProjects(ps);
+      setSubProjects(sps);
+      setUsers(us);
+      setError('');
+    } catch (err) {
+      if (mountedRef.current) setError((err as Error).message);
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!enabled) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const [ps, sps, us] = await Promise.all([
-          apiFetch<Project[]>('/projects'),
-          apiFetch<SubProject[]>('/subprojects'),
-          apiFetch<UserBrief[]>('/users'),
-        ]);
-        if (cancelled) return;
-        setProjects(ps);
-        setSubProjects(sps);
-        setUsers(us);
-      } catch (err) {
-        if (!cancelled) setError((err as Error).message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+    mountedRef.current = true;
+    void load();
     return () => {
-      cancelled = true;
+      mountedRef.current = false;
     };
   }, [enabled]);
 
@@ -116,5 +122,6 @@ export function useDashboardData(enabled: boolean): UseDashboardDataResult {
     loading,
     error,
     todayIso,
+    reload: () => load(),
   };
 }

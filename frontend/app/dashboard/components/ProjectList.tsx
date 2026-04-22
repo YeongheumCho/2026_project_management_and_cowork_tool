@@ -7,6 +7,8 @@ type Props = {
   projects: Project[];
   subprojects: SubProject[];
   loading: boolean;
+  selectedProjectId?: number | null;
+  onSelectProject?: (projectId: number) => void;
 };
 
 /**
@@ -18,6 +20,8 @@ export default function ProjectList({
   projects,
   subprojects,
   loading,
+  selectedProjectId,
+  onSelectProject,
 }: Props) {
   const byProject = new Map<number, SubProject[]>();
   for (const sp of subprojects) {
@@ -49,6 +53,8 @@ export default function ProjectList({
               key={p.id}
               project={p}
               subprojects={byProject.get(p.id) ?? []}
+              selected={selectedProjectId === p.id}
+              onSelect={onSelectProject}
             />
           ))}
       </div>

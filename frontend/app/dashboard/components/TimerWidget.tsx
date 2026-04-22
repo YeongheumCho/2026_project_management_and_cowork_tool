@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import type { SubProject } from '../../lib/api';
 
 type Props = {
-  /** 내가 현재 진행 중인 소프로젝트 후보 (선택 드롭다운에 사용) */
+  /** 현재 선택된 프로젝트에 속한 소프로젝트 후보 */
   candidates: SubProject[];
+  projectName?: string;
+  helperText?: string;
 };
 
 type TimerState = 'idle' | 'running' | 'paused';
@@ -18,13 +20,28 @@ type TimerState = 'idle' | 'running' | 'paused';
  * - 재생/일시정지/정지 3버튼 컨트롤.
  * - 드롭다운으로 대상 소프로젝트 선택.
  */
-export default function TimerWidget({ candidates }: Props) {
+export default function TimerWidget({
+  candidates,
+  projectName,
+  helperText,
+}: Props) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [state, setState] = useState<TimerState>('idle');
   const [elapsed, setElapsed] = useState(0); // seconds
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const selected = candidates.find((c) => c.id === selectedId) ?? null;
+
+  useEffect(() => {
+    setState('idle');
+    setElapsed(0);
+    setSelectedId((current) => {
+      if (current && candidates.some((candidate) => candidate.id === current)) {
+        return current;
+      }
+      return candidates[0]?.id ?? null;
+    });
+  }, [candidates, projectName]);
 
   useEffect(() => {
     if (state !== 'running') return;
@@ -52,13 +69,19 @@ export default function TimerWidget({ candidates }: Props) {
         </p>
 
         <div className="flex-1 min-w-[200px]">
+          <p className="text-lg font-semibold text-slate-900">
+            {projectName ?? '선택된 프로젝트 없음'}
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            {helperText ?? '프로젝트를 선택하고 시작하세요'}
+          </p>
           <select
             value={selectedId ?? ''}
             onChange={(e) =>
               setSelectedId(e.target.value ? Number(e.target.value) : null)
             }
             disabled={state === 'running'}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm disabled:bg-slate-50"
+            className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm disabled:bg-slate-50"
           >
             <option value="">프로젝트를 선택하고 시작하세요</option>
             {candidates.map((c) => (

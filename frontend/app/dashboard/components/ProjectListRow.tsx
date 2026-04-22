@@ -11,6 +11,8 @@ import { colorForId } from '../../components/AppShell/colors';
 type Props = {
   project: Project;
   subprojects: SubProject[];
+  selected?: boolean;
+  onSelect?: (projectId: number) => void;
 };
 
 /**
@@ -22,7 +24,12 @@ type Props = {
  * "대표 상태" 선정 규칙: 모두 completed 면 completed, 아니면 진행 중 중
  * 가장 진척률 높은 항목 기준. (주요 시각 지표만 단순하게)
  */
-export default function ProjectListRow({ project, subprojects }: Props) {
+export default function ProjectListRow({
+  project,
+  subprojects,
+  selected = false,
+  onSelect,
+}: Props) {
   const total = subprojects.length;
   const done = subprojects.filter((sp) => sp.status === 'completed').length;
   const avgProgress =
@@ -46,11 +53,20 @@ export default function ProjectListRow({ project, subprojects }: Props) {
     ).values(),
   ).slice(0, 4);
 
-  return (
-    <Link
-      href={`/projects/${project.id}`}
-      className="flex items-center gap-4 rounded-xl border border-slate-100 bg-white p-4 hover:border-indigo-200 hover:bg-indigo-50/30"
-    >
+  const summary =
+    subprojects
+      .slice()
+      .sort((left, right) => right.progress - left.progress)[0]?.name ??
+    `소프로젝트 ${total}건 · 완료 ${done}건`;
+
+  const containerClass = `flex w-full items-center gap-4 rounded-xl border bg-white p-4 text-left transition ${
+    selected
+      ? 'border-indigo-300 bg-indigo-50/40 shadow-sm'
+      : 'border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30'
+  }`;
+
+  const content = (
+    <>
       <span
         className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorForId(project.id)}`}
       />
@@ -60,7 +76,7 @@ export default function ProjectListRow({ project, subprojects }: Props) {
           {project.name}
         </p>
         <p className="mt-0.5 truncate text-xs text-slate-500">
-          소프로젝트 {total}건 · 완료 {done}건
+          {summary}
         </p>
       </div>
 
@@ -95,6 +111,24 @@ export default function ProjectListRow({ project, subprojects }: Props) {
           {SUBPROJECT_STATUS_LABEL[representative]}
         </span>
       )}
+    </>
+  );
+
+  if (onSelect) {
+    return (
+      <button
+        type="button"
+        onClick={() => onSelect(project.id)}
+        className={containerClass}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link href={`/projects/${project.id}`} className={containerClass}>
+      {content}
     </Link>
   );
 }
