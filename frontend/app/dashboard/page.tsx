@@ -1,57 +1,39 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import AppShell from '../components/AppShell';
-import { apiFetch, type Project, type SubProject, type UserBrief } from '../lib/api';
-import { toISODate } from '../lib/calendar';
 import { useMe } from '../lib/useMe';
-import { SUBPROJECT_STATUS_LABEL, SUBPROJECT_STATUS_BADGE } from '../lib/subprojectStatus';
-import ProgressBar from '../components/ProgressBar';
+import DashboardHeader from './components/DashboardHeader';
+import KpiGrid from './components/KpiGrid';
+import ProjectList from './components/ProjectList';
+import TimerWidget from './components/TimerWidget';
+import { useDashboardData } from './hooks/useDashboardData';
 
+/**
+ * 개요(대시보드) 페이지.
+ *
+ * 이 파일은 오케스트레이션만 담당한다 — 데이터 로딩/KPI 집계는
+ * `hooks/useDashboardData`, UI 블록은 `components/` 하위 파일로 분리되어 있어
+ * 팀원별 동시 작업 시 충돌이 최소화된다.
+ *
+ * Figma "개요" 탭 구조:
+ * 상단 서브헤더 → KPI 4카드 → 타이머 위젯 → 프로젝트 목록
+ */
 export default function DashboardPage() {
   const { me, loading: meLoading } = useMe();
+  const enabled = !!me;
+  const {
+    projects,
+    subprojects,
+    users,
+    summary,
+    loading,
+    error,
+    todayIso,
+  } = useDashboardData(enabled);
 
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [subprojects, setSubProjects] = useState<SubProject[]>([]);
-  const [users, setUsers] = useState<UserBrief[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!me) return;
-    (async () => {
-      try {
-        const [ps, sps, us] = await Promise.all([
-          apiFetch<Project[]>('/projects'),
-          apiFetch<SubProject[]>('/subprojects'),
-          apiFetch<UserBrief[]>('/users'),
-        ]);
-        setProjects(ps);
-        setSubProjects(sps);
-        setUsers(us);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [me]);
-
-  const todayIso = toISODate(new Date());
-  const inProgressCount = useMemo(
-    () => subprojects.filter((sp) => sp.status !== 'completed').length,
-    [subprojects],
-  );
-  const dueTodayCount = useMemo(
-    () =>
-      subprojects.filter(
-        (sp) => sp.end_date === todayIso && sp.status !== 'completed',
-      ).length,
-    [subprojects, todayIso],
-  );
-  const memberCount = users.length;
-
-  const myTodaySubprojects = useMemo(() => {
+  // 타이머 위젯용 — 내가 담당한, 오늘 기간이 걸쳐 있는 소프로젝트
+  const myActive = useMemo(() => {
     if (!me) return [];
     return subprojects.filter(
       (sp) =>
@@ -61,14 +43,6 @@ export default function DashboardPage() {
         sp.status !== 'completed',
     );
   }, [subprojects, me, todayIso]);
-
-  const recentSubprojects = useMemo(
-    () =>
-      [...subprojects]
-        .sort((a, b) => b.created_at.localeCompare(a.created_at))
-        .slice(0, 5),
-    [subprojects],
-  );
 
   if (meLoading || !me) {
     return <main className="p-8 text-slate-900">불러오는 중...</main>;
@@ -82,153 +56,24 @@ export default function DashboardPage() {
         </p>
       )}
 
-      <p className="mb-6 text-sm text-slate-500">
-        프로젝트와 업무 현황을 한눈에 확인하는 공간 ·{' '}
-        {new Date().toLocaleDateString('ko-KR', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          weekday: 'long',
-        })}
-      </p>
+      <DashboardHeader />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <KpiCard
-          label="진행 중 소프로젝트"
-          value={inProgressCount}
-          hint={`전체 ${subprojects.length}건 중`}
-          loading={loading}
-        />
-        <KpiCard
-          label="오늘 마감 업무"
-          value={dueTodayCount}
-          hint={dueTodayCount > 0 ? '확인이 필요합니다' : '오늘 마감 없음'}
-          loading={loading}
-          accent={dueTodayCount > 0 ? 'warn' : 'normal'}
-        />
-        <KpiCard
-          label="활성 팀원 수"
-          value={memberCount}
-          hint={`관리자 ${users.filter((u) => u.role === 'admin').length}명 / 일반 ${users.filter((u) => u.role === 'member').length}명`}
-          loading={loading}
-        />
-      </div>
+      <KpiGrid
+        inProgressProjects={summary.inProgressProjects}
+        completedSubs={summary.completedSubs}
+        avgProgress={summary.avgProgress}
+        weeklyMinutes={summary.weeklyMinutes}
+        memberCount={users.length}
+        loading={loading}
+      />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-baseline justify-between">
-            <h3 className="text-lg font-semibold">오늘의 할 일</h3>
-            <span className="text-xs text-slate-400">{me.name} 담당</span>
-          </div>
-          <div className="mt-3 space-y-2">
-            {loading && (
-              <p className="py-6 text-center text-sm text-slate-400">
-                불러오는 중...
-              </p>
-            )}
-            {!loading && myTodaySubprojects.length === 0 && (
-              <p className="py-6 text-center text-sm text-slate-400">
-                오늘 진행 중인 본인 담당 업무가 없습니다.
-              </p>
-            )}
-            {myTodaySubprojects.map((sp) => {
-              const currentStep =
-                [...sp.subtasks]
-                  .sort((a, b) => a.order_index - b.order_index)
-                  .find((t) => !t.is_done)?.name ?? '완료';
-              return (
-                <div
-                  key={sp.id}
-                  className="rounded-xl border border-slate-100 bg-slate-50 p-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{sp.name}</p>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-micro ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
-                    >
-                      {SUBPROJECT_STATUS_LABEL[sp.status]}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    현재 단계: {currentStep} · 종료 {sp.end_date}
-                  </p>
-                  <ProgressBar
-                    value={sp.progress}
-                    className="mt-2"
-                    ariaLabel={`${sp.name} 진척도`}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </section>
+      <TimerWidget candidates={myActive} />
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-baseline justify-between">
-            <h3 className="text-lg font-semibold">최근 소프로젝트</h3>
-            <span className="text-xs text-slate-400">최신 5건</span>
-          </div>
-          <div className="mt-3 space-y-2">
-            {loading && (
-              <p className="py-6 text-center text-sm text-slate-400">
-                불러오는 중...
-              </p>
-            )}
-            {!loading && recentSubprojects.length === 0 && (
-              <p className="py-6 text-center text-sm text-slate-400">
-                아직 등록된 소프로젝트가 없습니다.
-              </p>
-            )}
-            {recentSubprojects.map((sp) => {
-              const project = projects.find((p) => p.id === sp.project_id);
-              return (
-                <div
-                  key={sp.id}
-                  className="rounded-xl border border-slate-100 bg-slate-50 p-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{sp.name}</p>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-micro ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
-                    >
-                      {SUBPROJECT_STATUS_LABEL[sp.status]}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {project?.name ?? `프로젝트 #${sp.project_id}`} ·{' '}
-                    {sp.assignee?.name ?? '담당자 미지정'} · {sp.start_date} ~{' '}
-                    {sp.end_date}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      </div>
+      <ProjectList
+        projects={projects}
+        subprojects={subprojects}
+        loading={loading}
+      />
     </AppShell>
-  );
-}
-
-type KpiProps = {
-  label: string;
-  value: number;
-  hint?: string;
-  loading?: boolean;
-  accent?: 'normal' | 'warn';
-};
-
-function KpiCard({ label, value, hint, loading, accent = 'normal' }: KpiProps) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p
-        className={`mt-2 text-3xl font-bold ${
-          accent === 'warn' ? 'text-amber-600' : 'text-blue-600'
-        }`}
-      >
-        {loading ? '—' : value}
-      </p>
-      {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
-    </div>
   );
 }
