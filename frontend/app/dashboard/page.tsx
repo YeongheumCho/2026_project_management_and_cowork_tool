@@ -5,18 +5,8 @@ import AppShell from '../components/AppShell';
 import { apiFetch, type Project, type SubProject, type UserBrief } from '../lib/api';
 import { toISODate } from '../lib/calendar';
 import { useMe } from '../lib/useMe';
-
-const STATUS_LABEL: Record<SubProject['status'], string> = {
-  planned: '예정',
-  in_progress: '진행중',
-  completed: '완료',
-};
-
-const STATUS_BADGE: Record<SubProject['status'], string> = {
-  planned: 'bg-slate-100 text-slate-600',
-  in_progress: 'bg-blue-100 text-blue-700',
-  completed: 'bg-emerald-100 text-emerald-700',
-};
+import { SUBPROJECT_STATUS_LABEL, SUBPROJECT_STATUS_BADGE } from '../lib/subprojectStatus';
+import ProgressBar from '../components/ProgressBar';
 
 export default function DashboardPage() {
   const { me, loading: meLoading } = useMe();
@@ -154,20 +144,19 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">{sp.name}</p>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] ${STATUS_BADGE[sp.status]}`}
+                      className={`rounded-full px-2 py-0.5 text-[11px] ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
                     >
-                      {STATUS_LABEL[sp.status]}
+                      {SUBPROJECT_STATUS_LABEL[sp.status]}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
                     현재 단계: {currentStep} · 종료 {sp.end_date}
                   </p>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full bg-blue-500"
-                      style={{ width: `${sp.progress}%` }}
-                    />
-                  </div>
+                  <ProgressBar
+                    value={sp.progress}
+                    className="mt-2"
+                    ariaLabel={`${sp.name} 진척도`}
+                  />
                 </div>
               );
             })}
@@ -200,9 +189,9 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">{sp.name}</p>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] ${STATUS_BADGE[sp.status]}`}
+                      className={`rounded-full px-2 py-0.5 text-[11px] ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
                     >
-                      {STATUS_LABEL[sp.status]}
+                      {SUBPROJECT_STATUS_LABEL[sp.status]}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-slate-500">

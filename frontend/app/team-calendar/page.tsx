@@ -4,20 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import AppShell from '../components/AppShell';
 import MonthCalendar, { shiftMonth } from '../components/MonthCalendar';
 import TeamModal from '../components/TeamModal';
+import ProgressBar from '../components/ProgressBar';
 import { apiFetch, type Project, type SubProject, type UserBrief } from '../lib/api';
 import { useMe } from '../lib/useMe';
-
-const STATUS_LABEL: Record<SubProject['status'], string> = {
-  planned: '예정',
-  in_progress: '진행중',
-  completed: '완료',
-};
-
-const STATUS_DOT: Record<SubProject['status'], string> = {
-  planned: 'bg-slate-400',
-  in_progress: 'bg-blue-500',
-  completed: 'bg-emerald-500',
-};
+import { SUBPROJECT_STATUS_LABEL, SUBPROJECT_STATUS_DOT } from '../lib/subprojectStatus';
 
 export default function TeamCalendarPage() {
   const { me, loading: meLoading } = useMe();
@@ -143,10 +133,10 @@ export default function TeamCalendarPage() {
                 className="block w-full rounded-xl border border-slate-100 bg-slate-50 p-3 text-left hover:bg-slate-100"
               >
                 <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${STATUS_DOT[sp.status]}`} />
+                  <span className={`h-2 w-2 rounded-full ${SUBPROJECT_STATUS_DOT[sp.status]}`} />
                   <span className="text-sm font-medium">{sp.name}</span>
                   <span className="ml-auto text-[11px] text-slate-500">
-                    {STATUS_LABEL[sp.status]}
+                    {SUBPROJECT_STATUS_LABEL[sp.status]}
                   </span>
                 </div>
                 <div className="mt-1 flex justify-between text-[11px] text-slate-500">
@@ -155,12 +145,11 @@ export default function TeamCalendarPage() {
                     {sp.start_date} ~ {sp.end_date}
                   </span>
                 </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full bg-blue-500"
-                    style={{ width: `${sp.progress}%` }}
-                  />
-                </div>
+                <ProgressBar
+                  value={sp.progress}
+                  className="mt-2"
+                  ariaLabel={`${sp.name} 진척도`}
+                />
               </button>
             ))}
           </div>

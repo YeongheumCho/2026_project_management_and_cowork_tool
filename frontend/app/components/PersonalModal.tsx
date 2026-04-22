@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { apiFetch, type SubProject, type SubTask } from '../lib/api';
+import Modal from './Modal';
+import ProgressBar from './ProgressBar';
 
 type Props = {
   open: boolean;
@@ -28,7 +30,7 @@ export default function PersonalModal({
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState('');
 
-  if (!open || !subproject) return null;
+  if (!subproject) return null;
 
   const canEdit =
     isAdmin ||
@@ -62,8 +64,7 @@ export default function PersonalModal({
   const isAllDone = tasks.length > 0 && tasks.every((t) => t.is_done);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+    <Modal open={open} onClose={onClose} size="md" ariaLabel={subproject.name}>
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-lg font-semibold">{subproject.name}</h3>
@@ -84,12 +85,12 @@ export default function PersonalModal({
             <span>진척도</span>
             <span>{subproject.progress.toFixed(0)}%</span>
           </div>
-          <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-200">
-            <div
-              className="h-full bg-blue-500 transition-all"
-              style={{ width: `${subproject.progress}%` }}
-            />
-          </div>
+          <ProgressBar
+            value={subproject.progress}
+            size="md"
+            className="mt-1"
+            ariaLabel={`${subproject.name} 진척도`}
+          />
         </div>
 
         {!canEdit && (
@@ -149,7 +150,6 @@ export default function PersonalModal({
             닫기
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
