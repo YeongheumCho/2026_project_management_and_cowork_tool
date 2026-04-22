@@ -31,17 +31,6 @@ type Props = {
   onSaved: () => void;
 };
 
-/**
- * 관리자가 소프로젝트(SubProject)를 생성/수정하는 모달.
- * 각 섹션은 독립 파일로 분리되어 있어 병합 충돌을 최소화한다:
- *  - sections/BasicSection        : 공통 기본
- *  - sections/InspectionMetaSection : 검증 공통 메타
- *  - sections/InspectionStatusSection : 1차 검증 / InReview
- *  - sections/ChangeSection       : 변경점 검증
- *  - sections/EtcSection          : 기타 업무
- *  - parts/InspectionBlock, ModalHeader, ModalFooter
- *  - types, payload               : 상태/직렬화
- */
 export default function TeamModal({
   open,
   mode,
@@ -74,9 +63,10 @@ export default function TeamModal({
   }, [open, mode, initial, defaultDate, projects, lockedProjectId]);
 
   const selectedProject = useMemo(
-    () => projects.find((p) => p.id === f.projectId),
+    () => projects.find((project) => project.id === f.projectId),
     [projects, f.projectId],
   );
+
   const projectType = selectedProject?.project_type ?? 'general';
   const isInspection =
     projectType === 'official_inspection' ||
@@ -97,30 +87,34 @@ export default function TeamModal({
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setF((prev) => ({ ...prev, [key]: value }));
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!isAdmin) return;
-    if (invalid) return;
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!isAdmin || invalid) return;
+
     setSaving(true);
     setError('');
+
     try {
       const payload = buildSubProjectPayload(f);
+
       if (mode === 'create') {
         await apiFetch('/subprojects', {
           method: 'POST',
           body: JSON.stringify(payload),
         });
       } else if (initial) {
-        const { project_id: _pid, ...updatable } = payload;
+        const updatable = { ...payload, project_id: undefined };
+
         await apiFetch(`/subprojects/${initial.id}`, {
           method: 'PUT',
           body: JSON.stringify(updatable),
         });
       }
+
       onSaved();
       onClose();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (nextError) {
+      setError((nextError as Error).message);
     } finally {
       setSaving(false);
     }
@@ -129,15 +123,17 @@ export default function TeamModal({
   const handleDelete = async () => {
     if (!initial || !isAdmin) return;
     if (initial.status === 'completed') return;
-    if (!window.confirm('이 소프로젝트를 삭제할까요?')) return;
+    if (!window.confirm('Delete this subproject?')) return;
+
     setSaving(true);
     setError('');
+
     try {
       await apiFetch(`/subprojects/${initial.id}`, { method: 'DELETE' });
       onSaved();
       onClose();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (nextError) {
+      setError((nextError as Error).message);
     } finally {
       setSaving(false);
     }
@@ -149,7 +145,7 @@ export default function TeamModal({
       onClose={onClose}
       size="xl"
       scrollable
-      ariaLabel={mode === 'create' ? '소프로젝트 추가' : '소프로젝트 수정'}
+      ariaLabel={mode === 'create' ? 'Add subproject' : 'Edit subproject'}
     >
       <ModalHeader
         mode={mode}
@@ -161,8 +157,8 @@ export default function TeamModal({
       />
 
       {!isAdmin && (
-        <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
-          이 화면은 관리자만 수정할 수 있습니다.
+        <p className="mt-3 rounded-xl bg-[#FAEEDA] px-4 py-3 text-sm text-[#854F0B]">
+          Only admins can create or edit subprojects here.
         </p>
       )}
 
@@ -195,7 +191,7 @@ export default function TeamModal({
         {isEtc && <EtcSection f={f} set={set} />}
 
         {error && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p className="rounded-xl bg-[#FCEBEB] px-4 py-3 text-sm text-[#A32D2D]">
             {error}
           </p>
         )}

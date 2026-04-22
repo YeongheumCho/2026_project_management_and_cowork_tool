@@ -1,8 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
 import { useMe } from '../lib/useMe';
+import CreateProjectModal from '../projects/components/CreateProjectModal';
+import { useWorkflowSelection } from '../lib/workflow-selection';
 import DashboardHeader from './components/DashboardHeader';
 import KpiGrid from './components/KpiGrid';
 import ProjectList from './components/ProjectList';
@@ -12,15 +15,19 @@ import { useDashboardData } from './hooks/useDashboardData';
 /**
  * 개요(대시보드) 페이지.
  *
- * 이 파일은 오케스트레이션만 담당한다 — 데이터 로딩/KPI 집계는
- * `hooks/useDashboardData`, UI 블록은 `components/` 하위 파일로 분리되어 있어
- * 팀원별 동시 작업 시 충돌이 최소화된다.
- *
- * Figma "개요" 탭 구조:
- * 상단 서브헤더 → KPI 4카드 → 타이머 위젯 → 프로젝트 목록
+ * Figma 개요 탭처럼 사이드바 선택과 메인 패널이 함께 반응하도록
+ * 프로젝트/팀원 선택 상태를 이 레벨에서 조율한다.
  */
 export default function DashboardPage() {
+  const router = useRouter();
   const { me, loading: meLoading } = useMe();
+  const {
+    selectedMemberId,
+    setSelectedMemberId,
+    toggleSelectedMemberId,
+    selectedProjectId,
+    setSelectedProjectId,
+  } = useWorkflowSelection();
   const enabled = !!me;
   const {
     projects,
@@ -30,33 +37,109 @@ export default function DashboardPage() {
     loading,
     error,
     todayIso,
+    reload,
   } = useDashboardData(enabled);
 
-  // 타이머 위젯용 — 내가 담당한, 오늘 기간이 걸쳐 있는 소프로젝트
-  const myActive = useMemo(() => {
-    if (!me) return [];
+  const [createOpen, setCreateOpen] = useState(false);
+  const [modalError, setModalError] = useState('');
+
+  const filteredSubprojects = useMemo(() => {
+    if (!selectedMemberId) return subprojects;
     return subprojects.filter(
-      (sp) =>
-        sp.assignee_id === me.id &&
-        sp.start_date <= todayIso &&
-        sp.end_date >= todayIso &&
-        sp.status !== 'completed',
+      (subproject) => subproject.assignee_id === selectedMemberId,
     );
-  }, [subprojects, me, todayIso]);
+  }, [selectedMemberId, subprojects]);
+
+  const visibleProjects = useMemo(() => {
+    if (!selectedMemberId) return projects;
+    const visibleIds = new Set(
+      filteredSubprojects.map((subproject) => subproject.project_id),
+    );
+    return projects.filter((project) => visibleIds.has(project.id));
+  }, [filteredSubprojects, projects, selectedMemberId]);
+
+  useEffect(() => {
+    if (visibleProjects.length === 0) {
+      setSelectedProjectId(null);
+      return;
+    }
+
+    if (
+      selectedProjectId === null ||
+      !visibleProjects.some((project) => project.id === selectedProjectId)
+    ) {
+      setSelectedProjectId(visibleProjects[0].id);
+    }
+  }, [selectedProjectId, setSelectedProjectId, visibleProjects]);
+
+  const selectedProject = useMemo(
+    () => visibleProjects.find((project) => project.id === selectedProjectId) ?? null,
+    [selectedProjectId, visibleProjects],
+  );
+
+  const timerCandidates = useMemo(() => {
+    if (!selectedProject) return [];
+    return filteredSubprojects.filter(
+      (subproject) =>
+        subproject.project_id === selectedProject.id &&
+        subproject.start_date <= todayIso &&
+        subproject.end_date >= todayIso &&
+        subproject.status !== 'completed',
+    );
+  }, [filteredSubprojects, selectedProject, todayIso]);
+
+  const timerHelperText = useMemo(() => {
+    if (!selectedProject && selectedMemberId) {
+      return '선택한 팀원이 담당한 프로젝트가 없습니다.';
+    }
+    if (!selectedProject) {
+      return '왼쪽에서 프로젝트를 선택해 주세요';
+    }
+    if (selectedMemberId) {
+      return '선택한 팀원 기준으로 이 프로젝트의 진행 중 업무만 보여줍니다.';
+    }
+    return '프로젝트를 선택하고 시작하세요';
+  }, [selectedMemberId, selectedProject]);
+
+  const handleProjectSelect = (projectId: number) => {
+    const hasVisibleTask = filteredSubprojects.some(
+      (subproject) => subproject.project_id === projectId,
+    );
+    if (selectedMemberId && !hasVisibleTask) {
+      setSelectedMemberId(null);
+    }
+    setSelectedProjectId(projectId);
+  };
 
   if (meLoading || !me) {
     return <main className="p-8 text-slate-900">불러오는 중...</main>;
   }
 
   return (
-    <AppShell me={me}>
-      {error && (
+    <AppShell
+      me={me}
+      onNewProject={
+        me.role === 'admin'
+          ? () => {
+              setModalError('');
+              setCreateOpen(true);
+            }
+          : undefined
+      }
+      selectedProjectId={selectedProjectId}
+      selectedMemberId={selectedMemberId}
+      onProjectSelect={handleProjectSelect}
+      onMemberSelect={toggleSelectedMemberId}
+      sidebarProjects={projects}
+      sidebarUsers={users}
+    >
+      {(error || modalError) && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-          {error}
+          {error || modalError}
         </p>
       )}
 
-      <DashboardHeader />
+      <DashboardHeader onRequestAiSuggestion={() => router.push('/tasks')} />
 
       <KpiGrid
         inProgressProjects={summary.inProgressProjects}
@@ -67,12 +150,32 @@ export default function DashboardPage() {
         loading={loading}
       />
 
-      <TimerWidget candidates={myActive} />
+      <TimerWidget
+        candidates={timerCandidates}
+        projectName={selectedProject?.name}
+        helperText={timerHelperText}
+      />
 
       <ProjectList
-        projects={projects}
-        subprojects={subprojects}
+        projects={visibleProjects}
+        subprojects={filteredSubprojects}
         loading={loading}
+        selectedProjectId={selectedProjectId}
+        onSelectProject={handleProjectSelect}
+      />
+
+      <CreateProjectModal
+        open={createOpen}
+        onClose={() => {
+          setModalError('');
+          setCreateOpen(false);
+        }}
+        onCreated={async (created) => {
+          await reload();
+          setSelectedMemberId(null);
+          setSelectedProjectId(created.id);
+        }}
+        onError={setModalError}
       />
     </AppShell>
   );

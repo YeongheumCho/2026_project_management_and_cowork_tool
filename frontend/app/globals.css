@@ -1,78 +1,59 @@
 @import "tailwindcss";
 
-/* ============================================================
-   디자인 토큰 (KEFICO 5층 협업 툴)
-   - brand:    파란색 계열 (KPI Tool 메인 컬러)
-   - surface:  배경 / 카드 표면
-   - text:     본문 / 보조 텍스트
-   - border:   기본 / 강조 보더
-   - status:   SubProject 진행 상태 (planned/progress/done)
-   - verify:   검증 상태 시맨틱 색상 (pass/fail/wait/upload)
-   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8f8f5;
+  --foreground: #1a1a1a;
 
-  /* brand */
-  --color-brand-50: #eff6ff;
-  --color-brand-100: #dbeafe;
-  --color-brand-500: #3b82f6;
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
-  --color-brand-on:  #ffffff;
+  --color-brand-50: #eeedfe;
+  --color-brand-100: #d9d7fb;
+  --color-brand-500: #6d66cf;
+  --color-brand-600: #534ab7;
+  --color-brand-700: #433a9a;
+  --color-brand-on: #ffffff;
 
-  /* surface */
-  --color-surface:        #ffffff;
-  --color-surface-muted:  #f8fafc; /* slate-50 */
-  --color-surface-subtle: #f1f5f9; /* slate-100 */
-  --color-surface-strong: #0f172a; /* slate-900 */
+  --color-surface: #ffffff;
+  --color-surface-muted: #fafafa;
+  --color-surface-subtle: #f1efe8;
+  --color-surface-strong: #26215c;
 
-  /* text */
-  --color-text:         #0f172a; /* slate-900 */
-  --color-text-muted:   #475569; /* slate-600 */
-  --color-text-subtle:  #64748b; /* slate-500 */
-  --color-text-faint:   #94a3b8; /* slate-400 */
-  --color-text-on-brand:#ffffff;
+  --color-text: #1a1a1a;
+  --color-text-muted: #5f5e5a;
+  --color-text-subtle: #888780;
+  --color-text-faint: #b4b2a9;
+  --color-text-on-brand: #ffffff;
 
-  /* border */
-  --color-border:        #e2e8f0; /* slate-200 */
-  --color-border-subtle: #f1f5f9; /* slate-100 */
-  --color-border-strong: #cbd5e1; /* slate-300 */
+  --color-border: #eaeae4;
+  --color-border-subtle: #f1efe8;
+  --color-border-strong: #d3d1c7;
 
-  /* status — SubProject (planned / in_progress / completed) */
-  --color-status-planned:        #cbd5e1; /* slate-300 */
-  --color-status-planned-bg:     #f1f5f9; /* slate-100 */
-  --color-status-planned-fg:     #475569; /* slate-600 */
-  --color-status-progress:       #3b82f6; /* blue-500 */
-  --color-status-progress-bg:    #dbeafe; /* blue-100 */
-  --color-status-progress-fg:    #1d4ed8; /* blue-700 */
-  --color-status-done:           #10b981; /* emerald-500 */
-  --color-status-done-bg:        #d1fae5; /* emerald-100 */
-  --color-status-done-fg:        #047857; /* emerald-700 */
+  --color-status-planned: #5f5e5a;
+  --color-status-planned-bg: #f1efe8;
+  --color-status-planned-fg: #5f5e5a;
+  --color-status-progress: #185fa5;
+  --color-status-progress-bg: #e6f1fb;
+  --color-status-progress-fg: #185fa5;
+  --color-status-done: #3b6d11;
+  --color-status-done-bg: #eaf3de;
+  --color-status-done-fg: #3b6d11;
 
-  /* verify — 검증 상태 (pass/fail/wait/inreview/upload) */
-  --color-verify-pass-bg:  #d1fae5; /* emerald-100 */
-  --color-verify-pass-fg:  #047857;
-  --color-verify-fail-bg:  #fee2e2; /* red-100  */
-  --color-verify-fail-fg:  #b91c1c;
-  --color-verify-warn-bg:  #fef3c7; /* amber-100 */
-  --color-verify-warn-fg:  #b45309;
-  --color-verify-info-bg:  #dbeafe; /* blue-100 */
-  --color-verify-info-fg:  #1d4ed8;
-  --color-verify-idle-bg:  #f1f5f9; /* slate-100 */
-  --color-verify-idle-fg:  #475569;
+  --color-verify-pass-bg: #eaf3de;
+  --color-verify-pass-fg: #3b6d11;
+  --color-verify-fail-bg: #fcebeb;
+  --color-verify-fail-fg: #a32d2d;
+  --color-verify-warn-bg: #faeeda;
+  --color-verify-warn-fg: #854f0b;
+  --color-verify-info-bg: #e6f1fb;
+  --color-verify-info-fg: #185fa5;
+  --color-verify-idle-bg: #f1efe8;
+  --color-verify-idle-fg: #5f5e5a;
 
-  /* radius */
-  --radius-sm: 0.5rem;   /* 8px  - chip/badge */
-  --radius-md: 0.75rem;  /* 12px - button/input */
-  --radius-lg: 1rem;     /* 16px - card/modal */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
   --radius-pill: 9999px;
 
-  /* focus ring */
-  --ring-focus: 0 0 0 3px rgb(59 130 246 / 0.3);
-
-  /* 마이크로 폰트 (한글 가독성 보장) */
-  --text-micro: 0.6875rem; /* 11px */
+  --ring-focus: 0 0 0 3px rgb(83 74 183 / 0.18);
+  --text-micro: 0.6875rem;
 }
 
 @theme inline {
@@ -95,49 +76,33 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
-
-/* ============================================================
-   공통 유틸리티 (Tailwind v4 @utility)
-   - .input, .input-sm
-   - .btn, .btn-primary, .btn-secondary, .btn-ghost, .btn-danger, .btn-sm
-   - .card
-   - .badge, .badge-pill
-   - .field-label, .field-helper
-   - .chat-dot
-   ============================================================ */
 
 @utility input {
   width: 100%;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-muted);
   padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   line-height: 1.25rem;
   color: var(--color-text);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 @utility input-sm {
   padding: 0.375rem 0.625rem;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
 }
 .input:focus,
 .input:focus-visible {
   outline: none;
-  border-color: var(--color-brand-500);
+  border-color: var(--color-brand-600);
   box-shadow: var(--ring-focus);
+  background: var(--color-surface);
 }
 .input:disabled {
   background: var(--color-surface-subtle);
@@ -150,17 +115,17 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  border-radius: var(--radius-md);
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.25rem;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.1rem;
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   cursor: pointer;
 }
 @utility btn-sm {
-  padding: 0.375rem 0.75rem;
-  font-size: 0.8125rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.6875rem;
 }
 .btn:focus-visible {
   outline: none;
@@ -182,8 +147,8 @@ body {
 
 @utility btn-secondary {
   background: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-strong);
 }
 .btn-secondary:hover:not(:disabled) {
   background: var(--color-surface-subtle);
@@ -191,38 +156,38 @@ body {
 
 @utility btn-ghost {
   background: transparent;
-  color: var(--color-text-muted);
-  border: 1px solid transparent;
+  color: var(--color-brand-600);
+  border: 1px solid var(--color-border-strong);
 }
 .btn-ghost:hover:not(:disabled) {
   background: var(--color-brand-50);
-  color: var(--color-brand-700);
 }
 
 @utility btn-danger {
-  background: #dc2626;
-  color: #ffffff;
-  border: 1px solid transparent;
+  background: #fcebeb;
+  color: #a32d2d;
+  border: 1px solid #f4c9c9;
 }
 .btn-danger:hover:not(:disabled) {
-  background: #b91c1c;
+  background: #f8dede;
 }
 
 @utility card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: 1.25rem;
 }
 
 @utility badge {
   display: inline-flex;
   align-items: center;
-  border-radius: var(--radius-sm);
+  border-radius: 0.625rem;
   padding: 0.125rem 0.5rem;
-  font-size: var(--text-micro);
-  font-weight: 500;
+  font-size: 0.625rem;
+  font-weight: 700;
   line-height: 1rem;
+  letter-spacing: 0.04em;
 }
 @utility badge-pill {
   border-radius: var(--radius-pill);
@@ -230,8 +195,8 @@ body {
 
 @utility field-label {
   display: block;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 600;
   color: var(--color-text-muted);
   margin-bottom: 0.375rem;
 }
@@ -242,7 +207,6 @@ body {
   margin-top: 0.25rem;
 }
 
-/* 마이크로 폰트 (캘린더 셀, 메타 정보 등) */
 @utility text-micro {
   font-size: var(--text-micro);
   line-height: 1rem;
@@ -257,7 +221,7 @@ body {
 }
 @keyframes chat-bounce {
   0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-  40%           { transform: translateY(-0.25rem); opacity: 1; }
+  40% { transform: translateY(-0.25rem); opacity: 1; }
 }
 .chat-dot.delay-1 { animation-delay: 0ms; }
 .chat-dot.delay-2 { animation-delay: 150ms; }

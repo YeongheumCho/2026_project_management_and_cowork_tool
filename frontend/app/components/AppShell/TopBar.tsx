@@ -12,52 +12,45 @@ type Props = {
   onNewProject?: () => void;
 };
 
-/**
- * 상단 바 — 로고 + 탭 네비 + "새 프로젝트" 버튼 + 로그아웃 + 사용자 아바타.
- *
- * 로그아웃은 우측 상단에 독립 버튼으로 상시 노출된다.
- * (호버 드롭다운 안에 숨기면 탭 전환 중 실수 클릭이 잦다는 피드백 반영)
- *
- * 아바타는 클릭 시 사용자 정보 + 관리자 링크를 담은 메뉴를 토글한다.
- */
 export default function TopBar({ me, onLogout, onNewProject }: Props) {
   const pathname = usePathname();
   const initial = me.name?.charAt(0) ?? '?';
   const isAdmin = me.role === 'admin';
-
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
-    const onDocClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
       }
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuOpen(false);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
     };
-    document.addEventListener('mousedown', onDocClick);
-    document.addEventListener('keydown', onKey);
+
+    document.addEventListener('mousedown', handleDocumentClick);
+    document.addEventListener('keydown', handleEscape);
     return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', handleDocumentClick);
+      document.removeEventListener('keydown', handleEscape);
     };
   }, [menuOpen]);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-6 border-b border-slate-200 bg-white px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-6 border-b-[1.5px] border-[#534AB7] bg-white px-5">
       <Link href="/dashboard" className="flex items-center gap-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-sm font-bold text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-[#534AB7] text-[13px] font-bold text-white">
           W
         </span>
-        <span className="text-base font-semibold text-slate-900">
-          WorkFlow <span className="text-indigo-600">AI</span>
+        <span className="text-base font-bold tracking-[-0.3px] text-[#1A1A1A]">
+          WorkFlow <span className="text-[#534AB7]">AI</span>
         </span>
       </Link>
 
-      <nav className="flex items-center gap-1">
+      <nav className="flex items-center gap-0.5">
         {TOP_NAV.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -65,10 +58,10 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-lg px-3 py-1.5 text-sm transition ${
+              className={`rounded-lg px-[14px] py-[5px] text-xs transition ${
                 active
-                  ? 'bg-indigo-50 font-semibold text-indigo-700'
-                  : 'text-slate-600 hover:bg-slate-50'
+                  ? 'bg-[#534AB7] font-bold text-white'
+                  : 'font-medium text-[#5F5E5A] hover:bg-[#F1EFE8]'
               }`}
             >
               {item.label}
@@ -82,7 +75,7 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
           <button
             type="button"
             onClick={onNewProject}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-lg border border-[#AFA9EC] bg-[#EEEDFE] px-[14px] py-[6px] text-xs font-bold text-[#534AB7] hover:bg-[#E5E3FD]"
           >
             + 새 프로젝트
           </button>
@@ -91,7 +84,7 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
         <button
           type="button"
           onClick={onLogout}
-          className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+          className="rounded-lg border border-[#EAEAE4] px-[14px] py-[6px] text-xs font-semibold text-[#5F5E5A] hover:bg-[#F1EFE8]"
         >
           로그아웃
         </button>
@@ -99,37 +92,49 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
         <div ref={menuRef} className="relative">
           <button
             type="button"
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={() => setMenuOpen((value) => !value)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            title={`${me.name} (${me.email})`}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 hover:bg-indigo-200"
+            title={`${me.name} (${me.idnum})`}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#534AB7] text-[11px] font-bold text-white hover:bg-[#433A9A]"
           >
             {initial}
           </button>
+
           {menuOpen && (
             <div
               role="menu"
-              className="absolute right-0 top-full z-40 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
+              className="absolute right-0 top-full z-40 mt-2 w-56 rounded-2xl border border-[#D3D1C7] bg-white p-2 shadow-lg"
             >
               <div className="px-3 py-2">
-                <p className="text-sm font-medium text-slate-900">{me.name}</p>
-                <p className="truncate text-xs text-slate-500">{me.email}</p>
-                <p className="mt-1 text-xs text-slate-400">
-                  {isAdmin ? '관리자' : '일반 직원'}
+                <p className="text-sm font-medium text-[#1A1A1A]">{me.name}</p>
+                <p className="truncate text-xs text-[#888780]">{me.idnum}</p>
+                <p className="mt-1 text-xs text-[#B4B2A9]">
+                  {isAdmin ? '관리자' : '구성원'}
                 </p>
               </div>
-              <div className="my-1 h-px bg-slate-100" />
+              <div className="my-1 h-px bg-[#F1EFE8]" />
+
+              <Link
+                href="/settings"
+                role="menuitem"
+                onClick={() => setMenuOpen(false)}
+                className="block rounded-lg px-3 py-2 text-sm text-[#5F5E5A] hover:bg-[#F8F8F5]"
+              >
+                설정
+              </Link>
+
               {isAdmin && (
                 <Link
                   href="/admin"
                   role="menuitem"
                   onClick={() => setMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                  className="block rounded-lg px-3 py-2 text-sm text-[#5F5E5A] hover:bg-[#F8F8F5]"
                 >
                   관리자 페이지
                 </Link>
               )}
+
               <button
                 type="button"
                 role="menuitem"
@@ -137,7 +142,7 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
                   setMenuOpen(false);
                   onLogout();
                 }}
-                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-[#A32D2D] hover:bg-[#FCEBEB]"
               >
                 로그아웃
               </button>

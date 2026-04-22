@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import AdminHeader from './components/AdminHeader';
 import AdminSidebar from './components/AdminSidebar';
+import TemplateManager from './components/TemplateManager';
 import UserTable from './components/UserTable';
 import { useAdminUsers } from './hooks/useAdminUsers';
 
@@ -51,6 +52,7 @@ export default function AdminPage() {
               onRoleChange={handleRoleChange}
               onRoleSave={(m) => void handleRoleSave(m)}
             />
+            <TemplateManager />
           </div>
         </section>
       </div>

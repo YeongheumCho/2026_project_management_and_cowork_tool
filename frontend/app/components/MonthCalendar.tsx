@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import {
   addMonths,
@@ -10,19 +11,24 @@ import {
   toISODate,
 } from '../lib/calendar';
 import type { SubProject } from '../lib/api';
-import { SUBPROJECT_STATUS_BG } from '../lib/subprojectStatus';
 
 type Props = {
   year: number;
-  month: number; // 0-indexed
+  month: number;
   subprojects: SubProject[];
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onSelectDate?: (isoDate: string) => void;
   onSelectSubProject?: (sp: SubProject) => void;
-  /** 우상단 액션 버튼 (예: + 소프로젝트 추가). 관리자만 노출 */
-  rightAction?: React.ReactNode;
+  rightAction?: ReactNode;
+  title?: string;
+  tag?: string;
+  tagColor?: string;
+  filterSlot?: ReactNode;
 };
+
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const PROJECT_BAR_COLORS = ['#2563EB', '#534AB7', '#0F6E56', '#854F0B', '#185FA5', '#993556'];
 
 export default function MonthCalendar({
   year,
@@ -33,84 +39,130 @@ export default function MonthCalendar({
   onSelectDate,
   onSelectSubProject,
   rightAction,
+  title = '캘린더',
+  tag,
+  tagColor = '#534AB7',
+  filterSlot,
 }: Props) {
   const days = useMemo(() => getMonthMatrix(year, month), [year, month]);
+  const today = toISODate(new Date());
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-slate-200 p-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onPrevMonth}
-            className="rounded-lg border border-slate-200 px-3 py-1 text-sm hover:bg-slate-50"
-            aria-label="이전 달"
-          >
-            ‹
-          </button>
-          <h3 className="text-lg font-semibold">{formatMonth(year, month)}</h3>
-          <button
-            onClick={onNextMonth}
-            className="rounded-lg border border-slate-200 px-3 py-1 text-sm hover:bg-slate-50"
-            aria-label="다음 달"
-          >
-            ›
-          </button>
-        </div>
-        {rightAction}
-      </div>
-
-      <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50 text-center text-xs font-medium text-slate-500">
-        {['일', '월', '화', '수', '목', '금', '토'].map((d) => (
-          <div key={d} className="py-2">
-            {d}
+    <div className="overflow-hidden rounded-xl border border-[#EAEAE4] bg-white shadow-sm">
+      <div className="border-b border-[#EAEAE4] px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-[13px] font-semibold text-[#1A1A1A]">{title}</h3>
+            {tag && (
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                style={{
+                  backgroundColor: `${tagColor}20`,
+                  color: tagColor,
+                }}
+              >
+                {tag}
+              </span>
+            )}
           </div>
-        ))}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onPrevMonth}
+              className="text-[16px] text-[#888780]"
+              aria-label="이전 달"
+            >
+              ‹
+            </button>
+            <span className="min-w-[76px] text-center text-[11px] font-semibold text-[#1A1A1A]">
+              {formatMonth(year, month)}
+            </span>
+            <button
+              type="button"
+              onClick={onNextMonth}
+              className="text-[16px] text-[#888780]"
+              aria-label="다음 달"
+            >
+              ›
+            </button>
+            {rightAction}
+          </div>
+        </div>
+        {filterSlot && <div className="mt-3">{filterSlot}</div>}
       </div>
 
-      <div className="grid grid-cols-7">
-        {days.map((day, idx) => {
-          const inMonth = day.getMonth() === month;
-          const iso = toISODate(day);
-          const itemsToday = subprojects.filter((sp) =>
-            rangeOverlapsDay(
-              { start: parseISODate(sp.start_date), end: parseISODate(sp.end_date) },
-              day,
-            ),
-          );
-
-          return (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => onSelectDate?.(iso)}
-              className={`h-28 border-b border-r border-slate-100 p-2 text-left align-top ${
-                inMonth ? 'bg-white' : 'bg-slate-50/60 text-slate-300'
-              } hover:bg-blue-50/40`}
+      <div className="p-3">
+        <div className="mb-2 grid grid-cols-7 gap-1 text-center">
+          {WEEKDAYS.map((weekday) => (
+            <div
+              key={weekday}
+              className="py-1 text-[9px] font-bold text-[#888780]"
             >
-              <div className="text-xs font-semibold">{day.getDate()}</div>
-              <div className="mt-1 space-y-1">
-                {itemsToday.slice(0, 3).map((sp) => (
+              {weekday}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((day) => {
+            const iso = toISODate(day);
+            const inMonth = day.getMonth() === month;
+            const itemsToday = subprojects.filter((subproject) =>
+              rangeOverlapsDay(
+                {
+                  start: parseISODate(subproject.start_date),
+                  end: parseISODate(subproject.end_date),
+                },
+                day,
+              ),
+            );
+            const firstItem = itemsToday[0];
+            const barColor =
+              PROJECT_BAR_COLORS[
+                firstItem ? firstItem.project_id % PROJECT_BAR_COLORS.length : 0
+              ];
+            const isToday = iso === today;
+
+            return (
+              <button
+                key={iso}
+                type="button"
+                onClick={() => onSelectDate?.(iso)}
+                className={`relative aspect-square rounded-[5px] px-1 py-1 text-left align-top transition ${
+                  isToday
+                    ? 'bg-[#534AB7] text-white'
+                    : inMonth
+                      ? 'text-[#1A1A1A] hover:bg-[#F1EFE8]'
+                      : 'text-[#B4B2A9] hover:bg-[#F8F8F5]'
+                }`}
+              >
+                <div className={`relative z-10 text-[10px] ${isToday ? 'font-bold' : ''}`}>
+                  {day.getDate()}
+                </div>
+
+                {firstItem && (
                   <div
-                    key={sp.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectSubProject?.(sp);
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onSelectSubProject?.(firstItem);
                     }}
-                    className={`truncate rounded px-1.5 py-0.5 text-micro ${SUBPROJECT_STATUS_BG[sp.status]}`}
-                    title={`${sp.name} (${sp.assignee?.name ?? '미지정'})`}
+                    className="absolute bottom-[3px] left-[2px] right-[2px] z-0 flex h-[14px] items-center rounded-[6px] px-[5px] text-left"
+                    style={{ backgroundColor: barColor, opacity: 0.9 }}
+                    title={`${firstItem.name} (${firstItem.assignee?.name ?? '미지정'})`}
                   >
-                    {sp.name}
-                  </div>
-                ))}
-                {itemsToday.length > 3 && (
-                  <div className="text-micro text-slate-400">
-                    +{itemsToday.length - 3}
+                    <span className="truncate text-[8px] font-bold text-white">
+                      {firstItem.name} {Math.round(firstItem.progress)}%
+                    </span>
                   </div>
                 )}
-              </div>
-            </button>
-          );
-        })}
+
+                {itemsToday.length > 1 && !firstItem && (
+                  <span className="absolute bottom-[2px] left-1 h-1 w-1 rounded-full bg-[#534AB7]" />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

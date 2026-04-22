@@ -9,6 +9,7 @@ from app.models import Base  # noqa: F401
 from app.routers.auth import router as auth_router
 from app.routers.projects import router as projects_router
 from app.routers.users import router as users_router
+from app.routers.workflow import router as workflow_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -30,6 +31,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(projects_router)
+app.include_router(workflow_router)
 
 @app.get("/")
 def root():

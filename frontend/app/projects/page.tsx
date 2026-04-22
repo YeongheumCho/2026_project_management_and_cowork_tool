@@ -9,13 +9,6 @@ import CreateProjectForm from './components/CreateProjectForm';
 import ProjectCard from './components/ProjectCard';
 import { useProjects } from './hooks/useProjects';
 
-/**
- * 프로젝트 목록 페이지 (라우트).
- *
- * 이 파일은 오케스트레이션만 담당하며, 실제 UI는
- * `components/` 하위 파일들로 분리되어 있다. 각 하위 컴포넌트는
- * 독립 파일이라 팀원별 동시 작업 시 머지 충돌이 최소화된다.
- */
 export default function ProjectsPage() {
   const { me, loading: meLoading } = useMe();
   const isAdmin = me?.role === 'admin';
@@ -53,7 +46,7 @@ export default function ProjectsPage() {
   };
 
   if (meLoading || !me) {
-    return <main className="p-8 text-slate-900">불러오는 중...</main>;
+    return <main className="p-8 text-slate-900">Loading...</main>;
   }
 
   return (
@@ -77,24 +70,24 @@ export default function ProjectsPage() {
       <div className="space-y-4">
         {loading && (
           <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
-            불러오는 중...
+            Loading projects...
           </p>
         )}
 
         {!loading && projects.length === 0 && (
           <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
-            아직 프로젝트가 없습니다.{' '}
-            {isAdmin ? '위에서 프로젝트를 먼저 만들어 주세요.' : ''}
+            No projects yet.
+            {isAdmin ? ' Create the first project above.' : ''}
           </p>
         )}
 
-        {projects.map((p) => (
+        {projects.map((project) => (
           <ProjectCard
-            key={p.id}
-            project={p}
-            subprojects={byProject.get(p.id) ?? []}
+            key={project.id}
+            project={project}
+            subprojects={byProject.get(project.id) ?? []}
             isAdmin={!!isAdmin}
-            isOpen={expanded.has(p.id)}
+            isOpen={expanded.has(project.id)}
             onToggle={toggleExpand}
             onAddSub={openCreateSub}
             onEditSub={openEditSub}

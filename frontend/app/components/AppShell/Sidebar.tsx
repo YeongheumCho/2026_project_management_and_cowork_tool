@@ -7,32 +7,48 @@ import { colorForId } from './colors';
 type Props = {
   projects: Project[];
   users: UserBrief[];
+  selectedProjectId?: number | null;
+  selectedMemberId?: number | null;
+  onProjectSelect?: (projectId: number) => void;
+  onMemberSelect?: (memberId: number) => void;
 };
 
-/**
- * 좌측 사이드바 — "프로젝트" 섹션 + "팀원" 섹션.
- * 각 항목은 색상 도트 + 이름으로 구성되며, 프로젝트는 상세 페이지 링크.
- */
-export default function Sidebar({ projects, users }: Props) {
+export default function Sidebar({
+  projects,
+  users,
+  selectedProjectId,
+  selectedMemberId,
+  onProjectSelect,
+  onMemberSelect,
+}: Props) {
   return (
-    <aside className="hidden w-56 shrink-0 border-r border-slate-200 bg-white lg:block">
-      <div className="h-full overflow-y-auto px-4 py-6">
+    <aside className="hidden w-[210px] shrink-0 border-r border-[#EAEAE4] bg-white lg:block">
+      <div className="h-full overflow-y-auto px-[10px] py-[14px]">
         <Section title="프로젝트">
           {projects.length === 0 ? (
             <EmptyHint text="아직 프로젝트가 없습니다." />
           ) : (
             <ul className="space-y-1">
-              {projects.map((p) => (
-                <li key={p.id}>
-                  <Link
-                    href={`/projects/${p.id}`}
-                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
-                  >
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${colorForId(p.id)}`}
-                    />
-                    <span className="truncate">{p.name}</span>
-                  </Link>
+              {projects.map((project) => (
+                <li key={project.id}>
+                  {onProjectSelect ? (
+                    <button
+                      type="button"
+                      onClick={() => onProjectSelect(project.id)}
+                      className={itemClass(selectedProjectId === project.id)}
+                    >
+                      <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(project.id)}`} />
+                      <span className="truncate">{project.name}</span>
+                    </button>
+                  ) : (
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className={itemClass(false)}
+                    >
+                      <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(project.id)}`} />
+                      <span className="truncate">{project.name}</span>
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -41,18 +57,26 @@ export default function Sidebar({ projects, users }: Props) {
 
         <Section title="팀원" className="mt-6">
           {users.length === 0 ? (
-            <EmptyHint text="등록된 팀원이 없습니다." />
+            <EmptyHint text="표시할 팀원이 없습니다." />
           ) : (
             <ul className="space-y-1">
-              {users.map((u) => (
-                <li
-                  key={u.id}
-                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700"
-                >
-                  <span
-                    className={`h-2 w-2 shrink-0 rounded-full ${colorForId(u.id)}`}
-                  />
-                  <span className="truncate">{u.name}</span>
+              {users.map((user) => (
+                <li key={user.id}>
+                  {onMemberSelect ? (
+                    <button
+                      type="button"
+                      onClick={() => onMemberSelect(user.id)}
+                      className={itemClass(selectedMemberId === user.id)}
+                    >
+                      <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(user.id)}`} />
+                      <span className="truncate">{user.name}</span>
+                    </button>
+                  ) : (
+                    <div className={itemClass(false)}>
+                      <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(user.id)}`} />
+                      <span className="truncate">{user.name}</span>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -74,7 +98,7 @@ function Section({
 }) {
   return (
     <div className={className}>
-      <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+      <p className="mb-1 px-2 text-[9px] font-bold uppercase tracking-[1px] text-[#888780]">
         {title}
       </p>
       {children}
@@ -83,5 +107,13 @@ function Section({
 }
 
 function EmptyHint({ text }: { text: string }) {
-  return <p className="px-2 text-xs text-slate-400">{text}</p>;
+  return <p className="px-2 text-[11px] text-[#B4B2A9]">{text}</p>;
+}
+
+function itemClass(active: boolean) {
+  return `flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] transition ${
+    active
+      ? 'bg-[#F1EFE8] font-semibold text-[#1A1A1A]'
+      : 'font-medium text-[#5F5E5A] hover:bg-[#FAFAFA]'
+  }`;
 }

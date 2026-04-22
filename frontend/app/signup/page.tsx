@@ -1,10 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { type FormEvent, useMemo, useState } from 'react';
 import { API_BASE_URL } from '../lib/api';
-
 
 type ApiError = {
   detail?: string | Array<{ msg: string }>;
@@ -21,122 +20,277 @@ function getErrorMessage(data: ApiError | null, defaultMessage: string) {
 
 export default function SignupPage() {
   const router = useRouter();
-
   const [idnum, setIdnum] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<'admin' | 'member'>('member');
-
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [authRequested, setAuthRequested] = useState(false);
+  const [authCode, setAuthCode] = useState('');
+  const [authVerified, setAuthVerified] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSignup = async (e: FormEvent) => {
-    e.preventDefault();
+  const validationError = useMemo(() => {
+    if (!/^\d{4,9}$/.test(idnum)) return '사번은 4~9자리 숫자로 입력해주세요.';
+    if (name.trim().length < 2) return '이름은 2자 이상 입력해주세요.';
+    if (!/^01\d-\d{3,4}-\d{4}$/.test(phone)) {
+      return '휴대폰 번호는 010-0000-0000 형식으로 입력해주세요.';
+    }
+    if (password.length < 8) return '비밀번호는 8자 이상이어야 합니다.';
+    if (password !== confirmPassword) return '비밀번호 확인이 일치하지 않습니다.';
+    if (!authVerified) return '휴대폰 본인인증을 완료해주세요.';
+    if (!termsAccepted) return '약관 동의가 필요합니다.';
+    return '';
+  }, [authVerified, confirmPassword, idnum, name, password, phone, termsAccepted]);
+
+  async function handleSignup(event: FormEvent) {
+    event.preventDefault();
     setMessage('');
+    if (validationError) {
+      setMessage(validationError);
+      return;
+    }
+
     setLoading(true);
-
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/signup`, {
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ idnum, name, password, role }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idnum, name: name.trim(), password, role }),
       });
+      const data: ApiError = await response.json();
 
-      const data: ApiError = await res.json();
-
-      if (!res.ok) {
+      if (!response.ok) {
         setMessage(getErrorMessage(data, '회원가입에 실패했습니다.'));
         return;
       }
 
-      setMessage('회원가입 성공! 로그인 페이지로 이동합니다.');
-      setTimeout(() => {
-        router.push('/login');
-      }, 800);
+      setMessage('회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.');
+      window.setTimeout(() => router.push('/login'), 900);
     } catch (error) {
-      setMessage(`회원가입 요청 실패: ${String(error)}`);
+      setMessage(`회원가입 요청 중 오류가 발생했습니다: ${String(error)}`);
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  function requestPhoneVerification() {
+    if (!/^01\d-\d{3,4}-\d{4}$/.test(phone)) {
+      setMessage('휴대폰 번호 형식을 먼저 맞춰주세요.');
+      return;
+    }
+    setAuthRequested(true);
+    setAuthVerified(false);
+    setMessage('인증번호가 발송되었습니다. 데모 코드는 123456입니다.');
+  }
+
+  function verifyAuthCode() {
+    if (authCode === '123456') {
+      setAuthVerified(true);
+      setMessage('휴대폰 인증이 완료되었습니다.');
+      return;
+    }
+    setAuthVerified(false);
+    setMessage('인증번호가 올바르지 않습니다.');
+  }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
-      <div className="mx-auto max-w-md rounded-3xl border border-white/10 bg-white/5 p-8">
-        <h1 className="text-3xl font-bold">회원가입</h1>
-        <p className="mt-2 text-sm text-slate-300">협업 툴 계정을 생성합니다.</p>
+    <main className="min-h-screen bg-[#F8F8F5] px-6 py-12 text-[#1A1A1A]">
+      <div className="mx-auto max-w-lg rounded-[28px] border border-[#EAEAE4] bg-white p-8 shadow-sm">
+        <div className="mb-8">
+          <p className="text-[10px] font-bold uppercase tracking-[1px] text-[#888780]">
+            WorkFlow AI
+          </p>
+          <h1 className="mt-2 text-3xl font-bold">회원가입</h1>
+          <p className="mt-2 text-sm text-[#888780]">
+            PRD 요구사항에 맞춘 사번, 본인인증, 약관 동의 절차를 포함합니다.
+          </p>
+        </div>
 
-        <form onSubmit={handleSignup} className="mt-6 space-y-4">
-          <input
-            type="text"
-            placeholder="사번"
-            value={idnum}
-            onChange={(e) => setIdnum(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 outline-none"
-            required
-          />
-          <input
-            type="text"
-            placeholder="이름"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 outline-none"
-            required
-          />
-          <input
-            type="password"
-            placeholder="비밀번호"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 outline-none"
-            required
-          />
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setRole('member')}
-              className={`flex-1 rounded-2xl border px-4 py-3 text-sm ${
-                role === 'member'
-                  ? 'border-cyan-300 bg-cyan-300 text-slate-950'
-                  : 'border-white/10 bg-slate-900 text-white'
-              }`}
-            >
-              일반 직원
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole('admin')}
-              className={`flex-1 rounded-2xl border px-4 py-3 text-sm ${
-                role === 'admin'
-                  ? 'border-cyan-300 bg-cyan-300 text-slate-950'
-                  : 'border-white/10 bg-slate-900 text-white'
-              }`}
-            >
-              관리자
-            </button>
+        <form onSubmit={handleSignup} className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="사번">
+              <input
+                value={idnum}
+                onChange={(event) => setIdnum(event.target.value)}
+                className="input"
+                placeholder="예: 2026001"
+              />
+            </Field>
+            <Field label="이름">
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="input"
+                placeholder="이름 입력"
+              />
+            </Field>
           </div>
+
+          <Field label="휴대폰 번호">
+            <div className="flex gap-2">
+              <input
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                className="input"
+                placeholder="010-0000-0000"
+              />
+              <button
+                type="button"
+                onClick={requestPhoneVerification}
+                className="rounded-lg border border-[#AFA9EC] bg-[#EEEDFE] px-4 text-xs font-bold text-[#534AB7]"
+              >
+                인증요청
+              </button>
+            </div>
+          </Field>
+
+          {authRequested && (
+            <div className="rounded-xl border border-[#EAEAE4] bg-[#FAFAFA] p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
+                본인인증
+              </p>
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={authCode}
+                  onChange={(event) => setAuthCode(event.target.value)}
+                  className="input"
+                  placeholder="인증번호 6자리"
+                />
+                <button
+                  type="button"
+                  onClick={verifyAuthCode}
+                  className="rounded-lg bg-[#534AB7] px-4 text-xs font-bold text-white"
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="비밀번호">
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="input"
+                placeholder="8자 이상"
+              />
+            </Field>
+            <Field label="비밀번호 확인">
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                className="input"
+                placeholder="비밀번호 재입력"
+              />
+            </Field>
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2">
+            <RoleButton
+              selected={role === 'member'}
+              onClick={() => setRole('member')}
+              title="구성원"
+              description="기본 사용자 권한"
+            />
+            <RoleButton
+              selected={role === 'admin'}
+              onClick={() => setRole('admin')}
+              title="관리자"
+              description="프로젝트/템플릿 관리"
+            />
+          </div>
+
+          <label className="flex items-start gap-3 rounded-xl border border-[#EAEAE4] bg-[#FAFAFA] px-4 py-3">
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(event) => setTermsAccepted(event.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[#534AB7]"
+            />
+            <span className="text-sm text-[#5F5E5A]">
+              서비스 이용약관 및 개인정보 처리방침에 동의합니다.
+            </span>
+          </label>
+
+          {message && (
+            <p
+              className={`rounded-xl px-4 py-3 text-sm ${
+                authVerified || message.includes('완료') || message.includes('발송')
+                  ? 'bg-[#EEEDFE] text-[#534AB7]'
+                  : 'bg-[#FCEBEB] text-[#A32D2D]'
+              }`}
+            >
+              {message}
+            </p>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-2xl bg-cyan-300 px-5 py-3 font-semibold text-slate-950 disabled:opacity-60"
+            className="w-full rounded-xl bg-[#534AB7] px-5 py-3 text-sm font-bold text-white disabled:opacity-50"
           >
-            {loading ? '처리 중...' : '회원가입'}
+            {loading ? '가입 처리 중...' : '회원가입'}
           </button>
         </form>
 
-        {message && <p className="mt-4 text-sm text-cyan-300">{message}</p>}
-
-        <p className="mt-6 text-sm text-slate-300">
-          이미 계정이 있으면{' '}
-          <Link href="/login" className="text-cyan-300 underline">
+        <p className="mt-6 text-sm text-[#888780]">
+          이미 계정이 있다면{' '}
+          <Link href="/login" className="font-semibold text-[#534AB7] underline">
             로그인
           </Link>
         </p>
       </div>
     </main>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function RoleButton({
+  selected,
+  onClick,
+  title,
+  description,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-xl border px-4 py-3 text-left transition ${
+        selected
+          ? 'border-[#534AB7] bg-[#EEEDFE]'
+          : 'border-[#EAEAE4] bg-white hover:bg-[#FAFAFA]'
+      }`}
+    >
+      <p className="text-sm font-bold text-[#1A1A1A]">{title}</p>
+      <p className="mt-1 text-xs text-[#888780]">{description}</p>
+    </button>
   );
 }

@@ -7,9 +7,11 @@ import PersonalModal from '../components/PersonalModal';
 import ProgressBar from '../components/ProgressBar';
 import { apiFetch, type SubProject, type UserBrief } from '../lib/api';
 import { useMe } from '../lib/useMe';
+import { useWorkflowSelection } from '../lib/workflow-selection';
 
 export default function PersonalCalendarPage() {
   const { me, loading: meLoading } = useMe();
+  const { selectedMemberId, setSelectedMemberId } = useWorkflowSelection();
   const [users, setUsers] = useState<UserBrief[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [subprojects, setSubProjects] = useState<SubProject[]>([]);
@@ -23,14 +25,23 @@ export default function PersonalCalendarPage() {
     if (!me) return;
     (async () => {
       try {
-        const us = await apiFetch<UserBrief[]>('/users');
+        const us =
+          me.role === 'admin'
+            ? await apiFetch<UserBrief[]>('/users')
+            : [me];
         setUsers(us);
-        setSelectedUserId(me.id);
+        setSelectedUserId(selectedMemberId ?? me.id);
       } catch (err) {
         setError((err as Error).message);
       }
     })();
-  }, [me]);
+  }, [me, selectedMemberId]);
+
+  useEffect(() => {
+    if (selectedMemberId !== null) {
+      setSelectedUserId(selectedMemberId);
+    }
+  }, [selectedMemberId]);
 
   const loadSubprojects = useCallback(async (userId: number) => {
     setLoading(true);
@@ -73,7 +84,15 @@ export default function PersonalCalendarPage() {
   }
 
   return (
-    <AppShell me={me}>
+    <AppShell
+      me={me}
+      selectedMemberId={selectedUserId}
+      onMemberSelect={(memberId) => {
+        setSelectedUserId(memberId);
+        setSelectedMemberId(memberId);
+      }}
+      sidebarUsers={users}
+    >
       {error && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
           {error}
@@ -87,7 +106,10 @@ export default function PersonalCalendarPage() {
           return (
             <button
               key={u.id}
-              onClick={() => setSelectedUserId(u.id)}
+              onClick={() => {
+                setSelectedUserId(u.id);
+                setSelectedMemberId(u.id);
+              }}
               className={`rounded-xl border px-3 py-2 text-sm ${
                 active
                   ? 'border-blue-500 bg-blue-600 text-white'

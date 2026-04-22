@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { apiFetch, type SubProject, type SubTask } from '../lib/api';
 import Modal from './Modal';
 import ProgressBar from './ProgressBar';
+import { softColorForId, textColorForId } from './AppShell/colors';
 
 type Props = {
   open: boolean;
@@ -11,14 +12,9 @@ type Props = {
   currentUserId: number;
   subproject: SubProject | null;
   onClose: () => void;
-  onChanged: () => void; // 체크 상태 변화 후 재로드
+  onChanged: () => void;
 };
 
-/**
- * 담당자/관리자가 세부 태스크를 체크/해제하는 Modal.
- * 현재 진행 단계(첫 미완료 태스크)에 ▶ 아이콘을 표시하고,
- * 완료된 단계는 취소선 + 회색으로 표시한다.
- */
 export default function PersonalModal({
   open,
   isAdmin,
@@ -36,15 +32,19 @@ export default function PersonalModal({
     isAdmin ||
     (subproject.assignee_id !== null && subproject.assignee_id === currentUserId);
 
-  // 정렬된 세부 태스크
   const tasks = [...subproject.subtasks].sort(
-    (a, b) => a.order_index - b.order_index,
+    (left, right) => left.order_index - right.order_index,
   );
+  const currentStep = tasks.find((task) => !task.is_done);
+  const isAllDone = tasks.length > 0 && tasks.every((task) => task.is_done);
+  const accentSurface = subproject.assignee_id
+    ? softColorForId(subproject.assignee_id)
+    : 'bg-[#F1EFE8]';
+  const accentText = subproject.assignee_id
+    ? textColorForId(subproject.assignee_id)
+    : 'text-[#5F5E5A]';
 
-  // 현재 진행 단계: 첫 번째 미완료 태스크
-  const currentStep = tasks.find((t) => !t.is_done);
-
-  const toggle = async (task: SubTask) => {
+  async function toggle(task: SubTask) {
     if (!canEdit || busy !== null) return;
     setBusy(task.id);
     setError('');
@@ -54,102 +54,152 @@ export default function PersonalModal({
         body: JSON.stringify({ is_done: !task.is_done }),
       });
       onChanged();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (nextError) {
+      setError((nextError as Error).message);
     } finally {
       setBusy(null);
     }
-  };
-
-  const isAllDone = tasks.length > 0 && tasks.every((t) => t.is_done);
+  }
 
   return (
-    <Modal open={open} onClose={onClose} size="md" ariaLabel={subproject.name}>
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="text-lg font-semibold">{subproject.name}</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              담당자: {subproject.assignee?.name ?? '미지정'} ·{' '}
-              {subproject.start_date} ~ {subproject.end_date}
-            </p>
-          </div>
-          {isAllDone && (
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-              완료 — 전체 반영됨
-            </span>
-          )}
+    <Modal open={open} onClose={onClose} size="lg" ariaLabel={subproject.name}>
+      <div className="space-y-5">
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#888780]">
+            Personal calendar assigned work
+          </p>
+          <h3 className="mt-2 text-[19px] font-bold text-[#1A1A1A]">
+            {subproject.name}
+          </h3>
+          <p className="mt-2 text-[11px] text-[#888780]">
+            {subproject.start_date} - {subproject.end_date}
+          </p>
         </div>
 
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <span>진척도</span>
-            <span>{subproject.progress.toFixed(0)}%</span>
+        <div
+          className={`rounded-[20px] border px-3 py-2 ${accentSurface} ${accentText}`}
+        >
+          <p className="text-[11px] font-semibold">
+            Assignee {subproject.assignee?.name ?? 'Unassigned'}
+          </p>
+        </div>
+
+        <div className={`rounded-[10px] border p-4 ${accentSurface}`}>
+          <div className="flex items-center justify-between">
+            <p className={`text-[11px] font-bold ${accentText}`}>
+              Task progress
+            </p>
+            <span className={`text-[13px] font-bold ${accentText}`}>
+              {Math.round(subproject.progress)}%
+            </span>
           </div>
           <ProgressBar
             value={subproject.progress}
             size="md"
-            className="mt-1"
-            ariaLabel={`${subproject.name} 진척도`}
+            className="mt-2"
+            ariaLabel={`${subproject.name} progress`}
           />
         </div>
 
         {!canEdit && (
-          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            본인이 담당한 태스크만 체크할 수 있습니다.
+          <p className="rounded-xl bg-[#FAEEDA] px-4 py-3 text-sm text-[#854F0B]">
+            Only the assigned member can update this task checklist.
           </p>
         )}
 
-        <ul className="mt-4 space-y-2">
-          {tasks.map((t) => {
-            const isCurrent = currentStep?.id === t.id;
-            return (
-              <li
-                key={t.id}
-                className={`flex items-center gap-3 rounded-xl border px-3 py-2 text-sm ${
-                  t.is_done
-                    ? 'border-slate-100 bg-slate-50'
-                    : isCurrent
-                      ? 'border-blue-200 bg-blue-50'
-                      : 'border-slate-200 bg-white'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={t.is_done}
-                  disabled={!canEdit || busy !== null}
-                  onChange={() => toggle(t)}
-                  className="h-4 w-4"
-                />
-                <span
-                  className={
-                    t.is_done ? 'text-slate-400 line-through' : 'text-slate-800'
-                  }
-                >
-                  {isCurrent && !t.is_done && '▶ '}
-                  {t.name}
+        <div className="space-y-4">
+          {tasks.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-[#D3D1C7] bg-[#FAFAFA] px-4 py-6 text-center text-sm text-[#888780]">
+              No tasks have been added yet.
+            </p>
+          ) : (
+            <div className="rounded-xl border border-[#EAEAE4] bg-white p-4">
+              <div className="mb-3 flex items-center justify-between border-b border-[#EAEAE4] pb-2 pl-6">
+                <span className="text-[9px] font-bold uppercase tracking-[0.8px] text-[#888780]">
+                  Detail tasks
                 </span>
-                <span className="ml-auto text-xs text-slate-400">
-                  가중치 {Number(t.weight).toFixed(0)}
+                <span className="text-[9px] font-bold uppercase tracking-[0.8px] text-[#888780]">
+                  Weight
                 </span>
-              </li>
-            );
-          })}
-        </ul>
+              </div>
+
+              <ul className="space-y-1">
+                {tasks.map((task) => {
+                  const isCurrent = currentStep?.id === task.id;
+                  return (
+                    <li
+                      key={task.id}
+                      className="flex items-center gap-3 border-b border-[#F1EFE8] py-2 last:border-b-0"
+                    >
+                      <button
+                        type="button"
+                        disabled={!canEdit || busy !== null}
+                        onClick={() => void toggle(task)}
+                        className={`flex h-[15px] w-[15px] items-center justify-center rounded-[4px] border text-[9px] ${
+                          task.is_done
+                            ? 'border-[#22C55E] bg-[#22C55E] text-white'
+                            : isCurrent
+                              ? 'border-[#534AB7] bg-white text-[#534AB7]'
+                              : 'border-[#D3D1C7] bg-white text-transparent'
+                        }`}
+                      >
+                        ✓
+                      </button>
+
+                      <span
+                        className={`flex-1 text-[12px] ${
+                          task.is_done
+                            ? 'text-[#B4B2A9] line-through'
+                            : isCurrent
+                              ? 'font-bold text-[#534AB7]'
+                              : 'text-[#1A1A1A]'
+                        }`}
+                      >
+                        {isCurrent && !task.is_done ? 'Now · ' : ''}
+                        {task.name}
+                      </span>
+
+                      <span
+                        className={`min-w-[32px] text-right text-[11px] font-semibold ${
+                          task.is_done
+                            ? 'text-[#22C55E]'
+                            : isCurrent
+                              ? 'text-[#534AB7]'
+                              : 'text-[#888780]'
+                        }`}
+                      >
+                        {Number(task.weight).toFixed(0)}%
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {isAllDone && (
+          <p className="rounded-xl bg-[#EAF3DE] px-4 py-3 text-sm text-[#3B6D11]">
+            All detail tasks are complete and the project progress has been updated.
+          </p>
+        )}
 
         {error && (
-          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p className="rounded-xl bg-[#FCEBEB] px-4 py-3 text-sm text-[#A32D2D]">
             {error}
           </p>
         )}
 
-        <div className="mt-5 flex justify-end">
+        <div className="flex justify-end border-t border-[#EAEAE4] pt-4">
           <button
+            type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50"
+            className="rounded-lg border border-[#D3D1C7] px-4 py-2 text-[11px] font-bold text-[#5F5E5A] hover:bg-[#F8F8F5]"
           >
-            닫기
+            Close
           </button>
         </div>
+      </div>
     </Modal>
   );
 }

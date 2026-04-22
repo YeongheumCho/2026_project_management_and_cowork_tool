@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   apiFetch,
   type Project,
@@ -24,6 +24,7 @@ type UseDashboardDataResult = {
   loading: boolean;
   error: string;
   todayIso: string;
+  reload: () => Promise<void>;
 };
 
 /**
@@ -43,29 +44,36 @@ export function useDashboardData(enabled: boolean): UseDashboardDataResult {
   const [users, setUsers] = useState<UserBrief[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const mountedRef = useRef(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [ps, sps, us] = await Promise.allSettled([
+        apiFetch<Project[]>('/projects'),
+        apiFetch<SubProject[]>('/subprojects'),
+        apiFetch<UserBrief[]>('/users'),
+      ]);
+      if (ps.status !== 'fulfilled') throw ps.reason;
+      if (sps.status !== 'fulfilled') throw sps.reason;
+      if (!mountedRef.current) return;
+      setProjects(ps.value);
+      setSubProjects(sps.value);
+      setUsers(us.status === 'fulfilled' ? us.value : []);
+      setError('');
+    } catch (err) {
+      if (mountedRef.current) setError((err as Error).message);
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!enabled) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const [ps, sps, us] = await Promise.all([
-          apiFetch<Project[]>('/projects'),
-          apiFetch<SubProject[]>('/subprojects'),
-          apiFetch<UserBrief[]>('/users'),
-        ]);
-        if (cancelled) return;
-        setProjects(ps);
-        setSubProjects(sps);
-        setUsers(us);
-      } catch (err) {
-        if (!cancelled) setError((err as Error).message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+    mountedRef.current = true;
+    void load();
     return () => {
-      cancelled = true;
+      mountedRef.current = false;
     };
   }, [enabled]);
 
@@ -89,8 +97,7 @@ export function useDashboardData(enabled: boolean): UseDashboardDataResult {
     const avgProgress =
       subprojects.length === 0
         ? 0
-        : subprojects.reduce((acc, sp) => acc + sp.progress, 0) /
-          subprojects.length;
+        : (completedSubs / subprojects.length) * 100;
 
     // 이번 달 기간이 겹치는 소프로젝트의 total_minutes 합.
     const ym = todayIso.slice(0, 7); // "YYYY-MM"
@@ -116,5 +123,6 @@ export function useDashboardData(enabled: boolean): UseDashboardDataResult {
     loading,
     error,
     todayIso,
+    reload: () => load(),
   };
 }

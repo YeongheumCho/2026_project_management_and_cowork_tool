@@ -3,98 +3,100 @@
 import Link from 'next/link';
 import type { Project, SubProject } from '../../lib/api';
 import {
-  SUBPROJECT_STATUS_BADGE,
-  SUBPROJECT_STATUS_LABEL,
-} from '../../lib/subprojectStatus';
-import { colorForId } from '../../components/AppShell/colors';
+  colorForId,
+  softColorForId,
+  textColorForId,
+} from '../../components/AppShell/colors';
 
 type Props = {
   project: Project;
   subprojects: SubProject[];
+  selected?: boolean;
+  onSelect?: (projectId: number) => void;
 };
 
-/**
- * 개요 페이지의 프로젝트 목록 한 행.
- *
- * - 좌측 컬러 도트 + 프로젝트명 + 요약 문구
- * - 우측: 진척도 막대 + 퍼센트 + 담당자 이니셜 배지 + 대표 상태 뱃지
- *
- * "대표 상태" 선정 규칙: 모두 completed 면 completed, 아니면 진행 중 중
- * 가장 진척률 높은 항목 기준. (주요 시각 지표만 단순하게)
- */
-export default function ProjectListRow({ project, subprojects }: Props) {
+export default function ProjectListRow({
+  project,
+  subprojects,
+  selected = false,
+  onSelect,
+}: Props) {
   const total = subprojects.length;
-  const done = subprojects.filter((sp) => sp.status === 'completed').length;
-  const avgProgress =
-    total === 0
-      ? 0
-      : subprojects.reduce((acc, sp) => acc + sp.progress, 0) / total;
+  const done = subprojects.filter((subproject) => subproject.status === 'completed').length;
+  const progress = total === 0 ? 0 : (done / total) * 100;
+  const summary =
+    subprojects
+      .slice()
+      .sort((left, right) => right.progress - left.progress)[0]?.name ??
+    `소프로젝트 ${total}건 · 완료 ${done}건`;
 
-  const representative =
-    total === 0
-      ? null
-      : subprojects.every((sp) => sp.status === 'completed')
-        ? 'completed'
-        : 'in_progress';
-
-  // 담당자 이니셜 (중복 제거, 최대 4명)
   const assignees = Array.from(
     new Map(
       subprojects
-        .filter((sp) => sp.assignee)
-        .map((sp) => [sp.assignee!.id, sp.assignee!]),
+        .filter((subproject) => subproject.assignee)
+        .map((subproject) => [subproject.assignee!.id, subproject.assignee!]),
     ).values(),
   ).slice(0, 4);
 
-  return (
-    <Link
-      href={`/projects/${project.id}`}
-      className="flex items-center gap-4 rounded-xl border border-slate-100 bg-white p-4 hover:border-indigo-200 hover:bg-indigo-50/30"
-    >
-      <span
-        className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorForId(project.id)}`}
-      />
+  const content = (
+    <>
+      <span className={`h-[9px] w-[9px] shrink-0 rounded-full ${colorForId(project.id)}`} />
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-slate-900">
+        <p className="truncate text-[13px] font-semibold text-[#1A1A1A]">
           {project.name}
         </p>
-        <p className="mt-0.5 truncate text-xs text-slate-500">
-          소프로젝트 {total}건 · 완료 {done}건
-        </p>
+        <p className="mt-0.5 truncate text-[11px] text-[#888780]">{summary}</p>
       </div>
 
-      <div className="hidden w-64 shrink-0 items-center gap-3 md:flex">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+      <div className="hidden w-[90px] shrink-0 md:block">
+        <div className="h-1 overflow-hidden rounded-full bg-[#F1EFE8]">
           <div
-            className="h-full rounded-full bg-indigo-500"
-            style={{ width: `${Math.min(100, Math.max(0, avgProgress))}%` }}
+            className={`h-full rounded-full ${colorForId(project.id)}`}
+            style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
           />
         </div>
-        <span className="w-10 shrink-0 text-right text-xs font-medium tabular-nums text-slate-600">
-          {Math.round(avgProgress)}%
-        </span>
+        <div className="mt-[3px] text-right text-[10px] text-[#888780]">
+          {Math.round(progress)}%
+        </div>
       </div>
 
-      <div className="hidden items-center gap-1 md:flex">
-        {assignees.map((a) => (
+      <div className="hidden items-center md:flex">
+        {assignees.map((assignee, index) => (
           <span
-            key={a.id}
-            title={a.name}
-            className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600"
+            key={assignee.id}
+            title={assignee.name}
+            className={`flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 border-white text-[8px] font-bold ${softColorForId(assignee.id)} ${textColorForId(assignee.id)}`}
+            style={{ marginLeft: index === 0 ? 0 : -6 }}
           >
-            {a.name.charAt(0)}
+            {assignee.name.charAt(0)}
           </span>
         ))}
       </div>
 
-      {representative && (
-        <span
-          className={`rounded-full px-2 py-0.5 text-micro ${SUBPROJECT_STATUS_BADGE[representative]}`}
-        >
-          {SUBPROJECT_STATUS_LABEL[representative]}
-        </span>
-      )}
+      <span className="rounded-[10px] bg-[#E6F1FB] px-[9px] py-[3px] text-[10px] font-bold uppercase tracking-[0.5px] text-[#185FA5]">
+        {progress >= 100 ? '완료' : '진행중'}
+      </span>
+    </>
+  );
+
+  const containerClass = `flex w-full items-center gap-[14px] rounded-xl border px-4 py-[13px] text-left transition ${
+    selected
+      ? 'border-[#D3D1C7] bg-[#FAFAFA]'
+      : 'border-[#EAEAE4] bg-white hover:border-[#D3D1C7] hover:bg-[#FAFAFA]'
+  }`;
+
+  if (onSelect) {
+    return (
+      <button type="button" onClick={() => onSelect(project.id)} className={containerClass}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link href={`/projects/${project.id}`} className={containerClass}>
+      {content}
     </Link>
   );
 }

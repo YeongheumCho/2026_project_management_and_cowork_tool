@@ -1,14 +1,18 @@
 /**
- * 공통 API 유틸 + 도메인 타입.
+ * Shared API utilities and domain types.
  */
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? '/backend';
 
+export type Role = 'admin' | 'member';
+
 export type UserBrief = {
   id: number;
+  idnum: string;
   name: string;
-  email: string;
-  role: 'admin' | 'member';
+  role: Role;
+  is_active?: boolean;
+  created_at?: string;
 };
 
 export type Me = UserBrief & {
@@ -44,7 +48,13 @@ export type VerifyState =
   | 'inreview_done'
   | 'uploaded';
 
-export type VerificationLevel = 'basic' | 'LV1' | 'LV2' | 'BSW' | 'LV3' | 'LV4';
+export type VerificationLevel =
+  | 'basic'
+  | 'LV1'
+  | 'LV2'
+  | 'BSW'
+  | 'LV3'
+  | 'LV4';
 
 export type EtcCategory =
   | 'education'
@@ -67,7 +77,6 @@ export type SubProject = {
   created_at: string;
   updated_at: string;
 
-  // KEFICO 공통 메타
   priority?: string | null;
   controller_name?: string | null;
   controller_version?: string | null;
@@ -90,7 +99,6 @@ export type SubProject = {
   special_note?: string | null;
   completed_on?: string | null;
 
-  // 1차 / InReview 상태·시간
   first_verify_status?: VerifyState | null;
   first_setup_min?: number | null;
   first_aud_min?: number | null;
@@ -105,14 +113,12 @@ export type SubProject = {
 
   total_minutes?: number;
 
-  // 변경점 검증 전용
   cr_no?: string | null;
   ip_addr?: string | null;
   change_feedback_min?: number | null;
   change_revalidate_min?: number | null;
   lin_std_hold_note?: string | null;
 
-  // 기타 업무 전용
   etc_category?: EtcCategory | null;
   etc_month?: string | null;
   etc_days?: number | null;
@@ -127,7 +133,102 @@ export type Project = {
   created_at: string;
 };
 
-// ---------- 한국어 라벨 ----------
+export type WorkQueueItem = {
+  id: number;
+  project_id: number;
+  project_name: string;
+  subproject_id: number;
+  subproject_name: string;
+  start_date: string;
+  end_date: string;
+  progress: number;
+  priority_hint: string;
+};
+
+export type WorkLogStatus = 'running' | 'paused' | 'completed';
+
+export type WorkLog = {
+  id: number;
+  user_id: number;
+  subproject_id: number | null;
+  task_name: string;
+  started_at: string;
+  current_started_at: string | null;
+  ended_at: string | null;
+  duration_sec: number;
+  status: WorkLogStatus;
+  session_group_id: string | null;
+  created_at: string;
+};
+
+export type RecommendationRequest = {
+  project_name: string;
+  project_type: ProjectType | string;
+  start_date: string;
+  end_date: string;
+  availability_weight: number;
+  capability_weight: number;
+};
+
+export type RecommendationCandidate = {
+  user_id: number;
+  name: string;
+  role: Role | string;
+  rank: number;
+  score: number;
+  availability_score: number;
+  capability_score: number;
+  remaining_minutes: number;
+  keyword_experience_count: number;
+  reasons: string[];
+};
+
+export type RecommendationResponse = {
+  request: RecommendationRequest;
+  candidates: RecommendationCandidate[];
+};
+
+export type AssignmentRequest = {
+  project_name: string;
+  project_type: ProjectType | string;
+  subproject_name: string;
+  assignee_id: number;
+  start_date: string;
+  end_date: string;
+  apply_template: boolean;
+};
+
+export type AssignmentResponse = {
+  project_id: number;
+  subproject_id: number;
+  assignee_id: number;
+  assigned_member_name: string;
+};
+
+export type UserSettings = {
+  id: number;
+  idnum: string;
+  name: string;
+  role: Role | string;
+  default_calendar_view: 'team' | 'personal';
+  notifications_enabled: boolean;
+};
+
+export type TemplateTaskItem = {
+  name: string;
+  weight: number;
+};
+
+export type Template = {
+  id: number;
+  name: string;
+  project_type: ProjectType | string;
+  trigger_keyword: string | null;
+  is_default: boolean;
+  tasks: TemplateTaskItem[];
+  created_by: number | null;
+  created_at: string;
+};
 
 export const PROJECT_TYPE_LABEL: Record<string, string> = {
   general: '일반',
@@ -143,11 +244,11 @@ export const VERIFY_STATE_LABEL: Record<VerifyState, string> = {
   all_pass: '올패스 완료',
   fail_issue: 'FAIL 이슈',
   pass_issue: 'PASS 이슈',
-  review_done: '검토 완(담당자 재확인)',
+  review_done: '검토 완료',
   inreview_waiting: 'InReview 대기',
   inreview_in_progress: 'InReview 진행 중',
   inreview_done: 'InReview 완료',
-  uploaded: '업로드 완',
+  uploaded: '업로드 완료',
 };
 
 export const VERIFICATION_LEVEL_LABEL: Record<VerificationLevel, string> = {
@@ -166,8 +267,6 @@ export const ETC_CATEGORY_LABEL: Record<EtcCategory, string> = {
   fail_classification: 'FAIL 유형 분류',
   other: '기타',
 };
-
-// ---------- fetch util ----------
 
 type ErrorBody = {
   detail?: string | Array<{ msg: string }>;
