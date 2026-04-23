@@ -1,11 +1,32 @@
+"""
+[DEPRECATED] 이 스크립트는 더 이상 사용하지 않습니다.
+
+조직도 임포트는 `scripts/import_org_chart.py` 로 이관되었습니다.
+자세한 절차는 `docs/setup/database-setup.md` 를 참고하세요.
+
+이 파일은 과거 더미 데이터(A1001, M2001~M2004 + [Sample] 프로젝트) 를
+만들어내며, `import_org_chart.py` 가 실행되면 바로 purge 됩니다. 따라서
+지금 실행해도 의미가 없고, 오히려 혼선을 일으킬 수 있습니다.
+"""
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
-from decimal import Decimal
-from pathlib import Path
 import sys
 
-from sqlalchemy import select
+raise SystemExit(
+    "scripts/seed_dummy_data.py 는 deprecated 입니다.\n"
+    "대신 `python scripts/import_org_chart.py` 를 실행하세요.\n"
+    "자세한 가이드: docs/setup/database-setup.md"
+)
+
+
+# 아래 코드는 히스토리 참조용으로만 남겨두며, 위의 SystemExit 로 인해 도달하지 않습니다.
+# 필요하다면 git blame 으로 과거 동작을 추적할 수 있습니다.
+
+from datetime import date, datetime, timedelta, timezone  # noqa: E402
+from decimal import Decimal  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+from sqlalchemy import select  # noqa: E402
 
 
 CURRENT_DIR = Path(__file__).resolve().parent

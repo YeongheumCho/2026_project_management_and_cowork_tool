@@ -13,6 +13,10 @@ export type UserBrief = {
   role: Role;
   is_active?: boolean;
   created_at?: string;
+  team?: string | null;
+  position?: string | null;
+  email?: string | null;
+  phone?: string | null;
 };
 
 export type Me = UserBrief & {
