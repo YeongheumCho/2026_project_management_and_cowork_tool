@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Me } from '../../lib/api';
-import { TOP_NAV } from './nav';
+import { TOP_NAV, type NavItem } from './nav';
 
 type Props = {
   me: Me;
@@ -18,6 +18,11 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
   const isAdmin = me.role === 'admin';
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const navItems = useMemo<NavItem[]>(() => {
+    if (!isAdmin) return TOP_NAV;
+    return [...TOP_NAV, { href: '/admin', label: '관리' }];
+  }, [isAdmin]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -51,7 +56,7 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
       </Link>
 
       <nav className="flex items-center gap-0.5">
-        {TOP_NAV.map((item) => {
+        {navItems.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
@@ -77,7 +82,7 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
             onClick={onNewProject}
             className="rounded-lg border border-[#AFA9EC] bg-[#EEEDFE] px-[14px] py-[6px] text-xs font-bold text-[#534AB7] hover:bg-[#E5E3FD]"
           >
-            + 새 프로젝트
+            + 프로젝트
           </button>
         )}
 
@@ -123,17 +128,6 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
               >
                 설정
               </Link>
-
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2 text-sm text-[#5F5E5A] hover:bg-[#F8F8F5]"
-                >
-                  관리자 페이지
-                </Link>
-              )}
 
               <button
                 type="button"

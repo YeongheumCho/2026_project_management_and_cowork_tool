@@ -14,6 +14,7 @@
   # SubTasks
   PATCH  /subtasks/{id}                체크/해제 — 담당자 본인 또는 관리자
 """
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -35,10 +36,13 @@ from app.models.project import (
 )
 from app.models.progress_log import ProgressLog
 from app.models.user import User
+from app.models.workflow import WORKLOG_RUNNING, WorkLog
 from app.schemas.progress_log import ProgressLogCreate, ProgressLogResponse
 from app.schemas.project import (
+    ProjectMemberTimeSummary,
     ProjectCreate,
     ProjectResponse,
+    ProjectTimeSummary,
     SubProjectCreate,
     SubProjectResponse,
     SubProjectUpdate,
@@ -145,6 +149,65 @@ def list_projects(
     _: User = Depends(get_current_user),
 ):
     return db.scalars(select(Project).order_by(Project.created_at.desc())).all()
+
+
+@router.get("/projects/time-summary", response_model=list[ProjectTimeSummary])
+def list_project_time_summary(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    now = datetime.now(timezone.utc)
+    rows = db.execute(
+        select(WorkLog, SubProject, User)
+        .join(SubProject, WorkLog.subproject_id == SubProject.id)
+        .join(User, WorkLog.user_id == User.id)
+    ).all()
+
+    per_project_user: dict[int, dict[int, dict[str, int | str]]] = defaultdict(dict)
+
+    for work_log, subproject, user in rows:
+        duration_sec = work_log.duration_sec
+        if work_log.status == WORKLOG_RUNNING and work_log.current_started_at:
+            duration_sec += max(
+                0,
+                int((now - work_log.current_started_at).total_seconds()),
+            )
+
+        project_bucket = per_project_user.setdefault(subproject.project_id, {})
+        member_bucket = project_bucket.get(user.id)
+        if member_bucket is None:
+            project_bucket[user.id] = {
+                "user_name": user.name,
+                "total_seconds": duration_sec,
+            }
+        else:
+            member_bucket["total_seconds"] = int(member_bucket["total_seconds"]) + duration_sec
+
+    summaries: list[ProjectTimeSummary] = []
+    for project_id, members in per_project_user.items():
+        member_summaries = sorted(
+            [
+                ProjectMemberTimeSummary(
+                    user_id=user_id,
+                    user_name=str(data["user_name"]),
+                    total_seconds=int(data["total_seconds"]),
+                )
+                for user_id, data in members.items()
+                if int(data["total_seconds"]) > 0
+            ],
+            key=lambda item: (-item.total_seconds, item.user_name),
+        )
+
+        summaries.append(
+            ProjectTimeSummary(
+                project_id=project_id,
+                total_seconds=sum(member.total_seconds for member in member_summaries),
+                members=member_summaries,
+            )
+        )
+
+    summaries.sort(key=lambda item: item.project_id)
+    return summaries
 
 
 # ========== SubProjects ==========

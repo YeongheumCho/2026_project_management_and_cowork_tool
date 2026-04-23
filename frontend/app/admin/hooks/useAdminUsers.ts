@@ -21,15 +21,7 @@ type UseAdminUsersResult = {
   handleRoleSave: (member: UserResponse) => Promise<void>;
 };
 
-/**
- * 관리자 페이지 데이터 훅.
- *
- * - 마운트 시 `/auth/me`, `/auth/users` 병렬 로드
- * - 401: 토큰 제거 후 로그인으로 리다이렉트
- * - 403: 접근 금지 메시지 노출
- * - 권한 편집은 낙관적 로컬 변경 + 저장 버튼으로 PATCH 요청
- */
-export function useAdminUsers(): UseAdminUsersResult {
+export function useAdminUsers(enabled = true): UseAdminUsersResult {
   const router = useRouter();
   const [user, setUser] = useState<UserResponse | null>(null);
   const [users, setUsers] = useState<UserResponse[]>([]);
@@ -38,7 +30,19 @@ export function useAdminUsers(): UseAdminUsersResult {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setUser(null);
+      setUsers([]);
+      setSavingId(null);
+      setMessage(null);
+      setLoading(false);
+      return;
+    }
+
     const run = async () => {
+      setLoading(true);
+      setMessage(null);
+
       const token = localStorage.getItem('access_token');
       if (!token) {
         router.replace('/login');
@@ -58,7 +62,7 @@ export function useAdminUsers(): UseAdminUsersResult {
         }
 
         if (meRes.status === 403 || usersRes.status === 403) {
-          setMessage('관리자만 접근할 수 있는 페이지입니다.');
+          setMessage('관리자만 접근할 수 있는 기능입니다.');
           setLoading(false);
           return;
         }
@@ -77,18 +81,18 @@ export function useAdminUsers(): UseAdminUsersResult {
         setUser(meData);
         setUsers(usersData);
       } catch {
-        setMessage('서버와 연결하지 못했습니다.');
+        setMessage('서버에 연결하지 못했습니다.');
       } finally {
         setLoading(false);
       }
     };
 
     void run();
-  }, [router]);
+  }, [enabled, router]);
 
   const handleRoleChange = (idnum: string, role: string) => {
     setUsers((prev) =>
-      prev.map((m) => (m.idnum === idnum ? { ...m, role } : m)),
+      prev.map((member) => (member.idnum === idnum ? { ...member, role } : member)),
     );
   };
 
@@ -114,13 +118,13 @@ export function useAdminUsers(): UseAdminUsersResult {
 
       const updated = data as UserResponse;
       setUsers((prev) =>
-        prev.map((m) => (m.idnum === updated.idnum ? updated : m)),
+        prev.map((current) =>
+          current.idnum === updated.idnum ? updated : current,
+        ),
       );
       if (user?.idnum === updated.idnum) setUser(updated);
 
-      setMessage(
-        `${updated.name}님의 권한을 ${updated.role}(으)로 변경했습니다.`,
-      );
+      setMessage(`${updated.name}의 권한을 ${updated.role}(으)로 변경했습니다.`);
     } catch {
       setMessage('권한 변경 중 오류가 발생했습니다.');
     } finally {

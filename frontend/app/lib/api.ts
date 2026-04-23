@@ -13,6 +13,8 @@ export type UserBrief = {
   role: Role;
   is_active?: boolean;
   created_at?: string;
+  center?: string | null;
+  office?: string | null;
   team?: string | null;
   position?: string | null;
   email?: string | null;
@@ -135,6 +137,18 @@ export type Project = {
   project_type: ProjectType | string;
   created_by: number | null;
   created_at: string;
+};
+
+export type ProjectMemberTimeSummary = {
+  user_id: number;
+  user_name: string;
+  total_seconds: number;
+};
+
+export type ProjectTimeSummary = {
+  project_id: number;
+  total_seconds: number;
+  members: ProjectMemberTimeSummary[];
 };
 
 export type WorkQueueItem = {

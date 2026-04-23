@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import AppShell from '../components/AppShell';
 import TeamModal from '../components/TeamModal';
-import { type SubProject } from '../lib/api';
+import { type ProjectTimeSummary, type SubProject } from '../lib/api';
 import { useMe } from '../lib/useMe';
 import CreateProjectForm from './components/CreateProjectForm';
 import ProjectCard from './components/ProjectCard';
@@ -13,8 +13,16 @@ export default function ProjectsPage() {
   const { me, loading: meLoading } = useMe();
   const isAdmin = me?.role === 'admin';
 
-  const { projects, users, byProject, loading, error, reload, setError } =
-    useProjects(!!me);
+  const {
+    projects,
+    users,
+    byProject,
+    timeByProject,
+    loading,
+    error,
+    reload,
+    setError,
+  } = useProjects(!!me);
 
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const toggleExpand = (id: number) =>
@@ -86,6 +94,7 @@ export default function ProjectsPage() {
             key={project.id}
             project={project}
             subprojects={byProject.get(project.id) ?? []}
+            timeSummary={timeByProject.get(project.id) ?? emptyTimeSummary(project.id)}
             isAdmin={!!isAdmin}
             isOpen={expanded.has(project.id)}
             onToggle={toggleExpand}
@@ -108,4 +117,12 @@ export default function ProjectsPage() {
       />
     </AppShell>
   );
+}
+
+function emptyTimeSummary(projectId: number): ProjectTimeSummary {
+  return {
+    project_id: projectId,
+    total_seconds: 0,
+    members: [],
+  };
 }

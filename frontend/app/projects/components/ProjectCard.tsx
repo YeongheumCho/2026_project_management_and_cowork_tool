@@ -1,12 +1,18 @@
 'use client';
 
-import { PROJECT_TYPE_LABEL, type Project, type SubProject } from '../../lib/api';
+import {
+  PROJECT_TYPE_LABEL,
+  type Project,
+  type ProjectTimeSummary,
+  type SubProject,
+} from '../../lib/api';
 import ProgressBar from '../../components/ProgressBar';
 import SubProjectListItem from './SubProjectListItem';
 
 type Props = {
   project: Project;
   subprojects: SubProject[];
+  timeSummary: ProjectTimeSummary;
   isAdmin: boolean;
   isOpen: boolean;
   onToggle: (projectId: number) => void;
@@ -17,6 +23,7 @@ type Props = {
 export default function ProjectCard({
   project,
   subprojects,
+  timeSummary,
   isAdmin,
   isOpen,
   onToggle,
@@ -29,6 +36,7 @@ export default function ProjectCard({
   const progress = total > 0 ? (done / total) * 100 : 0;
   const typeLabel =
     PROJECT_TYPE_LABEL[project.project_type] ?? project.project_type;
+  const topMembers = timeSummary.members.slice(0, 5);
 
   return (
     <section className="overflow-hidden rounded-[24px] border border-[#E7E5DD] bg-white shadow-[0_14px_40px_rgba(28,25,23,0.06)]">
@@ -76,6 +84,34 @@ export default function ProjectCard({
             />
           </div>
 
+          <div className="min-w-[240px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-[#5F5E5A]">
+              <span>투입 시간</span>
+              <span className="text-[#1D1D1B]">
+                {formatDuration(timeSummary.total_seconds)}
+              </span>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              {topMembers.length === 0 ? (
+                <p className="text-[11px] text-[#8B897F]">
+                  아직 기록된 작업 시간이 없습니다.
+                </p>
+              ) : (
+                topMembers.map((member) => (
+                  <div
+                    key={member.user_id}
+                    className="flex items-center justify-between gap-3 text-[11px] text-[#5F5E5A]"
+                  >
+                    <span className="truncate">{member.user_name}</span>
+                    <span className="shrink-0 font-semibold text-[#1D1D1B]">
+                      {formatDuration(member.total_seconds)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
           {isAdmin && (
             <button
               type="button"
@@ -106,4 +142,12 @@ export default function ProjectCard({
       )}
     </section>
   );
+}
+
+function formatDuration(totalSeconds: number) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (hours === 0) return `${minutes}분`;
+  if (minutes === 0) return `${hours}시간`;
+  return `${hours}시간 ${minutes}분`;
 }
