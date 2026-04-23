@@ -43,6 +43,18 @@ Reboot after changing the computer name.
 APP_HOSTNAME=cowork-server
 NEXT_PUBLIC_API_BASE_URL=/backend
 NEXT_PUBLIC_AI_CHATBOT_URL=/ai
+BACKEND_CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://cowork-server
+REALTIME_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://cowork-server
+```
+
+If you also want to allow access by server IP during setup, add it to both
+origin variables.
+
+Example:
+
+```env
+BACKEND_CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://cowork-server,http://192.168.0.50
+REALTIME_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://cowork-server,http://192.168.0.50
 ```
 
 ## Start
@@ -60,6 +72,29 @@ From another office PC:
 ```text
 http://cowork-server
 ```
+
+Temporary fallback during setup:
+
+```text
+http://192.168.0.50
+```
+
+## Expected problems and fixes
+
+- `CORS blocked` when opening the service from another PC:
+  Set `BACKEND_CORS_ORIGINS` and `REALTIME_ALLOWED_ORIGINS` to include the
+  hostname or server IP that client PCs actually use.
+- `Site does not open by IP`:
+  Caddy now listens on port `80` for any host, so users can connect by
+  hostname or raw IP on the local network.
+- `cowork-server` does not resolve on client PCs:
+  Rename the server PC or add a `hosts` entry on each client PC.
+- `Connection timed out` from another PC:
+  Open inbound TCP port `80` in Windows Defender Firewall on the server PC.
+- `Multiple browsers show different timer state`:
+  This is expected for local browser state such as access tokens. Each user
+  should sign in on their own PC, but all project time is still accumulated in
+  the shared database on the server.
 
 ## HTTPS note
 

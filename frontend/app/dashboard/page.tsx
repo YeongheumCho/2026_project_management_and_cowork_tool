@@ -12,12 +12,6 @@ import ProjectList from './components/ProjectList';
 import TimerWidget from './components/TimerWidget';
 import { useDashboardData } from './hooks/useDashboardData';
 
-/**
- * 개요(대시보드) 페이지.
- *
- * Figma 개요 탭처럼 사이드바 선택과 메인 패널이 함께 반응하도록
- * 프로젝트/팀원 선택 상태를 이 레벨에서 조율한다.
- */
 export default function DashboardPage() {
   const router = useRouter();
   const { me, loading: meLoading } = useMe();
@@ -40,6 +34,7 @@ export default function DashboardPage() {
     reload,
   } = useDashboardData(enabled);
 
+  const isAdmin = me?.role === 'admin';
   const [createOpen, setCreateOpen] = useState(false);
   const [modalError, setModalError] = useState('');
 
@@ -73,7 +68,8 @@ export default function DashboardPage() {
   }, [selectedProjectId, setSelectedProjectId, visibleProjects]);
 
   const selectedProject = useMemo(
-    () => visibleProjects.find((project) => project.id === selectedProjectId) ?? null,
+    () =>
+      visibleProjects.find((project) => project.id === selectedProjectId) ?? null,
     [selectedProjectId, visibleProjects],
   );
 
@@ -90,15 +86,15 @@ export default function DashboardPage() {
 
   const timerHelperText = useMemo(() => {
     if (!selectedProject && selectedMemberId) {
-      return '선택한 팀원이 담당한 프로젝트가 없습니다.';
+      return '선택한 담당자에게 해당하는 프로젝트가 없습니다.';
     }
     if (!selectedProject) {
-      return '왼쪽에서 프로젝트를 선택해 주세요';
+      return '왼쪽에서 프로젝트를 선택해 주세요.';
     }
     if (selectedMemberId) {
-      return '선택한 팀원 기준으로 이 프로젝트의 진행 중 업무만 보여줍니다.';
+      return '선택한 담당자 기준으로 이 프로젝트의 진행 중 업무만 보여줍니다.';
     }
-    return '프로젝트를 선택하고 시작하세요';
+    return '프로젝트를 선택하고 작업을 시작해 보세요.';
   }, [selectedMemberId, selectedProject]);
 
   const handleProjectSelect = (projectId: number) => {
@@ -112,14 +108,14 @@ export default function DashboardPage() {
   };
 
   if (meLoading || !me) {
-    return <main className="p-8 text-slate-900">불러오는 중...</main>;
+    return <main className="p-8 text-slate-900">Loading...</main>;
   }
 
   return (
     <AppShell
       me={me}
       onNewProject={
-        me.role === 'admin'
+        isAdmin
           ? () => {
               setModalError('');
               setCreateOpen(true);

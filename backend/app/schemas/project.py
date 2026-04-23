@@ -58,6 +58,18 @@ class ProjectResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ProjectMemberTimeSummary(BaseModel):
+    user_id: int
+    user_name: str
+    total_seconds: int
+
+
+class ProjectTimeSummary(BaseModel):
+    project_id: int
+    total_seconds: int
+    members: list[ProjectMemberTimeSummary]
+
+
 # ---------- SubTask ----------
 
 class SubTaskResponse(BaseModel):

@@ -18,6 +18,8 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # 조직도 확장 필드 (E-모빌리티센터 조직도 임포트 기반)
+    center: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    office: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     team: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     position: Mapped[str | None] = mapped_column(String(50), nullable=True)
     email: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
