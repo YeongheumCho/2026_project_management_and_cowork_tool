@@ -16,6 +16,13 @@ class User(Base):
     # "admin" (관리자) | "member" (일반 직원)
     role: Mapped[str] = mapped_column(String(20), default="member", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # 조직도 확장 필드 (E-모빌리티센터 조직도 임포트 기반)
+    team: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    position: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
+    phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

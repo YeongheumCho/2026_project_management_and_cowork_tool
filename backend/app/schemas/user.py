@@ -8,6 +8,10 @@ class UserCreate(BaseModel):
     name: str = Field(min_length=2, max_length=50)
     password: str = Field(min_length=8, max_length=128)
     role: str = Field(default="member", pattern="^(admin|member)$")
+    team: str | None = Field(default=None, max_length=100)
+    position: str | None = Field(default=None, max_length=50)
+    email: str | None = Field(default=None, max_length=120)
+    phone: str | None = Field(default=None, max_length=20)
 
 
 class UserResponse(BaseModel):
@@ -16,6 +20,10 @@ class UserResponse(BaseModel):
     name: str
     role: str
     is_active: bool
+    team: str | None = None
+    position: str | None = None
+    email: str | None = None
+    phone: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -27,7 +35,10 @@ class UserRoleUpdate(BaseModel):
 
 class UserBrief(BaseModel):
     id: int
+    idnum: str
     name: str
     role: str
+    team: str | None = None
+    position: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

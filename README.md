@@ -73,10 +73,14 @@ AI Chatbot (8002)
 ```
 .
 ├── backend/          # FastAPI REST API
-│   └── app/
-│       ├── models/project.py    # Project / SubProject / SubTask (+KEFICO 필드)
-│       ├── schemas/project.py   # Pydantic 스키마 (enum: 검증상태/LEVEL/기타카테고리)
-│       └── routers/projects.py  # CRUD + 유형별 템플릿 자동 생성
+│   ├── app/
+│   │   ├── models/project.py    # Project / SubProject / SubTask (+KEFICO 필드)
+│   │   ├── models/user.py       # User (+조직도 확장: team/position/email/phone)
+│   │   ├── schemas/project.py   # Pydantic 스키마 (enum: 검증상태/LEVEL/기타카테고리)
+│   │   └── routers/projects.py  # CRUD + 유형별 템플릿 자동 생성
+│   └── scripts/
+│       ├── import_org_chart.py  # E-모빌리티센터 조직도 104명 일괄 등록 (멱등성 보장)
+│       └── data/사번포함조직도.csv  # 조직도 원본 (수정 후 재실행으로 갱신)
 ├── realtime/         # WebSocket 실시간 서버
 ├── frontend/         # Next.js 프론트엔드
 │   └── app/
@@ -101,38 +105,37 @@ AI Chatbot (8002)
 - `feature/<이름>/<기능>`: 기능 개발 브랜치 (예: `feature/backend/auth`, `feature/frontend/dashboard`)
 
 
-### 7. ?? ?? ??? ??
+### 7. 초기 데이터 — E-모빌리티센터 조직도 임포트
 
-??? ???, ????, ??????, ?? ??? ? ?? ?? ??? ?? ??? ?????.
+최초 기동 후, **실제 조직도 104명**을 일괄 등록해서 바로 로그인 테스트를 할 수 있습니다. 전체 절차와 주의사항은 별도 가이드에 정리되어 있습니다 → [`docs/setup/database-setup.md`](./docs/setup/database-setup.md)
 
-```powershell
-# 1. ???? ??
-docker compose up -d
-
-# 2. ?? ??? ?? ??
-docker compose exec backend python scripts/seed_dummy_data.py
-```
-
-?? ?? ? ?? ??? ??? ?? ??:
-
-- ???: `A1001 / Admin1234!`
-- ?? ???: `M2001 / Member1234!`
-
-?? ??? ?? ???? ??? ?? ???? ????? ?? ?? ???? ??? ???? ????.
-
-??? ??:
+요약:
 
 ```powershell
-docker compose exec db psql -U cowork_user -d cowork_db -c "SELECT idnum, name, role FROM users ORDER BY idnum;"
-docker compose exec db psql -U cowork_user -d cowork_db -c "SELECT id, name, project_type FROM projects ORDER BY id;"
+# 1. DB 볼륨 초기화 (User 모델에 team/position/email/phone 컬럼이 추가되었으므로 필수)
+docker compose down -v
+
+# 2. 백엔드 + DB 기동 (create_all 로 테이블 생성)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db redis backend
+
+# 3. CSV 기반 104명 일괄 임포트
+docker compose exec backend python scripts/import_org_chart.py
 ```
 
-?? ???? ???? ?? ?? ??? ?? DB??? ???? ??? ? ??????.
+임포트 완료 후 로그인 샘플:
+
+- 모든 사용자: **로그인 ID = 사번, 초기 비밀번호 = `00000000`**
+- 관리자(`admin`) 18명: 각 팀의 팀장/실장/센터장(MASTER) + 서비스 개발자 4명 (조영흠·박상은·신현지·김한결)
+- 나머지 86명은 일반 직원(`member`)
+
+결과 확인:
 
 ```powershell
-docker compose exec db psql -U cowork_user -d cowork_db -c "TRUNCATE TABLE progress_logs, subtasks, subprojects, projects, users RESTART IDENTITY CASCADE;"
-docker compose exec backend python scripts/seed_dummy_data.py
+docker compose exec db psql -U cowork_user -d cowork_db -c "SELECT role, COUNT(*) FROM users GROUP BY role ORDER BY role;"
+docker compose exec db psql -U cowork_user -d cowork_db -c "SELECT team, COUNT(*) FROM users GROUP BY team ORDER BY team;"
 ```
+
+조직 개편으로 CSV 를 갱신한 뒤에는 같은 명령 (`import_org_chart.py`) 을 다시 실행하면 됩니다. 스크립트는 멱등성을 가져 같은 사번은 메타데이터만 덮어쓰고 비밀번호는 유지합니다.
 
 ---
 
