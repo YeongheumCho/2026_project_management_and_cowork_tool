@@ -6,11 +6,18 @@ import { API_BASE_URL } from '../../lib/api';
  * 공용 `lib/api` 의 UserBrief 와 분리해서 유지한다.
  */
 export type UserResponse = {
+  id: number;
   idnum: string;
   name: string;
   is_active: boolean;
   created_at: string;
   role: string;
+  center?: string | null;
+  office?: string | null;
+  team?: string | null;
+  position?: string | null;
+  email?: string | null;
+  phone?: string | null;
 };
 
 export type ErrorResponse = {

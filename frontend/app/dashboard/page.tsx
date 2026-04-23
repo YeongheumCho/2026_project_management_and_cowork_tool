@@ -9,6 +9,7 @@ import { useWorkflowSelection } from '../lib/workflow-selection';
 import DashboardHeader from './components/DashboardHeader';
 import KpiGrid from './components/KpiGrid';
 import ProjectList from './components/ProjectList';
+import ProjectSummaryGrid from './components/ProjectSummaryGrid';
 import TimerWidget from './components/TimerWidget';
 import { useDashboardData } from './hooks/useDashboardData';
 
@@ -143,6 +144,12 @@ export default function DashboardPage() {
         avgProgress={summary.avgProgress}
         weeklyMinutes={summary.weeklyMinutes}
         memberCount={users.length}
+        loading={loading}
+      />
+
+      <ProjectSummaryGrid
+        projects={projects}
+        subprojects={subprojects}
         loading={loading}
       />
 

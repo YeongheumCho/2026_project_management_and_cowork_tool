@@ -40,10 +40,11 @@ export default function AdminPage() {
     <AppShell me={me}>
       <div className="mb-6">
         <h1 className="text-[20px] font-bold tracking-[-0.3px] text-[#1A1A1A]">
-          관리
+          관리자 설정
         </h1>
         <p className="mt-1 text-[12px] text-[#888780]">
-          사용자 권한과 템플릿을 여기에서 관리할 수 있습니다.
+          팀원 권한과 프로젝트 템플릿만 여기에서 관리합니다. 그 외 조회는
+          좌측 상단 네비게이션(개요 / 프로젝트 / 캘린더)에서 바로 확인하세요.
         </p>
       </div>
 

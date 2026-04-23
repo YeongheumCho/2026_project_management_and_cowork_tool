@@ -94,10 +94,14 @@ export function useDashboardData(enabled: boolean): UseDashboardDataResult {
       (sp) => sp.status === 'completed',
     ).length;
 
+    // 소프로젝트 progress(0–100) 의 단순 평균.
+    // 과거에는 "완료된 개수 비율" 로 잘못 계산돼서 세부 태스크 체크로
+    // progress 가 20 → 40 → 60 이 올라가도 KPI 카드가 꿈쩍하지 않았다.
     const avgProgress =
       subprojects.length === 0
         ? 0
-        : (completedSubs / subprojects.length) * 100;
+        : subprojects.reduce((sum, sp) => sum + (sp.progress ?? 0), 0) /
+          subprojects.length;
 
     // 이번 달 기간이 겹치는 소프로젝트의 total_minutes 합.
     const ym = todayIso.slice(0, 7); // "YYYY-MM"
