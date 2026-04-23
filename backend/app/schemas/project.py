@@ -43,9 +43,20 @@ EtcCategory = Literal[
 
 # ---------- Project ----------
 
+class ProjectParticipantBrief(BaseModel):
+    id: int
+    name: str
+    center: str | None = None
+    office: str | None = None
+    team: str | None = None
+    position: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     project_type: ProjectType = "general"
+    participant_ids: list[int] = Field(min_length=1)
 
 
 class ProjectResponse(BaseModel):
@@ -54,6 +65,7 @@ class ProjectResponse(BaseModel):
     project_type: str
     created_by: Optional[int] = None
     created_at: datetime
+    participants: list[ProjectParticipantBrief] = []
 
     model_config = ConfigDict(from_attributes=True)
 

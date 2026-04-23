@@ -86,13 +86,13 @@ export default function DashboardPage() {
 
   const timerHelperText = useMemo(() => {
     if (!selectedProject && selectedMemberId) {
-      return '선택한 담당자에게 해당하는 프로젝트가 없습니다.';
+      return '선택한 담당자에게 해당되는 프로젝트가 없습니다.';
     }
     if (!selectedProject) {
       return '왼쪽에서 프로젝트를 선택해 주세요.';
     }
     if (selectedMemberId) {
-      return '선택한 담당자 기준으로 이 프로젝트의 진행 중 업무만 보여줍니다.';
+      return '선택한 담당자 기준으로 현재 진행 중인 업무만 보여드립니다.';
     }
     return '프로젝트를 선택하고 작업을 시작해 보세요.';
   }, [selectedMemberId, selectedProject]);
@@ -108,7 +108,7 @@ export default function DashboardPage() {
   };
 
   if (meLoading || !me) {
-    return <main className="p-8 text-slate-900">Loading...</main>;
+    return <main className="p-8 text-slate-900">불러오는 중...</main>;
   }
 
   return (
@@ -162,6 +162,7 @@ export default function DashboardPage() {
 
       <CreateProjectModal
         open={createOpen}
+        users={users}
         onClose={() => {
           setModalError('');
           setCreateOpen(false);

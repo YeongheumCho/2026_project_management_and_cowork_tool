@@ -19,18 +19,28 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
+    Column,
     Date,
     DateTime,
     ForeignKey,
     Integer,
     Numeric,
     String,
+    Table,
     Text,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+
+
+project_participants = Table(
+    "project_participants",
+    Base.metadata,
+    Column("project_id", ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+)
 
 
 # SubProject 상위 상태
@@ -92,6 +102,11 @@ class Project(Base):
         "ProgressLog",
         back_populates="project",
         cascade="all, delete-orphan",
+    )
+    participants = relationship(
+        "User",
+        secondary=project_participants,
+        back_populates="participating_projects",
     )
 
 

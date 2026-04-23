@@ -1,6 +1,8 @@
 'use client';
 
+import { useMemo } from 'react';
 import { PROJECT_TYPE_LABEL, type Project, type UserBrief } from '../../../lib/api';
+import OrganizationMemberPicker from '../../OrganizationMemberPicker';
 import Field from '../../form/Field';
 import type { FormSetter, FormState } from '../types';
 
@@ -15,10 +17,6 @@ type Props = {
   isEtc: boolean;
 };
 
-/**
- * 모든 소프로젝트가 공통으로 갖는 기본 필드:
- * 프로젝트 · 이름 · 담당자 · 시작/종료일.
- */
 export default function BasicSection({
   f,
   set,
@@ -29,6 +27,17 @@ export default function BasicSection({
   lockedProjectId,
   isEtc,
 }: Props) {
+  const selectedProject = useMemo(
+    () => projects.find((project) => project.id === f.projectId),
+    [projects, f.projectId],
+  );
+  const availableUsers = useMemo(() => {
+    if (!selectedProject || selectedProject.participants.length === 0) {
+      return users;
+    }
+    return selectedProject.participants;
+  }, [selectedProject, users]);
+
   return (
     <section className="rounded-xl border border-slate-200 p-4">
       <h4 className="mb-3 text-sm font-semibold text-slate-700">기본 정보</h4>
@@ -43,38 +52,45 @@ export default function BasicSection({
             className="input"
           >
             <option value="">프로젝트 선택</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({PROJECT_TYPE_LABEL[p.project_type] ?? '일반'})
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name} ({PROJECT_TYPE_LABEL[project.project_type] ?? '일반'})
               </option>
             ))}
           </select>
         </Field>
-        <Field label={isEtc ? '업무 제목' : '소프로젝트 / 기능명'}>
+
+        <Field label={isEtc ? '업무 제목' : '하위 프로젝트 / 기능명'}>
           <input
             value={f.name}
             onChange={(e) => set('name', e.target.value)}
             disabled={!isAdmin}
             className="input"
-            placeholder={isEtc ? '예: 4월 휴가' : '예: 로그인 기능 개발'}
+            placeholder={isEtc ? '예: 4월 교육' : '예: 로그 분석 기능 개발'}
           />
         </Field>
-        <Field label="담당자">
-          <select
-            value={f.assigneeId}
-            onChange={(e) => set('assigneeId', Number(e.target.value))}
-            disabled={!isAdmin}
-            className="input"
-          >
-            <option value="">팀원 선택</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name} ({u.role === 'admin' ? '관리자' : '일반'})
-              </option>
-            ))}
-          </select>
+
+        <Field
+          label="담당자"
+          span={2}
+          helper={
+            selectedProject?.participants.length
+              ? '이 프로젝트에 참여 중인 인원만 선택할 수 있습니다.'
+              : '프로젝트 참여 인원이 아직 없으면 전체 조직에서 선택됩니다.'
+          }
+        >
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <OrganizationMemberPicker
+              users={availableUsers}
+              selectedIds={f.assigneeId === '' ? [] : [f.assigneeId]}
+              onChange={(nextIds) => set('assigneeId', nextIds[0] ?? '')}
+              singleSelection
+              disabled={!isAdmin}
+            />
+          </div>
         </Field>
-        <Field label="시작일 ~ 종료일">
+
+        <Field label="시작일 ~ 종료일" span={2}>
           <div className="flex gap-2">
             <input
               type="date"

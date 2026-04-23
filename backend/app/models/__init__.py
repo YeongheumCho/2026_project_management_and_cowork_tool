@@ -9,6 +9,7 @@ from app.models.project import (  # noqa: F401
     Project,
     SubProject,
     SubTask,
+    project_participants,
     STATUS_PLANNED,
     STATUS_IN_PROGRESS,
     STATUS_COMPLETED,

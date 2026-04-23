@@ -46,7 +46,7 @@ export default function ProjectCard({
             type="button"
             onClick={() => onToggle(project.id)}
             className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#DDDAD0] bg-[#FAFAF7] text-sm font-semibold text-[#5F5E5A] transition hover:border-[#BDB8E9] hover:text-[#534AB7]"
-            aria-label={isOpen ? 'Collapse project' : 'Expand project'}
+            aria-label={isOpen ? '프로젝트 접기' : '프로젝트 펼치기'}
           >
             {isOpen ? '-' : '+'}
           </button>
@@ -64,23 +64,23 @@ export default function ProjectCard({
 
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[#7A786F]">
               <span>
-                Created {new Date(project.created_at).toLocaleDateString('ko-KR')}
+                생성일 {new Date(project.created_at).toLocaleDateString('ko-KR')}
               </span>
-              <span>{total} subprojects</span>
-              <span>{done} completed</span>
-              <span>{inProgress} in progress</span>
+              <span>소프로젝트 {total}개</span>
+              <span>완료 {done}개</span>
+              <span>진행 중 {inProgress}개</span>
             </div>
           </div>
 
           <div className="min-w-[180px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
             <div className="flex items-center justify-between text-[11px] font-semibold text-[#5F5E5A]">
-              <span>Project progress</span>
+              <span>프로젝트 진행률</span>
               <span className="text-[#1D1D1B]">{Math.round(progress)}%</span>
             </div>
             <ProgressBar
               value={progress}
               className="mt-2"
-              ariaLabel={`${project.name} progress`}
+              ariaLabel={`${project.name} 진행률`}
             />
           </div>
 
@@ -118,7 +118,7 @@ export default function ProjectCard({
               onClick={() => onAddSub(project.id)}
               className="rounded-[14px] bg-[#534AB7] px-4 py-2 text-[11px] font-bold text-white shadow-[0_8px_20px_rgba(83,74,183,0.24)] transition hover:bg-[#473EA7]"
             >
-              + Add subproject
+              + 소프로젝트 추가
             </button>
           )}
         </div>
@@ -128,8 +128,8 @@ export default function ProjectCard({
         <div className="bg-[#FBFBF8] px-5 py-5">
           {subprojects.length === 0 ? (
             <p className="rounded-[18px] border border-dashed border-[#D7D4CA] bg-white px-5 py-8 text-center text-sm text-[#8B897F]">
-              No subprojects yet.
-              {isAdmin ? ' Add one from the button above to get started.' : ''}
+              아직 등록된 소프로젝트가 없습니다.
+              {isAdmin ? ' 위 버튼에서 바로 추가할 수 있습니다.' : ''}
             </p>
           ) : (
             <ul className="space-y-3">

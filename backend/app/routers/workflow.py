@@ -158,6 +158,23 @@ def start_work_log(
         running_log.current_started_at = None
         running_log.status = WORKLOG_PAUSED
 
+    resumable_log = db.scalar(
+        select(WorkLog)
+        .where(
+            WorkLog.user_id == current_user.id,
+            WorkLog.status == WORKLOG_PAUSED,
+            WorkLog.subproject_id == payload.subproject_id,
+            WorkLog.task_name == payload.task_name,
+        )
+        .order_by(WorkLog.created_at.desc(), WorkLog.id.desc())
+    )
+    if resumable_log:
+        resumable_log.status = WORKLOG_RUNNING
+        resumable_log.current_started_at = now
+        db.commit()
+        db.refresh(resumable_log)
+        return resumable_log
+
     log = WorkLog(
         user_id=current_user.id,
         subproject_id=payload.subproject_id,

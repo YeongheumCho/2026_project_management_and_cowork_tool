@@ -37,3 +37,8 @@ class User(Base):
         back_populates="assignee",
         foreign_keys="SubProject.assignee_id",
     )
+    participating_projects = relationship(
+        "Project",
+        secondary="project_participants",
+        back_populates="participants",
+    )
