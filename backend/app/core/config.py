@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     BACKEND_CORS_ORIGINS: str = "http://localhost:3000"
+    AI_CHATBOT_URL: str = "http://ai-chatbot:8002/api/chat/"
+    AI_ASSIGNMENT_USE_CLAUDE: bool = True
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",

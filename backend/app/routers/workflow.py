@@ -2,10 +2,12 @@ import json
 from datetime import date, datetime, timezone
 from uuid import uuid4
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import settings
 from app.core.security import hash_password, verify_password
 from app.dependencies import get_current_user, get_db, require_admin
 from app.models.project import PROJECT_TYPES, Project, SubProject, SubTask
@@ -37,6 +39,7 @@ from app.schemas.workflow import (
 
 
 router = APIRouter(tags=["workflow"])
+SERVICE_DEVELOPER_NAMES = {"조영흠", "박상은", "신현지", "김한결"}
 
 
 def _utcnow() -> datetime:
@@ -73,6 +76,156 @@ def _recommendation_reasons(
         f"유사 업무 경험치 {keyword_hits}건이 반영되어 역량 점수가 {capability_score:.0f}점입니다.",
         f"{user.name}님의 현재 잔여 업무량은 약 {remaining_minutes}분입니다.",
     ]
+
+
+def _is_excluded_assignment_position(position: str | None) -> bool:
+    normalized = (position or "").strip()
+    if not normalized:
+        return False
+    excluded_titles = ("센터장", "실장", "팀장")
+    return any(title in normalized for title in excluded_titles)
+
+
+def _should_exclude_from_assignment(user: User) -> bool:
+    if user.name in SERVICE_DEVELOPER_NAMES:
+        return False
+    if user.role == "admin":
+        return True
+    return _is_excluded_assignment_position(user.position)
+
+
+def _matches_org_scope(
+    user: User,
+    office: str | None,
+    team: str | None,
+) -> bool:
+    normalized_office = (office or "").strip()
+    normalized_team = (team or "").strip()
+    if normalized_office and (user.office or "").strip() != normalized_office:
+        return False
+    if normalized_team and (user.team or "").strip() != normalized_team:
+        return False
+    return True
+
+
+def _extract_json_block(text: str) -> dict | list | None:
+    text = text.strip()
+    candidates = [text]
+
+    if "```json" in text:
+        start = text.index("```json") + len("```json")
+        end = text.find("```", start)
+        if end != -1:
+            candidates.append(text[start:end].strip())
+    elif "```" in text:
+        start = text.index("```") + len("```")
+        end = text.find("```", start)
+        if end != -1:
+            candidates.append(text[start:end].strip())
+
+    for candidate in candidates:
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
+async def _rerank_candidates_with_claude(
+    payload: RecommendationRequest,
+    candidates: list[RecommendationCandidate],
+) -> tuple[list[RecommendationCandidate], bool]:
+    if not settings.AI_ASSIGNMENT_USE_CLAUDE or not candidates:
+        return candidates, False
+
+    shortlist = [
+        {
+            "user_id": candidate.user_id,
+            "name": candidate.name,
+            "role": candidate.role,
+            "position": candidate.position,
+            "score": candidate.score,
+            "availability_score": candidate.availability_score,
+            "capability_score": candidate.capability_score,
+            "remaining_minutes": candidate.remaining_minutes,
+            "keyword_experience_count": candidate.keyword_experience_count,
+            "reasons": candidate.reasons,
+        }
+        for candidate in sorted(candidates, key=lambda item: item.score, reverse=True)[:5]
+    ]
+
+    prompt = (
+        "당신은 프로젝트 업무 배정 추천을 돕는 분석가입니다.\n"
+        "주어진 후보 5명 안에서 상위 3명을 다시 고르고, 각 사람의 추천 이유를 한국어로 3개씩 작성하세요.\n"
+        "반드시 JSON만 반환하세요.\n"
+        '{'
+        '"candidates": ['
+        '{"user_id": 1, "rank": 1, "reasons": ["...", "...", "..."]}'
+        "]"
+        '}\n\n'
+        f"요청 정보: {json.dumps(payload.model_dump(mode='json'), ensure_ascii=False)}\n"
+        f"후보 정보: {json.dumps(shortlist, ensure_ascii=False)}"
+    )
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            response = await client.post(
+                settings.AI_CHATBOT_URL,
+                json={
+                    "messages": [{"role": "user", "content": prompt}],
+                    "system_prompt": "프로젝트 업무 배정 추천 결과를 JSON으로만 반환하세요.",
+                },
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            detail = exc.response.text
+            try:
+                payload = exc.response.json()
+                if isinstance(payload, dict) and payload.get("detail"):
+                    detail = str(payload["detail"])
+            except Exception:
+                pass
+            raise ValueError(f"Claude 호출 실패: {detail}") from exc
+
+        data = response.json()
+
+    parsed = _extract_json_block(data.get("message", ""))
+    if not isinstance(parsed, dict):
+        raise ValueError("Claude 응답에서 JSON을 해석할 수 없습니다.")
+
+    rows = parsed.get("candidates")
+    if not isinstance(rows, list):
+        raise ValueError("Claude 응답에 candidates 배열이 없습니다.")
+
+    by_id = {candidate.user_id: candidate for candidate in candidates}
+    reranked: list[RecommendationCandidate] = []
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        user_id = row.get("user_id")
+        if not isinstance(user_id, int) or user_id not in by_id:
+            continue
+        candidate = by_id[user_id]
+        reasons = row.get("reasons")
+        if isinstance(reasons, list) and reasons:
+            candidate.reasons = [str(reason) for reason in reasons[:3]]
+        candidate.recommendation_source = "claude"
+        reranked.append(candidate)
+
+    if not reranked:
+        raise ValueError("Claude 응답에 유효한 추천 후보가 없습니다.")
+
+    used_ids = {candidate.user_id for candidate in reranked}
+    remaining = [
+        candidate
+        for candidate in sorted(candidates, key=lambda item: item.score, reverse=True)
+        if candidate.user_id not in used_ids
+    ]
+    ordered = (reranked + remaining)[:3]
+    for index, candidate in enumerate(ordered, start=1):
+        candidate.rank = index
+    return ordered, True
 
 
 @router.get("/work-queue/today", response_model=list[WorkQueueItem])
@@ -282,7 +435,7 @@ def delete_work_log(
 
 
 @router.post("/ai/recommendations", response_model=RecommendationResponse)
-def recommend_assignees(
+async def recommend_assignees(
     payload: RecommendationRequest,
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
@@ -302,6 +455,10 @@ def recommend_assignees(
     candidates: list[RecommendationCandidate] = []
 
     for user in users:
+        if _should_exclude_from_assignment(user):
+            continue
+        if not _matches_org_scope(user, payload.office, payload.team):
+            continue
         assigned_subprojects = [
             subproject
             for subproject in active_subprojects
@@ -335,12 +492,14 @@ def recommend_assignees(
                 user_id=user.id,
                 name=user.name,
                 role=user.role,
+                position=user.position,
                 rank=0,
                 score=round(final_score, 2),
                 availability_score=round(availability_score, 2),
                 capability_score=round(capability_score, 2),
                 remaining_minutes=remaining_minutes,
                 keyword_experience_count=keyword_hits + same_type_count,
+                recommendation_source="rule",
                 reasons=_recommendation_reasons(
                     user=user,
                     availability_score=availability_score,
@@ -351,11 +510,27 @@ def recommend_assignees(
             )
         )
 
-    top_candidates = sorted(candidates, key=lambda item: item.score, reverse=True)[:3]
+    ranked_candidates = sorted(candidates, key=lambda item: item.score, reverse=True)
+    top_candidates = ranked_candidates[:3]
     for index, candidate in enumerate(top_candidates, start=1):
         candidate.rank = index
 
-    return RecommendationResponse(request=payload, candidates=top_candidates)
+    claude_used = False
+    claude_error: str | None = None
+    try:
+        top_candidates, claude_used = await _rerank_candidates_with_claude(
+            payload,
+            ranked_candidates,
+        )
+    except Exception as exc:
+        claude_error = str(exc)
+
+    return RecommendationResponse(
+        request=payload,
+        candidates=top_candidates,
+        claude_used=claude_used,
+        claude_error=claude_error,
+    )
 
 
 @router.post("/ai/assignments", response_model=AssignmentResponse, status_code=status.HTTP_201_CREATED)

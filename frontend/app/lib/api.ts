@@ -185,6 +185,8 @@ export type RecommendationRequest = {
   project_type: ProjectType | string;
   start_date: string;
   end_date: string;
+  office?: string | null;
+  team?: string | null;
   availability_weight: number;
   capability_weight: number;
 };
@@ -193,18 +195,22 @@ export type RecommendationCandidate = {
   user_id: number;
   name: string;
   role: Role | string;
+  position?: string | null;
   rank: number;
   score: number;
   availability_score: number;
   capability_score: number;
   remaining_minutes: number;
   keyword_experience_count: number;
+  recommendation_source: 'rule' | 'claude' | string;
   reasons: string[];
 };
 
 export type RecommendationResponse = {
   request: RecommendationRequest;
   candidates: RecommendationCandidate[];
+  claude_used: boolean;
+  claude_error: string | null;
 };
 
 export type AssignmentRequest = {
