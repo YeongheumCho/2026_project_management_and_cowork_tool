@@ -5,10 +5,11 @@ import AppShell from '../components/AppShell';
 import MonthCalendar, { shiftMonth } from '../components/MonthCalendar';
 import TeamModal from '../components/TeamModal';
 import ProgressBar from '../components/ProgressBar';
+import TeamMemberFilter from '../components/TeamMemberFilter';
 import { apiFetch, type Project, type SubProject, type UserBrief } from '../lib/api';
 import { useMe } from '../lib/useMe';
 import { useWorkflowSelection } from '../lib/workflow-selection';
-import { colorForId, softColorForId, textColorForId } from '../components/AppShell/colors';
+import { colorForId } from '../components/AppShell/colors';
 
 export default function TeamCalendarPage() {
   const { me, loading: meLoading } = useMe();
@@ -144,34 +145,14 @@ export default function TeamCalendarPage() {
           tag="캘린더 B"
           tagColor="#0F6E56"
           filterSlot={
-            <div className="flex flex-wrap items-center gap-[5px]">
+            <div className="flex flex-col items-start gap-1.5">
               <span className="text-[10px] text-[#888780]">담당자</span>
-              <button
-                type="button"
-                onClick={() => setSelectedMemberId(null)}
-                className={`rounded-full border px-[9px] py-1 text-[11px] ${
-                  selectedMemberId === null
-                    ? 'border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]'
-                    : 'border-[#EAEAE4] text-[#888780]'
-                }`}
-              >
-                전체
-              </button>
-              {users.map((user) => (
-                <button
-                  key={user.id}
-                  type="button"
-                  onClick={() => setSelectedMemberId(user.id)}
-                  className={`inline-flex items-center gap-1 rounded-full border px-[9px] py-1 text-[11px] ${
-                    selectedMemberId === user.id
-                      ? `${softColorForId(user.id)} ${textColorForId(user.id)} border-transparent`
-                      : 'border-[#EAEAE4] text-[#888780]'
-                  }`}
-                >
-                  <span className={`h-[6px] w-[6px] rounded-full ${colorForId(user.id)}`} />
-                  {user.name}
-                </button>
-              ))}
+              <TeamMemberFilter
+                users={users}
+                selectedId={selectedMemberId ?? null}
+                onSelect={setSelectedMemberId}
+                myTeam={me.team}
+              />
             </div>
           }
         />

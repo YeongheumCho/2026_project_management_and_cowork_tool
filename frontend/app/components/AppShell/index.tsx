@@ -63,6 +63,7 @@ export default function AppShell({
         <Sidebar
           projects={sidebarProjects ?? projects}
           users={sidebarUsers ?? users}
+          myTeam={me.team}
           selectedProjectId={selectedProjectId}
           selectedMemberId={selectedMemberId}
           onProjectSelect={onProjectSelect}
