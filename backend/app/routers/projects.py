@@ -132,11 +132,24 @@ def create_project(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
+    participant_ids = list(dict.fromkeys(payload.participant_ids))
+    participants = db.scalars(
+        select(User)
+        .where(User.id.in_(participant_ids), User.is_active.is_(True))
+        .order_by(User.name.asc())
+    ).all()
+    if len(participants) != len(participant_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="유효하지 않은 프로젝트 참여 인원이 포함되어 있습니다.",
+        )
+
     project = Project(
         name=payload.name,
         project_type=payload.project_type,
         created_by=admin.id,
     )
+    project.participants = participants
     db.add(project)
     db.commit()
     db.refresh(project)
@@ -148,7 +161,11 @@ def list_projects(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
-    return db.scalars(select(Project).order_by(Project.created_at.desc())).all()
+    return db.scalars(
+        select(Project)
+        .options(selectinload(Project.participants))
+        .order_by(Project.created_at.desc())
+    ).all()
 
 
 @router.get("/projects/time-summary", response_model=list[ProjectTimeSummary])
@@ -222,7 +239,11 @@ def create_subproject(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    project = db.get(Project, payload.project_id)
+    project = db.scalar(
+        select(Project)
+        .options(selectinload(Project.participants))
+        .where(Project.id == payload.project_id)
+    )
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -234,6 +255,12 @@ def create_subproject(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="담당자를 찾을 수 없습니다.",
+        )
+
+    if project.participants and assignee.id not in {member.id for member in project.participants}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="담당자는 해당 프로젝트 참여 인원 중에서만 선택할 수 있습니다.",
         )
 
     sp = SubProject(
@@ -300,6 +327,11 @@ def update_subproject(
     admin: User = Depends(require_admin),
 ):
     sp = _load_subproject(db, subproject_id)
+    project = db.scalar(
+        select(Project)
+        .options(selectinload(Project.participants))
+        .where(Project.id == sp.project_id)
+    )
 
     new_start = payload.start_date or sp.start_date
     new_end = payload.end_date or sp.end_date
@@ -317,6 +349,13 @@ def update_subproject(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="담당자를 찾을 수 없습니다.",
+            )
+        if project and project.participants and assignee.id not in {
+            member.id for member in project.participants
+        }:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="담당자는 해당 프로젝트 참여 인원 중에서만 선택할 수 있습니다.",
             )
         sp.assignee_id = assignee.id
     if payload.start_date is not None:

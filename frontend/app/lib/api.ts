@@ -137,6 +137,7 @@ export type Project = {
   project_type: ProjectType | string;
   created_by: number | null;
   created_at: string;
+  participants: UserBrief[];
 };
 
 export type ProjectMemberTimeSummary = {

@@ -11,6 +11,15 @@ import {
   SUBPROJECT_STATUS_LABEL,
 } from '../../lib/subprojectStatus';
 
+const TEXT = {
+  uploadDone: '\uc5c5\ub85c\ub4dc \uc644\ub8cc',
+  firstVerify: '1\ucc28 \uac80\uc99d',
+  inReview: '\uc778\ub9ac\ubdf0',
+  unassigned: '\ubbf8\uc9c0\uc815',
+  progress: '\uc9c4\ud589\ub960',
+  separator: ' \u00b7 ',
+} as const;
+
 type Props = {
   sp: SubProject;
   onClick: (sp: SubProject) => void;
@@ -48,20 +57,22 @@ export default function SubProjectListItem({ sp, onClick }: Props) {
               </span>
               {sp.upload_done && (
                 <span className="rounded-full border border-[#D8F0DE] bg-[#EEF9F1] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#287A43]">
-                  Uploaded
+                  {TEXT.uploadDone}
                 </span>
               )}
             </div>
 
             {metaBits.length > 0 && (
               <p className="mt-1 text-[11px] text-[#7A786F]">
-                {metaBits.join(' · ')}
+                {metaBits.join(TEXT.separator)}
               </p>
             )}
 
             {(first || inReview) && (
               <p className="mt-1 text-[11px] text-[#5F5E5A]">
-                1st verify: {first ?? '-'} · In review: {inReview ?? '-'}
+                {TEXT.firstVerify}: {first ?? '-'}
+                {TEXT.separator}
+                {TEXT.inReview}: {inReview ?? '-'}
               </p>
             )}
           </div>
@@ -71,13 +82,13 @@ export default function SubProjectListItem({ sp, onClick }: Props) {
               {sp.start_date} - {sp.end_date}
             </p>
             <p className="mt-1 text-[11px] font-semibold text-[#5F5E5A]">
-              {sp.assignee?.name ?? 'Unassigned'}
+              {sp.assignee?.name ?? TEXT.unassigned}
             </p>
           </div>
         </div>
 
         <div className="mt-4 flex items-center justify-between text-[11px] text-[#7A786F]">
-          <span>Progress</span>
+          <span>{TEXT.progress}</span>
           <span className="font-semibold text-[#1D1D1B]">
             {sp.progress.toFixed(0)}%
           </span>
@@ -86,7 +97,7 @@ export default function SubProjectListItem({ sp, onClick }: Props) {
         <ProgressBar
           value={sp.progress}
           className="mt-2"
-          ariaLabel={`${sp.name} progress`}
+          ariaLabel={`${sp.name} ${TEXT.progress}`}
         />
       </button>
     </li>

@@ -6,6 +6,23 @@ import Modal from './Modal';
 import ProgressBar from './ProgressBar';
 import { softColorForId, textColorForId } from './AppShell/colors';
 
+const TEXT = {
+  title: '\uac1c\uc778 \uce98\ub9b0\ub354 \uc5c5\ubb34 \uc0c1\uc138',
+  assignee: '\ub2f4\ub2f9\uc790',
+  unassigned: '\ubbf8\uc9c0\uc815',
+  progress: '\uc5c5\ubb34 \uc9c4\ud589\ub960',
+  progressAriaSuffix: '\uc9c4\ud589\ub960',
+  assigneeOnly: '\uc774 \uccb4\ud06c\ub9ac\uc2a4\ud2b8\ub294 \ub2f4\ub2f9\uc790\ub9cc \uc218\uc815\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.',
+  emptyTasks: '\uc544\uc9c1 \uc138\ubd80 \uc5c5\ubb34\uac00 \ub4f1\ub85d\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.',
+  detailTasks: '\uc138\ubd80 \uc5c5\ubb34',
+  weight: '\ube44\uc911',
+  current: '\ud604\uc7ac \uc9c4\ud589 \u00b7 ',
+  allDone:
+    '\ubaa8\ub4e0 \uc138\ubd80 \uc5c5\ubb34\uac00 \uc644\ub8cc\ub418\uc5b4 \ud504\ub85c\uc81d\ud2b8 \uc9c4\ud589\ub960\uc774 \ubc18\uc601\ub418\uc5c8\uc2b5\ub2c8\ub2e4.',
+  close: '\ub2eb\uae30',
+  check: '\u2713',
+} as const;
+
 type Props = {
   open: boolean;
   isAdmin: boolean;
@@ -66,7 +83,7 @@ export default function PersonalModal({
       <div className="space-y-5">
         <div>
           <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#888780]">
-            Personal calendar assigned work
+            {TEXT.title}
           </p>
           <h3 className="mt-2 text-[19px] font-bold text-[#1A1A1A]">
             {subproject.name}
@@ -80,15 +97,13 @@ export default function PersonalModal({
           className={`rounded-[20px] border px-3 py-2 ${accentSurface} ${accentText}`}
         >
           <p className="text-[11px] font-semibold">
-            Assignee {subproject.assignee?.name ?? 'Unassigned'}
+            {TEXT.assignee} {subproject.assignee?.name ?? TEXT.unassigned}
           </p>
         </div>
 
         <div className={`rounded-[10px] border p-4 ${accentSurface}`}>
           <div className="flex items-center justify-between">
-            <p className={`text-[11px] font-bold ${accentText}`}>
-              Task progress
-            </p>
+            <p className={`text-[11px] font-bold ${accentText}`}>{TEXT.progress}</p>
             <span className={`text-[13px] font-bold ${accentText}`}>
               {Math.round(subproject.progress)}%
             </span>
@@ -97,29 +112,29 @@ export default function PersonalModal({
             value={subproject.progress}
             size="md"
             className="mt-2"
-            ariaLabel={`${subproject.name} progress`}
+            ariaLabel={`${subproject.name} ${TEXT.progressAriaSuffix}`}
           />
         </div>
 
         {!canEdit && (
           <p className="rounded-xl bg-[#FAEEDA] px-4 py-3 text-sm text-[#854F0B]">
-            Only the assigned member can update this task checklist.
+            {TEXT.assigneeOnly}
           </p>
         )}
 
         <div className="space-y-4">
           {tasks.length === 0 ? (
             <p className="rounded-xl border border-dashed border-[#D3D1C7] bg-[#FAFAFA] px-4 py-6 text-center text-sm text-[#888780]">
-              No tasks have been added yet.
+              {TEXT.emptyTasks}
             </p>
           ) : (
             <div className="rounded-xl border border-[#EAEAE4] bg-white p-4">
               <div className="mb-3 flex items-center justify-between border-b border-[#EAEAE4] pb-2 pl-6">
                 <span className="text-[9px] font-bold uppercase tracking-[0.8px] text-[#888780]">
-                  Detail tasks
+                  {TEXT.detailTasks}
                 </span>
                 <span className="text-[9px] font-bold uppercase tracking-[0.8px] text-[#888780]">
-                  Weight
+                  {TEXT.weight}
                 </span>
               </div>
 
@@ -143,7 +158,7 @@ export default function PersonalModal({
                               : 'border-[#D3D1C7] bg-white text-transparent'
                         }`}
                       >
-                        ✓
+                        {TEXT.check}
                       </button>
 
                       <span
@@ -155,7 +170,7 @@ export default function PersonalModal({
                               : 'text-[#1A1A1A]'
                         }`}
                       >
-                        {isCurrent && !task.is_done ? 'Now · ' : ''}
+                        {isCurrent && !task.is_done ? TEXT.current : ''}
                         {task.name}
                       </span>
 
@@ -180,7 +195,7 @@ export default function PersonalModal({
 
         {isAllDone && (
           <p className="rounded-xl bg-[#EAF3DE] px-4 py-3 text-sm text-[#3B6D11]">
-            All detail tasks are complete and the project progress has been updated.
+            {TEXT.allDone}
           </p>
         )}
 
@@ -196,7 +211,7 @@ export default function PersonalModal({
             onClick={onClose}
             className="rounded-lg border border-[#D3D1C7] px-4 py-2 text-[11px] font-bold text-[#5F5E5A] hover:bg-[#F8F8F5]"
           >
-            Close
+            {TEXT.close}
           </button>
         </div>
       </div>

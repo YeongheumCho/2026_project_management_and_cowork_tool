@@ -54,7 +54,7 @@ export default function ProjectsPage() {
   };
 
   if (meLoading || !me) {
-    return <main className="p-8 text-slate-900">Loading...</main>;
+    return <main className="p-8 text-slate-900">불러오는 중...</main>;
   }
 
   return (
@@ -67,6 +67,7 @@ export default function ProjectsPage() {
 
       {isAdmin && (
         <CreateProjectForm
+          users={users}
           onCreated={async (created) => {
             await reload();
             setExpanded((prev) => new Set(prev).add(created.id));
@@ -78,14 +79,14 @@ export default function ProjectsPage() {
       <div className="space-y-4">
         {loading && (
           <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
-            Loading projects...
+            프로젝트를 불러오는 중...
           </p>
         )}
 
         {!loading && projects.length === 0 && (
           <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
-            No projects yet.
-            {isAdmin ? ' Create the first project above.' : ''}
+            등록된 프로젝트가 없습니다.
+            {isAdmin ? ' 상단에서 첫 프로젝트를 생성해보세요.' : ''}
           </p>
         )}
 

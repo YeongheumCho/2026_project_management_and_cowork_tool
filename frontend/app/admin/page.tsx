@@ -19,7 +19,7 @@ export default function AdminPage() {
   } = useAdminUsers(isAdmin);
 
   if (meLoading || !me) {
-    return <main className="p-8 text-slate-900">Loading...</main>;
+    return <main className="p-8 text-slate-900">불러오는 중...</main>;
   }
 
   if (!isAdmin) {
@@ -33,7 +33,7 @@ export default function AdminPage() {
   }
 
   if (loading) {
-    return <main className="p-8 text-slate-900">Loading...</main>;
+    return <main className="p-8 text-slate-900">불러오는 중...</main>;
   }
 
   return (

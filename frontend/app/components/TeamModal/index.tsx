@@ -18,6 +18,15 @@ import EtcSection from './sections/EtcSection';
 import { EMPTY_FORM, fromSubProject, type FormState } from './types';
 import { buildSubProjectPayload } from './payload';
 
+const TEXT = {
+  deleteConfirm:
+    '\uc774 \ud558\uc704 \ud504\ub85c\uc81d\ud2b8\ub97c \uc0ad\uc81c\ud558\uc2dc\uaca0\uc2b5\ub2c8\uae4c?',
+  createAria: '\ud558\uc704 \ud504\ub85c\uc81d\ud2b8 \ucd94\uac00',
+  editAria: '\ud558\uc704 \ud504\ub85c\uc81d\ud2b8 \uc218\uc815',
+  adminOnly:
+    '\uc5ec\uae30\uc11c\ub294 \uad00\ub9ac\uc790\ub9cc \ud558\uc704 \ud504\ub85c\uc81d\ud2b8\ub97c \ucd94\uac00\ud558\uac70\ub098 \uc218\uc815\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.',
+} as const;
+
 type Props = {
   open: boolean;
   mode: 'create' | 'edit';
@@ -66,6 +75,18 @@ export default function TeamModal({
     () => projects.find((project) => project.id === f.projectId),
     [projects, f.projectId],
   );
+  const availableAssigneeIds = useMemo(() => {
+    if (!selectedProject || selectedProject.participants.length === 0) {
+      return new Set(users.map((user) => user.id));
+    }
+    return new Set(selectedProject.participants.map((user) => user.id));
+  }, [selectedProject, users]);
+
+  useEffect(() => {
+    if (f.assigneeId === '') return;
+    if (availableAssigneeIds.has(f.assigneeId)) return;
+    setF((prev) => ({ ...prev, assigneeId: '' }));
+  }, [availableAssigneeIds, f.assigneeId]);
 
   const projectType = selectedProject?.project_type ?? 'general';
   const isInspection =
@@ -123,7 +144,7 @@ export default function TeamModal({
   const handleDelete = async () => {
     if (!initial || !isAdmin) return;
     if (initial.status === 'completed') return;
-    if (!window.confirm('Delete this subproject?')) return;
+    if (!window.confirm(TEXT.deleteConfirm)) return;
 
     setSaving(true);
     setError('');
@@ -145,7 +166,7 @@ export default function TeamModal({
       onClose={onClose}
       size="xl"
       scrollable
-      ariaLabel={mode === 'create' ? 'Add subproject' : 'Edit subproject'}
+      ariaLabel={mode === 'create' ? TEXT.createAria : TEXT.editAria}
     >
       <ModalHeader
         mode={mode}
@@ -158,7 +179,7 @@ export default function TeamModal({
 
       {!isAdmin && (
         <p className="mt-3 rounded-xl bg-[#FAEEDA] px-4 py-3 text-sm text-[#854F0B]">
-          Only admins can create or edit subprojects here.
+          {TEXT.adminOnly}
         </p>
       )}
 

@@ -2,15 +2,18 @@
 
 import { FormEvent, useMemo, useState } from 'react';
 import Modal from '../../components/Modal';
+import OrganizationMemberPicker from '../../components/OrganizationMemberPicker';
 import {
   apiFetch,
   PROJECT_TYPE_LABEL,
   type Project,
   type ProjectType,
+  type UserBrief,
 } from '../../lib/api';
 
 type Props = {
   open: boolean;
+  users: UserBrief[];
   onClose: () => void;
   onCreated: (project: Project) => Promise<void> | void;
   onError: (message: string) => void;
@@ -26,19 +29,25 @@ const PROJECT_TYPE_OPTIONS: ProjectType[] = [
 
 export default function CreateProjectModal({
   open,
+  users,
   onClose,
   onCreated,
   onError,
 }: Props) {
   const [name, setName] = useState('');
   const [type, setType] = useState<ProjectType>('official_inspection');
+  const [participantIds, setParticipantIds] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
 
-  const disabled = useMemo(() => !name.trim() || busy, [name, busy]);
+  const disabled = useMemo(
+    () => !name.trim() || participantIds.length === 0 || busy,
+    [name, participantIds, busy],
+  );
 
   function reset() {
     setName('');
     setType('official_inspection');
+    setParticipantIds([]);
   }
 
   function handleClose() {
@@ -55,7 +64,11 @@ export default function CreateProjectModal({
     try {
       const created = await apiFetch<Project>('/projects', {
         method: 'POST',
-        body: JSON.stringify({ name: name.trim(), project_type: type }),
+        body: JSON.stringify({
+          name: name.trim(),
+          project_type: type,
+          participant_ids: participantIds,
+        }),
       });
       await onCreated(created);
       reset();
@@ -68,13 +81,12 @@ export default function CreateProjectModal({
   }
 
   return (
-    <Modal open={open} onClose={handleClose} size="md" ariaLabel="새 프로젝트 생성">
+    <Modal open={open} onClose={handleClose} size="lg" ariaLabel="새 프로젝트 생성">
       <form onSubmit={submit} className="space-y-5">
         <div>
           <h2 className="text-xl font-semibold text-slate-900">새 프로젝트</h2>
           <p className="mt-1 text-sm text-slate-500">
-            대시보드에서 바로 프로젝트를 만들고, 이후 세부 업무를 이어서 관리할
-            수 있습니다.
+            프로젝트 유형과 참여 인원을 먼저 정해 두면 하위 프로젝트 담당자를 더 정확하게 배정할 수 있습니다.
           </p>
         </div>
 
@@ -113,6 +125,29 @@ export default function CreateProjectModal({
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-medium text-slate-700">
+              프로젝트 참여 인원
+            </label>
+            <span className="text-xs text-slate-500">
+              {participantIds.length}명 선택됨
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            이후 하위 프로젝트 담당자는 여기서 선택한 인원 안에서만 지정됩니다.
+          </p>
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <OrganizationMemberPicker
+              users={users}
+              selectedIds={participantIds}
+              onChange={setParticipantIds}
+              emptyLabel="선택 가능한 인원이 없습니다."
+              disabled={busy}
+            />
+          </div>
         </div>
 
         <div className="flex justify-end gap-2">

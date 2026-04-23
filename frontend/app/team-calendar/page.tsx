@@ -182,7 +182,7 @@ export default function TeamCalendarPage() {
   }
 
   if (meLoading || !me) {
-    return <main className="p-8 text-slate-900">Loading...</main>;
+    return <main className="p-8 text-slate-900">불러오는 중...</main>;
   }
 
   return (
@@ -201,10 +201,10 @@ export default function TeamCalendarPage() {
 
       <div className="mb-6">
         <h1 className="text-[20px] font-bold tracking-[-0.3px] text-[#1A1A1A]">
-          Team Calendar
+          팀 캘린더
         </h1>
         <p className="mt-1 text-[12px] text-[#888780]">
-          Track the overall schedule and inspect project progress by assignee in one place.
+          전체 일정과 담당자별 프로젝트 진행 현황을 한 화면에서 확인할 수 있습니다.
         </p>
       </div>
 
@@ -217,8 +217,8 @@ export default function TeamCalendarPage() {
           onNextMonth={() => setCursor((current) => shiftMonth(current, 1))}
           onSelectDate={(iso) => openCreate(iso)}
           onSelectSubProject={openEdit}
-          title="All Projects"
-          tag="Calendar A"
+          title="전체 프로젝트 캘린더"
+          tag="캘린더 A"
           tagColor="#534AB7"
           rightAction={
             isAdmin ? (
@@ -227,7 +227,7 @@ export default function TeamCalendarPage() {
                 onClick={() => openCreate()}
                 className="rounded-lg border border-[#AFA9EC] bg-[#EEEDFE] px-3 py-1.5 text-[11px] font-bold text-[#534AB7]"
               >
-                + Add Schedule
+                + 일정 추가
               </button>
             ) : undefined
           }
@@ -241,12 +241,12 @@ export default function TeamCalendarPage() {
             onPrevMonth={() => setCursor((current) => shiftMonth(current, -1))}
             onNextMonth={() => setCursor((current) => shiftMonth(current, 1))}
             onSelectSubProject={openEdit}
-            title="Assignee Calendar"
-            tag="Calendar B"
+            title="담당자별 캘린더"
+            tag="캘린더 B"
             tagColor="#0F6E56"
             filterSlot={
               <div className="flex flex-col items-start gap-1.5">
-                <span className="text-[10px] text-[#888780]">Assignee</span>
+                <span className="text-[10px] text-[#888780]">담당자</span>
                 <TeamMemberFilter
                   users={users}
                   selectedId={selectedMemberId ?? null}
@@ -273,9 +273,9 @@ export default function TeamCalendarPage() {
       <section className="rounded-2xl border border-[#EAEAE4] bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-[15px] font-bold text-[#1A1A1A]">Active Projects</h2>
+            <h2 className="text-[15px] font-bold text-[#1A1A1A]">진행 중 프로젝트</h2>
             <p className="mt-1 text-[11px] text-[#888780]">
-              Click a schedule block to jump into the detailed modal.
+              일정 항목을 클릭하면 상세 모달로 이동합니다.
             </p>
           </div>
           <span className="text-[11px] text-[#888780]">{activeProjects.length}</span>
@@ -284,7 +284,7 @@ export default function TeamCalendarPage() {
         <div className="space-y-3">
           {loading && (
             <p className="rounded-xl bg-[#FAFAFA] px-4 py-6 text-center text-sm text-[#888780]">
-              Loading...
+              불러오는 중...
             </p>
           )}
 
@@ -306,7 +306,7 @@ export default function TeamCalendarPage() {
                       {project.name}
                     </p>
                     <p className="mt-0.5 truncate text-[11px] text-[#888780]">
-                      {related[0]?.name ?? 'No subproject yet'}
+                      {related[0]?.name ?? '소프로젝트 준비 중'}
                     </p>
                   </div>
                   <div className="hidden w-[90px] shrink-0 md:block">
@@ -316,7 +316,7 @@ export default function TeamCalendarPage() {
                     </div>
                   </div>
                   <span className="rounded-full bg-[#E6F1FB] px-2 py-1 text-[10px] font-bold text-[#185FA5]">
-                    In Progress
+                    진행 중
                   </span>
                 </button>
               );
@@ -360,9 +360,9 @@ function SelectedMemberProjectBoard({
   if (!member) {
     return (
       <section className="rounded-2xl border border-dashed border-[#D8D4C8] bg-[#FCFBF8] p-5">
-        <h2 className="text-[15px] font-bold text-[#1A1A1A]">Assignee Project View</h2>
+        <h2 className="text-[15px] font-bold text-[#1A1A1A]">담당자 프로젝트 보기</h2>
         <p className="mt-2 text-[12px] leading-6 text-[#6F6D66]">
-          Pick a team member from the dropdown to visualize that person&apos;s project stream and delivery history.
+          드롭다운에서 담당자를 선택하면 해당 담당자의 프로젝트 흐름과 진행 이력을 볼 수 있습니다.
         </p>
       </section>
     );
@@ -388,16 +388,16 @@ function SelectedMemberProjectBoard({
             </span>
           </div>
           <h2 className="mt-3 text-[15px] font-bold text-[#1A1A1A]">
-            Project view for {member.name}
+            {member.name} 담당 프로젝트 보기
           </h2>
           <p className="mt-1 text-[11px] leading-5 text-[#888780]">{viewStyle.summary}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <MetricCard label="Projects" value={String(summary.projectCount)} />
-          <MetricCard label="Schedules" value={String(summary.subprojectCount)} />
-          <MetricCard label="Avg. Progress" value={`${Math.round(summary.averageProgress)}%`} />
-          <MetricCard label="Next Due" value={summary.nearestDeadline ?? '-'} />
+          <MetricCard label="프로젝트" value={String(summary.projectCount)} />
+          <MetricCard label="일정 수" value={String(summary.subprojectCount)} />
+          <MetricCard label="평균 진행률" value={`${Math.round(summary.averageProgress)}%`} />
+          <MetricCard label="다음 마감" value={summary.nearestDeadline ?? '-'} />
         </div>
       </div>
 
@@ -405,10 +405,10 @@ function SelectedMemberProjectBoard({
         {groups.length === 0 && (
           <div className="rounded-2xl border border-dashed border-[#D8D4C8] bg-[#FCFBF8] px-4 py-6 text-center">
             <p className="text-[13px] font-semibold text-[#1A1A1A]">
-              No assigned project history yet
+              아직 배정된 프로젝트 이력이 없습니다
             </p>
             <p className="mt-1 text-[11px] text-[#888780]">
-              Once this member receives schedules, project-specific progress cards will appear here.
+              이 담당자에게 일정이 배정되면 여기에서 프로젝트별 진행 카드를 확인할 수 있습니다.
             </p>
           </div>
         )}
@@ -432,14 +432,13 @@ function SelectedMemberProjectBoard({
                   />
                 </div>
                 <p className="mt-1 text-[11px] text-[#888780]">
-                  {group.startDate} to {group.endDate} | {group.subprojects.length} tracked schedule
-                  {group.subprojects.length > 1 ? 's' : ''}
+                  {group.startDate} ~ {group.endDate} | 추적 중인 일정 {group.subprojects.length}건
                 </p>
               </div>
 
               <div className="w-full max-w-[240px]">
                 <div className="mb-1 flex items-center justify-between text-[11px] text-[#66645C]">
-                  <span>Project progress</span>
+                  <span>프로젝트 진행률</span>
                   <span>{Math.round(group.progress)}%</span>
                 </div>
                 <ProgressBar value={group.progress} className="h-1.5" />
@@ -509,14 +508,14 @@ function StatusChip({
   inProgressCount: number;
   plannedCount: number;
 }) {
-  let label = 'Planned';
+  let label = '예정';
   let classes = 'bg-[#FAEEDA] text-[#854F0B]';
 
   if (inProgressCount > 0) {
-    label = 'In Progress';
+    label = '진행 중';
     classes = 'bg-[#E6F1FB] text-[#185FA5]';
   } else if (completedCount > 0 && plannedCount === 0) {
-    label = 'Completed';
+    label = '완료';
     classes = 'bg-[#E1F5EE] text-[#0F6E56]';
   }
 
@@ -528,9 +527,9 @@ function StatusChip({
 }
 
 function statusLabel(status: SubProject['status']) {
-  if (status === 'completed') return 'Completed';
-  if (status === 'in_progress') return 'In Progress';
-  return 'Planned';
+  if (status === 'completed') return '완료';
+  if (status === 'in_progress') return '진행 중';
+  return '예정';
 }
 
 function deriveMemberViewStyle(groups: MemberProjectGroup[]): MemberViewStyle {
@@ -547,29 +546,29 @@ function deriveMemberViewStyle(groups: MemberProjectGroup[]): MemberViewStyle {
     const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays <= 7) {
       return {
-        label: 'Deadline Focus',
-        summary: 'This view is prioritizing near-term deadlines because at least one assigned schedule is due within a week.',
+        label: '마감 우선',
+        summary: '일주일 이내 마감 일정이 있어 가까운 마감 기한이 먼저 보이도록 구성했습니다.',
       };
     }
   }
 
   if (totalInProgress >= 2) {
     return {
-      label: 'Execution Heavy',
-      summary: 'This member currently owns multiple active schedules, so the board emphasizes concurrent execution load.',
+      label: '동시 진행',
+      summary: '현재 동시에 진행 중인 일정이 여러 개라서 병행 작업 흐름이 눈에 띄도록 구성했습니다.',
     };
   }
 
   if (totalPlanned > totalCompleted) {
     return {
-      label: 'Planning Queue',
-      summary: 'Most assigned work is still queued or upcoming, so the board highlights planned schedules and start windows.',
+      label: '계획 중심',
+      summary: '예정된 일정 비중이 더 높아 향후 시작 일정과 대기 중인 작업이 먼저 보이도록 구성했습니다.',
     };
   }
 
   return {
-    label: 'Delivery Track',
-    summary: 'Completed and near-complete work now outweighs planned items, so the board emphasizes delivery progress.',
+    label: '완료 추적',
+    summary: '완료되었거나 마무리 단계인 일정이 많아 현재 납품 진행 상태를 중심으로 보여줍니다.',
   };
 }
 
@@ -577,11 +576,11 @@ function buildSubprojectNarrative(member: UserBrief, subproject: SubProject) {
   const completedSubtasks = subproject.subtasks.filter((task) => task.is_done).length;
   const totalSubtasks = subproject.subtasks.length;
   const assigneeLabel = subproject.assignee?.name ?? member.name;
-  const status = statusLabel(subproject.status).toLowerCase();
+  const status = statusLabel(subproject.status);
 
   if (totalSubtasks === 0) {
-    return `${assigneeLabel} is tracking this ${status} schedule from ${subproject.start_date} to ${subproject.end_date} with no detailed checklist registered yet.`;
+    return `${assigneeLabel} 담당 일정은 ${subproject.start_date}부터 ${subproject.end_date}까지이며, 현재 상태는 ${status}입니다. 아직 등록된 세부 체크리스트는 없습니다.`;
   }
 
-  return `${assigneeLabel} is tracking this ${status} schedule from ${subproject.start_date} to ${subproject.end_date}, with ${completedSubtasks} of ${totalSubtasks} checklist items completed.`;
+  return `${assigneeLabel} 담당 일정은 ${subproject.start_date}부터 ${subproject.end_date}까지이며, 현재 상태는 ${status}입니다. 체크리스트 ${totalSubtasks}개 중 ${completedSubtasks}개가 완료되었습니다.`;
 }
