@@ -117,7 +117,7 @@ function CenterFilterGroup({
   selectedId,
   onSelect,
 }: {
-  center: CenterGroup;
+  center: CenterGroup<UserBrief>;
   expanded: Set<string>;
   onToggle: (key: string) => void;
   selectedId: number | null;
@@ -176,7 +176,7 @@ function OfficeFilterGroup({
   selectedId,
   onSelect,
 }: {
-  office: OfficeGroup;
+  office: OfficeGroup<UserBrief>;
   expanded: Set<string>;
   onToggle: (key: string) => void;
   selectedId: number | null;
@@ -229,7 +229,7 @@ function TeamFilterGroup({
   selectedId,
   onSelect,
 }: {
-  team: TeamGroup;
+  team: TeamGroup<UserBrief>;
   expanded: boolean;
   onToggle: () => void;
   selectedId: number | null;
@@ -329,7 +329,7 @@ function MemberChips({
   );
 }
 
-function officeContainsSelected(office: OfficeGroup, selectedId: number | null) {
+function officeContainsSelected(office: OfficeGroup<UserBrief>, selectedId: number | null) {
   if (selectedId == null) return false;
   return (
     office.members.some((member) => member.id === selectedId) ||
@@ -337,7 +337,7 @@ function officeContainsSelected(office: OfficeGroup, selectedId: number | null) 
   );
 }
 
-function centerContainsSelected(center: CenterGroup, selectedId: number | null) {
+function centerContainsSelected(center: CenterGroup<UserBrief>, selectedId: number | null) {
   if (selectedId == null) return false;
   return (
     center.members.some((member) => member.id === selectedId) ||

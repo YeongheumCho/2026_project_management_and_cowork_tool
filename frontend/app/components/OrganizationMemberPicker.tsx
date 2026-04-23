@@ -127,7 +127,7 @@ function CenterPickerGroup({
   onToggleMember,
   disabled,
 }: {
-  center: CenterGroup;
+  center: CenterGroup<UserBrief>;
   expanded: Set<string>;
   selectedIds: number[];
   onToggle: (key: string) => void;
@@ -191,7 +191,7 @@ function OfficePickerGroup({
   onToggleMember,
   disabled,
 }: {
-  office: OfficeGroup;
+  office: OfficeGroup<UserBrief>;
   expanded: Set<string>;
   selectedIds: number[];
   onToggle: (key: string) => void;
@@ -249,7 +249,7 @@ function TeamPickerGroup({
   onToggleMember,
   disabled,
 }: {
-  team: TeamGroup;
+  team: TeamGroup<UserBrief>;
   expanded: boolean;
   selectedIds: number[];
   onToggle: () => void;
@@ -359,14 +359,14 @@ function MemberChips({
   );
 }
 
-function officeContainsSelected(office: OfficeGroup, selectedIds: number[]) {
+function officeContainsSelected(office: OfficeGroup<UserBrief>, selectedIds: number[]) {
   return (
     office.members.some((member) => selectedIds.includes(member.id)) ||
     office.teams.some((team) => team.members.some((member) => selectedIds.includes(member.id)))
   );
 }
 
-function centerContainsSelected(center: CenterGroup, selectedIds: number[]) {
+function centerContainsSelected(center: CenterGroup<UserBrief>, selectedIds: number[]) {
   return (
     center.members.some((member) => selectedIds.includes(member.id)) ||
     center.offices.some((office) => officeContainsSelected(office, selectedIds))
