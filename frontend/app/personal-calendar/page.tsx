@@ -5,6 +5,7 @@ import AppShell from '../components/AppShell';
 import MonthCalendar, { shiftMonth } from '../components/MonthCalendar';
 import PersonalModal from '../components/PersonalModal';
 import ProgressBar from '../components/ProgressBar';
+import TeamMemberFilter from '../components/TeamMemberFilter';
 import { apiFetch, type SubProject, type UserBrief } from '../lib/api';
 import { useMe } from '../lib/useMe';
 import { useWorkflowSelection } from '../lib/workflow-selection';
@@ -99,30 +100,25 @@ export default function PersonalCalendarPage() {
         </p>
       )}
 
-      {/* 팀원 카드 */}
-      <div className="mb-4 flex flex-wrap gap-2">
-        {users.map((u) => {
-          const active = u.id === selectedUserId;
-          return (
-            <button
-              key={u.id}
-              onClick={() => {
-                setSelectedUserId(u.id);
-                setSelectedMemberId(u.id);
-              }}
-              className={`rounded-xl border px-3 py-2 text-sm ${
-                active
-                  ? 'border-blue-500 bg-blue-600 text-white'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              {u.name}
-              <span className="ml-1 text-micro opacity-70">
-                ({u.role === 'admin' ? '관리자' : '일반'})
-              </span>
-            </button>
-          );
-        })}
+      {/* 팀원 필터 — 팀 단위로 접이식 */}
+      <div className="mb-4 rounded-2xl border border-[#EAEAE4] bg-white p-4 shadow-sm">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-[13px] font-semibold text-[#1A1A1A]">담당자 선택</h2>
+          <span className="text-[11px] text-[#888780]">
+            {users.length}명 중 1명
+          </span>
+        </div>
+        <TeamMemberFilter
+          users={users}
+          selectedId={selectedUserId}
+          onSelect={(id) => {
+            if (id === null) return;
+            setSelectedUserId(id);
+            setSelectedMemberId(id);
+          }}
+          myTeam={me.team}
+          singleSelection
+        />
       </div>
 
       {selectedUserId === null ? (
