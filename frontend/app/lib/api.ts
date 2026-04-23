@@ -138,6 +138,10 @@ export type Project = {
   created_by: number | null;
   created_at: string;
   participants: UserBrief[];
+  progress_percent: number;
+  subproject_count: number;
+  completed_subproject_count: number;
+  in_progress_subproject_count: number;
 };
 
 export type ProjectMemberTimeSummary = {
@@ -150,6 +154,37 @@ export type ProjectTimeSummary = {
   project_id: number;
   total_seconds: number;
   members: ProjectMemberTimeSummary[];
+};
+
+export type ProjectHistoryEntry = {
+  id: number;
+  user_id: number;
+  user_name: string;
+  project_id: number;
+  project_name: string;
+  subproject_id: number;
+  subproject_name: string;
+  project_type: string;
+  role_in_project: string;
+  started_on: string | null;
+  ended_on: string | null;
+  worked_minutes: number;
+  completion_rate: number;
+  recorded_at: string;
+};
+
+export type ProjectHistoryMemberSummary = {
+  user_id: number;
+  user_name: string;
+  completed_count: number;
+  total_minutes: number;
+  last_completed_on: string | null;
+};
+
+export type ProjectHistorySummary = {
+  project_id: number;
+  total_completed_count: number;
+  members: ProjectHistoryMemberSummary[];
 };
 
 export type WorkQueueItem = {
@@ -185,6 +220,8 @@ export type RecommendationRequest = {
   project_type: ProjectType | string;
   start_date: string;
   end_date: string;
+  office?: string | null;
+  team?: string | null;
   availability_weight: number;
   capability_weight: number;
 };
@@ -193,18 +230,23 @@ export type RecommendationCandidate = {
   user_id: number;
   name: string;
   role: Role | string;
+  position?: string | null;
   rank: number;
   score: number;
   availability_score: number;
   capability_score: number;
   remaining_minutes: number;
   keyword_experience_count: number;
+  history_experience_count: number;
+  recommendation_source: 'rule' | 'claude' | string;
   reasons: string[];
 };
 
 export type RecommendationResponse = {
   request: RecommendationRequest;
   candidates: RecommendationCandidate[];
+  claude_used: boolean;
+  claude_error: string | null;
 };
 
 export type AssignmentRequest = {

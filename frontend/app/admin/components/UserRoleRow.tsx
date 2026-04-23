@@ -6,8 +6,11 @@ type Props = {
   member: UserResponse;
   canEdit: boolean;
   savingId: string | null;
+  deletingId: string | null;
   onRoleChange: (idnum: string, role: string) => void;
   onRoleSave: (member: UserResponse) => void;
+  onDelete?: (member: UserResponse) => void;
+  onOpenHistory?: (member: UserResponse) => void;
 };
 
 /**
@@ -18,11 +21,15 @@ export default function UserRoleRow({
   member,
   canEdit,
   savingId,
+  deletingId,
   onRoleChange,
   onRoleSave,
+  onDelete,
+  onOpenHistory,
 }: Props) {
   const isSaving = savingId === member.idnum;
-  const disabled = isSaving || !canEdit;
+  const isDeleting = deletingId === member.idnum;
+  const disabled = isSaving || isDeleting || !canEdit;
 
   // 센터/실/팀 중 비어있지 않은 것만 ' · ' 로 연결
   const affiliation = [member.center, member.office, member.team]
@@ -31,9 +38,12 @@ export default function UserRoleRow({
     .join(' · ');
 
   return (
-    <tr className="border-b border-[#F1EFE8] hover:bg-[#FAFAFA]">
+    <tr
+      className="cursor-pointer border-b border-[#F1EFE8] hover:bg-[#FAFAFA]"
+      onClick={() => onOpenHistory?.(member)}
+    >
       <td className="py-3 pr-4 text-[13px] font-semibold text-[#1A1A1A]">
-        {member.name}
+        <span className="transition hover:text-[#534AB7]">{member.name}</span>
         {member.position && (
           <span className="ml-1.5 text-[11px] font-medium text-[#888780]">
             {member.position}
@@ -47,6 +57,7 @@ export default function UserRoleRow({
       <td className="py-3 pr-4">
         <select
           value={member.role}
+          onClick={(e) => e.stopPropagation()}
           onChange={(e) => onRoleChange(member.idnum, e.target.value)}
           disabled={disabled}
           className="rounded-lg border border-[#EAEAE4] bg-white px-2.5 py-1.5 text-[12px] text-[#1A1A1A] focus:border-[#534AB7] focus:outline-none disabled:bg-[#FAFAFA] disabled:text-[#888780]"
@@ -67,14 +78,32 @@ export default function UserRoleRow({
         )}
       </td>
       <td className="py-3">
-        <button
-          type="button"
-          onClick={() => onRoleSave(member)}
-          disabled={disabled}
-          className="rounded-lg bg-[#534AB7] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#43399C] disabled:cursor-not-allowed disabled:bg-[#D3D1C7]"
-        >
-          {isSaving ? '저장 중...' : '저장'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRoleSave(member);
+            }}
+            disabled={disabled}
+            className="rounded-lg bg-[#534AB7] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#43399C] disabled:cursor-not-allowed disabled:bg-[#D3D1C7]"
+          >
+            {isSaving ? '저장 중...' : '저장'}
+          </button>
+          {onDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(member);
+              }}
+              disabled={disabled}
+              className="rounded-lg border border-[#F4C9C9] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#A32D2D] transition hover:bg-[#FFF4F4] disabled:cursor-not-allowed disabled:border-[#E9E5E5] disabled:text-[#B4B2A9]"
+            >
+              {isDeleting ? '삭제 중...' : '삭제'}
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );

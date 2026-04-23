@@ -14,16 +14,22 @@ type Props = {
   users: UserResponse[];
   canEdit: boolean;
   savingId: string | null;
+  deletingId: string | null;
   onRoleChange: (idnum: string, role: string) => void;
   onRoleSave: (member: UserResponse) => void;
+  onDelete: (member: UserResponse) => void;
+  onOpenHistory: (member: UserResponse) => void;
 };
 
 export default function OrgChartView({
   users,
   canEdit,
   savingId,
+  deletingId,
   onRoleChange,
   onRoleSave,
+  onDelete,
+  onOpenHistory,
 }: Props) {
   const groups = useMemo(() => groupUsersByTeam(users), [users]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -55,8 +61,11 @@ export default function OrgChartView({
           onToggle={toggle}
           canEdit={canEdit}
           savingId={savingId}
+          deletingId={deletingId}
           onRoleChange={onRoleChange}
           onRoleSave={onRoleSave}
+          onDelete={onDelete}
+          onOpenHistory={onOpenHistory}
         />
       ))}
     </div>
@@ -69,8 +78,11 @@ type CenterNodeProps = {
   onToggle: (key: string) => void;
   canEdit: boolean;
   savingId: string | null;
+  deletingId: string | null;
   onRoleChange: (idnum: string, role: string) => void;
   onRoleSave: (member: UserResponse) => void;
+  onDelete: (member: UserResponse) => void;
+  onOpenHistory: (member: UserResponse) => void;
 };
 
 function CenterNode({
@@ -79,8 +91,11 @@ function CenterNode({
   onToggle,
   canEdit,
   savingId,
+  deletingId,
   onRoleChange,
   onRoleSave,
+  onDelete,
+  onOpenHistory,
 }: CenterNodeProps) {
   const isOpen = expanded.has(center.key);
   const totalMembers =
@@ -114,8 +129,11 @@ function CenterNode({
               members={center.members}
               canEdit={canEdit}
               savingId={savingId}
+              deletingId={deletingId}
               onRoleChange={onRoleChange}
               onRoleSave={onRoleSave}
+              onDelete={onDelete}
+              onOpenHistory={onOpenHistory}
             />
           )}
 
@@ -127,8 +145,11 @@ function CenterNode({
               onToggle={onToggle}
               canEdit={canEdit}
               savingId={savingId}
+              deletingId={deletingId}
               onRoleChange={onRoleChange}
               onRoleSave={onRoleSave}
+              onDelete={onDelete}
+              onOpenHistory={onOpenHistory}
             />
           ))}
         </div>
@@ -143,8 +164,11 @@ type OfficeNodeProps = {
   onToggle: (key: string) => void;
   canEdit: boolean;
   savingId: string | null;
+  deletingId: string | null;
   onRoleChange: (idnum: string, role: string) => void;
   onRoleSave: (member: UserResponse) => void;
+  onDelete: (member: UserResponse) => void;
+  onOpenHistory: (member: UserResponse) => void;
 };
 
 function OfficeNode({
@@ -153,8 +177,11 @@ function OfficeNode({
   onToggle,
   canEdit,
   savingId,
+  deletingId,
   onRoleChange,
   onRoleSave,
+  onDelete,
+  onOpenHistory,
 }: OfficeNodeProps) {
   const isOpen = expanded.has(office.key);
   const totalMembers =
@@ -182,8 +209,11 @@ function OfficeNode({
               members={office.members}
               canEdit={canEdit}
               savingId={savingId}
+              deletingId={deletingId}
               onRoleChange={onRoleChange}
               onRoleSave={onRoleSave}
+              onDelete={onDelete}
+              onOpenHistory={onOpenHistory}
             />
           )}
 
@@ -195,8 +225,11 @@ function OfficeNode({
               onToggle={onToggle}
               canEdit={canEdit}
               savingId={savingId}
+              deletingId={deletingId}
               onRoleChange={onRoleChange}
               onRoleSave={onRoleSave}
+              onDelete={onDelete}
+              onOpenHistory={onOpenHistory}
             />
           ))}
         </div>
@@ -211,8 +244,11 @@ type TeamNodeProps = {
   onToggle: (key: string) => void;
   canEdit: boolean;
   savingId: string | null;
+  deletingId: string | null;
   onRoleChange: (idnum: string, role: string) => void;
   onRoleSave: (member: UserResponse) => void;
+  onDelete: (member: UserResponse) => void;
+  onOpenHistory: (member: UserResponse) => void;
 };
 
 function TeamNode({
@@ -221,8 +257,11 @@ function TeamNode({
   onToggle,
   canEdit,
   savingId,
+  deletingId,
   onRoleChange,
   onRoleSave,
+  onDelete,
+  onOpenHistory,
 }: TeamNodeProps) {
   const isOpen = expanded.has(team.key);
 
@@ -246,8 +285,11 @@ function TeamNode({
             members={team.members}
             canEdit={canEdit}
             savingId={savingId}
+            deletingId={deletingId}
             onRoleChange={onRoleChange}
             onRoleSave={onRoleSave}
+            onDelete={onDelete}
+            onOpenHistory={onOpenHistory}
           />
         </div>
       )}
@@ -259,16 +301,22 @@ type MembersBlockProps = {
   members: UserResponse[];
   canEdit: boolean;
   savingId: string | null;
+  deletingId: string | null;
   onRoleChange: (idnum: string, role: string) => void;
   onRoleSave: (member: UserResponse) => void;
+  onDelete: (member: UserResponse) => void;
+  onOpenHistory: (member: UserResponse) => void;
 };
 
 function MembersBlock({
   members,
   canEdit,
   savingId,
+  deletingId,
   onRoleChange,
   onRoleSave,
+  onDelete,
+  onOpenHistory,
 }: MembersBlockProps) {
   return (
     <div className="overflow-x-auto">
@@ -280,8 +328,11 @@ function MembersBlock({
               member={member}
               canEdit={canEdit}
               savingId={savingId}
+              deletingId={deletingId}
               onRoleChange={onRoleChange}
               onRoleSave={onRoleSave}
+              onDelete={onDelete}
+              onOpenHistory={onOpenHistory}
             />
           ))}
         </tbody>

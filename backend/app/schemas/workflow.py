@@ -50,6 +50,8 @@ class RecommendationRequest(BaseModel):
     project_type: str = Field(min_length=1, max_length=50)
     start_date: date
     end_date: date
+    office: str | None = None
+    team: str | None = None
     availability_weight: float = Field(default=0.5, ge=0, le=1)
     capability_weight: float = Field(default=0.5, ge=0, le=1)
 
@@ -69,18 +71,23 @@ class RecommendationCandidate(BaseModel):
     user_id: int
     name: str
     role: str
+    position: str | None = None
     rank: int
     score: float
     availability_score: float
     capability_score: float
     remaining_minutes: int
     keyword_experience_count: int
+    history_experience_count: int = 0
+    recommendation_source: str = "rule"
     reasons: list[str]
 
 
 class RecommendationResponse(BaseModel):
     request: RecommendationRequest
     candidates: list[RecommendationCandidate]
+    claude_used: bool = False
+    claude_error: str | None = None
 
 
 class AssignmentRequest(BaseModel):

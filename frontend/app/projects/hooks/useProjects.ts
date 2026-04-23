@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   apiFetch,
+  type ProjectHistorySummary,
   type Project,
   type ProjectTimeSummary,
   type SubProject,
@@ -14,6 +15,7 @@ type UseProjectsResult = {
   subprojects: SubProject[];
   users: UserBrief[];
   timeByProject: Map<number, ProjectTimeSummary>;
+  historyByProject: Map<number, ProjectHistorySummary>;
   byProject: Map<number, SubProject[]>;
   loading: boolean;
   error: string;
@@ -26,23 +28,26 @@ export function useProjects(enabled: boolean): UseProjectsResult {
   const [subprojects, setSubProjects] = useState<SubProject[]>([]);
   const [users, setUsers] = useState<UserBrief[]>([]);
   const [timeSummary, setTimeSummary] = useState<ProjectTimeSummary[]>([]);
+  const [historySummary, setHistorySummary] = useState<ProjectHistorySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [projectList, subprojectList, userList, timeSummaryList] =
+      const [projectList, subprojectList, userList, timeSummaryList, historySummaryList] =
         await Promise.all([
           apiFetch<Project[]>('/projects'),
           apiFetch<SubProject[]>('/subprojects'),
           apiFetch<UserBrief[]>('/users'),
           apiFetch<ProjectTimeSummary[]>('/projects/time-summary'),
+          apiFetch<ProjectHistorySummary[]>('/projects/history-summary'),
         ]);
       setProjects(projectList);
       setSubProjects(subprojectList);
       setUsers(userList);
       setTimeSummary(timeSummaryList);
+      setHistorySummary(historySummaryList);
       setError('');
     } catch (err) {
       setError((err as Error).message);
@@ -76,11 +81,20 @@ export function useProjects(enabled: boolean): UseProjectsResult {
     return map;
   }, [timeSummary]);
 
+  const historyByProject = useMemo(() => {
+    const map = new Map<number, ProjectHistorySummary>();
+    for (const summary of historySummary) {
+      map.set(summary.project_id, summary);
+    }
+    return map;
+  }, [historySummary]);
+
   return {
     projects,
     subprojects,
     users,
     timeByProject,
+    historyByProject,
     byProject,
     loading,
     error,

@@ -24,6 +24,36 @@ export type ErrorResponse = {
   detail?: string;
 };
 
+export type UserCreatePayload = {
+  idnum: string;
+  name: string;
+  password: string;
+  role: string;
+  center?: string | null;
+  office?: string | null;
+  team?: string | null;
+  position?: string | null;
+  email?: string | null;
+  phone?: string | null;
+};
+
+export type ProjectHistoryEntry = {
+  id: number;
+  user_id: number;
+  user_name: string;
+  project_id: number;
+  project_name: string;
+  subproject_id: number;
+  subproject_name: string;
+  project_type: string;
+  role_in_project: string;
+  started_on: string | null;
+  ended_on: string | null;
+  worked_minutes: number;
+  completion_rate: number;
+  recorded_at: string;
+};
+
 type FetchOptions = {
   token: string;
   signal?: AbortSignal;
@@ -58,5 +88,36 @@ export async function patchUserRole(
     method: 'PATCH',
     headers: authHeaders(token, true),
     body: JSON.stringify({ role }),
+  });
+}
+
+export async function createUser(
+  { token }: FetchOptions,
+  payload: UserCreatePayload,
+) {
+  return fetch(`${API_BASE_URL}/auth/users`, {
+    method: 'POST',
+    headers: authHeaders(token, true),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteUser(
+  { token }: FetchOptions,
+  idnum: string,
+) {
+  return fetch(`${API_BASE_URL}/auth/users/${idnum}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+}
+
+export async function fetchUserProjectHistory(
+  { token, signal }: FetchOptions,
+  userId: number,
+) {
+  return fetch(`${API_BASE_URL}/projects/history?user_id=${userId}`, {
+    headers: authHeaders(token),
+    signal,
   });
 }

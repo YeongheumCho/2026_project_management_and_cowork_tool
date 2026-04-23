@@ -36,9 +36,12 @@ from app.models.project import (
 )
 from app.models.progress_log import ProgressLog
 from app.models.user import User
-from app.models.workflow import WORKLOG_RUNNING, WorkLog
+from app.models.workflow import WORKLOG_RUNNING, ProjectExecutionHistory, WorkLog
 from app.schemas.progress_log import ProgressLogCreate, ProgressLogResponse
 from app.schemas.project import (
+    ProjectHistoryEntry,
+    ProjectHistoryMemberSummary,
+    ProjectHistorySummary,
     ProjectMemberTimeSummary,
     ProjectCreate,
     ProjectResponse,
@@ -113,12 +116,161 @@ def _load_subproject(db: Session, subproject_id: int) -> SubProject:
     return sp
 
 
+def _get_visible_project_ids_for_user(db: Session, current_user: User) -> set[int]:
+    if current_user.role == "admin":
+        return set(
+            db.scalars(select(Project.id)).all()
+        )
+
+    return set(
+        db.scalars(
+            select(SubProject.project_id)
+            .where(
+                SubProject.assignee_id == current_user.id,
+                SubProject.status != STATUS_COMPLETED,
+            )
+        ).all()
+    )
+
+
+def _ensure_subproject_access(sp: SubProject, current_user: User) -> None:
+    if current_user.role == "admin":
+        return
+    if sp.assignee_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="해당 소프로젝트에 접근할 수 없습니다.",
+        )
+
+
+def _estimate_worked_minutes(db: Session, subproject_id: int, assignee_id: int | None) -> int:
+    if assignee_id is None:
+        return 0
+
+    now = datetime.now(timezone.utc)
+    logs = db.scalars(
+        select(WorkLog).where(
+            WorkLog.subproject_id == subproject_id,
+            WorkLog.user_id == assignee_id,
+        )
+    ).all()
+
+    total_seconds = 0
+    for log in logs:
+        total_seconds += log.duration_sec
+        if log.status == WORKLOG_RUNNING and log.current_started_at:
+            total_seconds += max(0, int((now - log.current_started_at).total_seconds()))
+    return max(0, total_seconds // 60)
+
+
+def _build_history_keywords(project: Project, subproject: SubProject) -> str:
+    tokens = [
+        project.name,
+        subproject.name,
+        subproject.function_name,
+        subproject.controller_name,
+        subproject.vehicle_type,
+        subproject.verification_level,
+        subproject.priority,
+        subproject.cr_no,
+        subproject.etc_category,
+    ]
+    return " ".join(token.strip() for token in tokens if token and token.strip())
+
+
+def _sync_subproject_execution_history(
+    db: Session,
+    project: Project,
+    subproject: SubProject,
+) -> None:
+    existing_rows = db.scalars(
+        select(ProjectExecutionHistory).where(
+            ProjectExecutionHistory.subproject_id == subproject.id
+        )
+    ).all()
+
+    if subproject.status != STATUS_COMPLETED or subproject.assignee_id is None:
+        for row in existing_rows:
+            db.delete(row)
+        return
+
+    worked_minutes = _estimate_worked_minutes(db, subproject.id, subproject.assignee_id)
+    if worked_minutes <= 0:
+        worked_minutes = (
+            subproject.total_minutes
+            or subproject.avg_expected_minutes
+            or max(1, (subproject.end_date - subproject.start_date).days + 1) * 60
+        )
+
+    history = next(
+        (row for row in existing_rows if row.user_id == subproject.assignee_id),
+        None,
+    )
+    for row in existing_rows:
+        if history is not None and row.id == history.id:
+            continue
+        db.delete(row)
+
+    if history is None:
+        history = ProjectExecutionHistory(
+            user_id=subproject.assignee_id,
+            project_id=project.id,
+            subproject_id=subproject.id,
+        )
+        db.add(history)
+
+    history.project_name = project.name
+    history.subproject_name = subproject.name
+    history.project_type = project.project_type
+    history.role_in_project = "assignee"
+    history.started_on = subproject.start_date
+    history.ended_on = subproject.completed_on or subproject.end_date
+    history.worked_minutes = worked_minutes
+    history.completion_rate = float(subproject.progress)
+    history.keyword_text = _build_history_keywords(project, subproject)
+
+
 def _apply_kefico_fields(sp: SubProject, payload) -> None:
     """payload에서 KEFICO 필드들 중 값이 들어온 것만 sp에 반영."""
     data = payload.model_dump(exclude_unset=True)
     for fname in _KEFICO_COPY_FIELDS:
         if fname in data:
             setattr(sp, fname, data[fname])
+
+
+def _subproject_weight_minutes(subproject: SubProject) -> int:
+    return max(
+        1,
+        subproject.total_minutes
+        or subproject.avg_expected_minutes
+        or max(1, (subproject.end_date - subproject.start_date).days + 1) * 60,
+    )
+
+
+def _serialize_project_response(project: Project) -> ProjectResponse:
+    subprojects = list(project.subprojects or [])
+    total_weight = sum(_subproject_weight_minutes(subproject) for subproject in subprojects)
+    weighted_progress = (
+        sum(float(subproject.progress) * _subproject_weight_minutes(subproject) for subproject in subprojects)
+        / total_weight
+        if total_weight > 0
+        else 0.0
+    )
+    completed_count = sum(1 for subproject in subprojects if subproject.status == STATUS_COMPLETED)
+    in_progress_count = sum(1 for subproject in subprojects if subproject.status == STATUS_IN_PROGRESS)
+
+    return ProjectResponse(
+        id=project.id,
+        name=project.name,
+        project_type=project.project_type,
+        created_by=project.created_by,
+        created_at=project.created_at,
+        participants=list(project.participants or []),
+        progress_percent=round(weighted_progress, 2),
+        subproject_count=len(subprojects),
+        completed_subproject_count=completed_count,
+        in_progress_subproject_count=in_progress_count,
+    )
 
 
 # ========== Projects ==========
@@ -153,20 +305,30 @@ def create_project(
     project.participants = participants
     db.add(project)
     db.commit()
-    db.refresh(project)
-    return project
+    project = db.scalar(
+        select(Project)
+        .options(selectinload(Project.participants), selectinload(Project.subprojects))
+        .where(Project.id == project.id)
+    )
+    return _serialize_project_response(project)
 
 
 @router.get("/projects", response_model=list[ProjectResponse])
 def list_projects(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    return db.scalars(
+    stmt = (
         select(Project)
-        .options(selectinload(Project.participants))
+        .options(selectinload(Project.participants), selectinload(Project.subprojects))
         .order_by(Project.created_at.desc())
-    ).all()
+    )
+    if current_user.role != "admin":
+        visible_project_ids = _get_visible_project_ids_for_user(db, current_user)
+        if not visible_project_ids:
+            return []
+        stmt = stmt.where(Project.id.in_(visible_project_ids))
+    return [_serialize_project_response(project) for project in db.scalars(stmt).all()]
 
 
 @router.put("/projects/{project_id}", response_model=ProjectResponse)
@@ -221,8 +383,12 @@ def update_project(
     project.project_type = payload.project_type
     project.participants = participants
     db.commit()
-    db.refresh(project)
-    return project
+    project = db.scalar(
+        select(Project)
+        .options(selectinload(Project.participants), selectinload(Project.subprojects))
+        .where(Project.id == project.id)
+    )
+    return _serialize_project_response(project)
 
 
 @router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -246,9 +412,12 @@ def delete_project(
 @router.get("/projects/time-summary", response_model=list[ProjectTimeSummary])
 def list_project_time_summary(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     now = datetime.now(timezone.utc)
+    visible_project_ids = _get_visible_project_ids_for_user(db, current_user)
+    if current_user.role != "admin" and not visible_project_ids:
+        return []
     rows = db.execute(
         select(WorkLog, SubProject, User)
         .join(SubProject, WorkLog.subproject_id == SubProject.id)
@@ -258,6 +427,8 @@ def list_project_time_summary(
     per_project_user: dict[int, dict[int, dict[str, int | str]]] = defaultdict(dict)
 
     for work_log, subproject, user in rows:
+        if current_user.role != "admin" and subproject.project_id not in visible_project_ids:
+            continue
         duration_sec = work_log.duration_sec
         if work_log.status == WORKLOG_RUNNING and work_log.current_started_at:
             duration_sec += max(
@@ -369,7 +540,7 @@ def list_subprojects(
     project_id: Optional[int] = Query(default=None),
     assignee_id: Optional[int] = Query(default=None),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     stmt = select(SubProject).options(
         selectinload(SubProject.subtasks),
@@ -377,9 +548,17 @@ def list_subprojects(
         selectinload(SubProject.verifier),
         selectinload(SubProject.reviewer),
     )
+    if current_user.role != "admin":
+        visible_project_ids = _get_visible_project_ids_for_user(db, current_user)
+        if not visible_project_ids:
+            return []
+        stmt = stmt.where(
+            SubProject.assignee_id == current_user.id,
+            SubProject.project_id.in_(visible_project_ids),
+        )
     if project_id is not None:
         stmt = stmt.where(SubProject.project_id == project_id)
-    if assignee_id is not None:
+    if assignee_id is not None and current_user.role == "admin":
         stmt = stmt.where(SubProject.assignee_id == assignee_id)
     stmt = stmt.order_by(SubProject.start_date.asc())
     return db.scalars(stmt).all()
@@ -389,9 +568,11 @@ def list_subprojects(
 def get_subproject(
     subproject_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    return _load_subproject(db, subproject_id)
+    sp = _load_subproject(db, subproject_id)
+    _ensure_subproject_access(sp, current_user)
+    return sp
 
 
 @router.put("/subprojects/{subproject_id}", response_model=SubProjectResponse)
@@ -452,6 +633,8 @@ def update_subproject(
                     detail=f"{fk_name} 사용자를 찾을 수 없습니다.",
                 )
 
+    if project is not None:
+        _sync_subproject_execution_history(db, project, sp)
     db.commit()
     return _load_subproject(db, subproject_id)
 
@@ -509,9 +692,147 @@ def update_subtask(
 
     db.flush()
     _recalc_status_and_progress(sp)
+    project = db.get(Project, sp.project_id)
+    if project is not None:
+        _sync_subproject_execution_history(db, project, sp)
     db.commit()
     db.refresh(task)
     return task
+
+
+@router.get("/projects/history", response_model=list[ProjectHistoryEntry])
+def list_project_execution_history(
+    project_id: Optional[int] = Query(default=None),
+    user_id: Optional[int] = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    visible_project_ids = _get_visible_project_ids_for_user(db, current_user)
+    if current_user.role != "admin" and not visible_project_ids:
+        return []
+    stmt = (
+        select(ProjectExecutionHistory, User)
+        .join(User, ProjectExecutionHistory.user_id == User.id)
+        .order_by(
+            ProjectExecutionHistory.ended_on.desc(),
+            ProjectExecutionHistory.recorded_at.desc(),
+        )
+    )
+    if current_user.role != "admin":
+        stmt = stmt.where(
+            ProjectExecutionHistory.project_id.in_(visible_project_ids),
+            ProjectExecutionHistory.user_id == current_user.id,
+        )
+    if project_id is not None:
+        stmt = stmt.where(ProjectExecutionHistory.project_id == project_id)
+    if user_id is not None and current_user.role == "admin":
+        stmt = stmt.where(ProjectExecutionHistory.user_id == user_id)
+
+    rows = db.execute(stmt).all()
+    return [
+        ProjectHistoryEntry(
+            id=history.id,
+            user_id=history.user_id,
+            user_name=user.name,
+            project_id=history.project_id,
+            project_name=history.project_name,
+            subproject_id=history.subproject_id,
+            subproject_name=history.subproject_name,
+            project_type=history.project_type,
+            role_in_project=history.role_in_project,
+            started_on=history.started_on,
+            ended_on=history.ended_on,
+            worked_minutes=history.worked_minutes,
+            completion_rate=float(history.completion_rate),
+            recorded_at=history.recorded_at,
+        )
+        for history, user in rows
+    ]
+
+
+@router.get("/projects/history-summary", response_model=list[ProjectHistorySummary])
+def list_project_execution_history_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    visible_project_ids = _get_visible_project_ids_for_user(db, current_user)
+    if current_user.role != "admin" and not visible_project_ids:
+        return []
+    rows = db.execute(
+        select(ProjectExecutionHistory, User).join(
+            User, ProjectExecutionHistory.user_id == User.id
+        )
+    ).all()
+
+    grouped: dict[int, dict[int, dict[str, object]]] = defaultdict(dict)
+    for history, user in rows:
+        if current_user.role != "admin":
+            if history.project_id not in visible_project_ids or history.user_id != current_user.id:
+                continue
+        project_bucket = grouped.setdefault(history.project_id, {})
+        member_bucket = project_bucket.get(user.id)
+        if member_bucket is None:
+            project_bucket[user.id] = {
+                "user_name": user.name,
+                "completed_count": 1,
+                "total_minutes": history.worked_minutes,
+                "last_completed_on": history.ended_on,
+            }
+            continue
+
+        member_bucket["completed_count"] = int(member_bucket["completed_count"]) + 1
+        member_bucket["total_minutes"] = int(member_bucket["total_minutes"]) + int(history.worked_minutes)
+        last_completed_on = member_bucket.get("last_completed_on")
+        if history.ended_on and (
+            last_completed_on is None or history.ended_on > last_completed_on
+        ):
+            member_bucket["last_completed_on"] = history.ended_on
+
+    return [
+        ProjectHistorySummary(
+            project_id=project_id,
+            total_completed_count=sum(
+                int(member["completed_count"]) for member in members.values()
+            ),
+            members=sorted(
+                [
+                    ProjectHistoryMemberSummary(
+                        user_id=user_id,
+                        user_name=str(data["user_name"]),
+                        completed_count=int(data["completed_count"]),
+                        total_minutes=int(data["total_minutes"]),
+                        last_completed_on=data["last_completed_on"],
+                    )
+                    for user_id, data in members.items()
+                ],
+                key=lambda item: (-item.completed_count, -item.total_minutes, item.user_name),
+            ),
+        )
+        for project_id, members in sorted(grouped.items())
+    ]
+
+
+@router.post("/projects/history/backfill", status_code=status.HTTP_204_NO_CONTENT)
+def backfill_project_execution_history(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    subprojects = db.scalars(
+        select(SubProject)
+        .options(selectinload(SubProject.subtasks))
+        .where(SubProject.status == STATUS_COMPLETED)
+    ).all()
+    projects = {
+        project.id: project
+        for project in db.scalars(select(Project).where(Project.id.in_([sp.project_id for sp in subprojects]))).all()
+    }
+    for subproject in subprojects:
+        project = projects.get(subproject.project_id)
+        if project is None:
+            continue
+        _sync_subproject_execution_history(db, project, subproject)
+    db.commit()
+    return None
 
 
 # ─────────────────────────────────────────────────────────────

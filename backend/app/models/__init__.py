@@ -17,6 +17,7 @@ from app.models.project import (  # noqa: F401
 )
 from app.models.progress_log import ProgressLog  # noqa: F401
 from app.models.workflow import (  # noqa: F401
+    ProjectExecutionHistory,
     ProjectTemplate,
     UserSetting,
     WorkLog,

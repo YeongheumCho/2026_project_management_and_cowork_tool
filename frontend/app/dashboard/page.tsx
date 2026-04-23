@@ -136,7 +136,11 @@ export default function DashboardPage() {
         </p>
       )}
 
-      <DashboardHeader onRequestAiSuggestion={() => router.push('/tasks')} />
+      <DashboardHeader
+        onRequestAiSuggestion={
+          isAdmin ? () => router.push('/tasks') : undefined
+        }
+      />
 
       <KpiGrid
         inProgressProjects={summary.inProgressProjects}

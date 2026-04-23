@@ -20,8 +20,11 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const navItems = useMemo<NavItem[]>(() => {
-    if (!isAdmin) return TOP_NAV;
-    return [...TOP_NAV, { href: '/admin', label: '관리' }];
+    const visibleNav = isAdmin
+      ? TOP_NAV
+      : TOP_NAV.filter((item) => item.href !== '/tasks');
+    if (!isAdmin) return visibleNav;
+    return [...visibleNav, { href: '/admin', label: '관리' }];
   }, [isAdmin]);
 
   useEffect(() => {
