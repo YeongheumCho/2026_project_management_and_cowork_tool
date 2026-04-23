@@ -43,6 +43,7 @@ from app.schemas.project import (
     ProjectCreate,
     ProjectResponse,
     ProjectTimeSummary,
+    ProjectUpdate,
     SubProjectCreate,
     SubProjectResponse,
     SubProjectUpdate,
@@ -166,6 +167,80 @@ def list_projects(
         .options(selectinload(Project.participants))
         .order_by(Project.created_at.desc())
     ).all()
+
+
+@router.put("/projects/{project_id}", response_model=ProjectResponse)
+def update_project(
+    project_id: int,
+    payload: ProjectUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    project = db.scalar(
+        select(Project)
+        .options(
+            selectinload(Project.participants),
+            selectinload(Project.subprojects),
+        )
+        .where(Project.id == project_id)
+    )
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="프로젝트를 찾을 수 없습니다.",
+        )
+
+    participant_ids = list(dict.fromkeys(payload.participant_ids))
+    participants = db.scalars(
+        select(User)
+        .where(User.id.in_(participant_ids), User.is_active.is_(True))
+        .order_by(User.name.asc())
+    ).all()
+    if len(participants) != len(participant_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="유효하지 않은 프로젝트 참여 인원이 포함되어 있습니다.",
+        )
+
+    participant_id_set = {user.id for user in participants}
+    invalid_assignees = [
+        subproject.name
+        for subproject in project.subprojects
+        if subproject.assignee_id is not None and subproject.assignee_id not in participant_id_set
+    ]
+    if invalid_assignees:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "현재 배정된 하위 프로젝트 담당자가 새 참여 인원에 포함되지 않습니다: "
+                + ", ".join(invalid_assignees[:3])
+            ),
+        )
+
+    project.name = payload.name
+    project.project_type = payload.project_type
+    project.participants = participants
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+@router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="프로젝트를 찾을 수 없습니다.",
+        )
+
+    db.delete(project)
+    db.commit()
+    return None
 
 
 @router.get("/projects/time-summary", response_model=list[ProjectTimeSummary])

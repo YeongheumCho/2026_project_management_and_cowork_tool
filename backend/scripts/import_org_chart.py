@@ -31,7 +31,7 @@ from app.models.user import User  # noqa: E402
 DEFAULT_CSV_PATH = CURRENT_DIR / "data" / "사번포함조직도.csv"
 DEFAULT_PASSWORD = "00000000"
 LEGACY_DUMMY_IDNUMS = {"A1001", "M2001", "M2002", "M2003", "M2004"}
-SERVICE_DEVELOPER_NAMES = {"조영흠", "박상호", "유현지", "김수결"}
+SERVICE_DEVELOPER_NAMES = {"조영흠", "박상은", "신현지", "김한결"}
 
 
 def determine_role(rel: str, name: str) -> str:

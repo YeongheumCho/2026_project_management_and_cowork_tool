@@ -1,28 +1,34 @@
-import type { UserBrief } from '../../lib/api';
-
-export type TeamGroup = {
-  key: string;
-  label: string;
-  members: UserBrief[];
+export type OrgMember = {
+  id: number;
+  name: string;
+  position?: string | null;
+  center?: string | null;
+  office?: string | null;
+  team?: string | null;
 };
 
-export type OfficeGroup = {
+export type TeamGroup<U extends OrgMember = OrgMember> = {
   key: string;
   label: string;
-  members: UserBrief[];
-  teams: TeamGroup[];
+  members: U[];
 };
 
-export type CenterGroup = {
+export type OfficeGroup<U extends OrgMember = OrgMember> = {
   key: string;
   label: string;
-  members: UserBrief[];
-  offices: OfficeGroup[];
+  members: U[];
+  teams: TeamGroup<U>[];
+};
+
+export type CenterGroup<U extends OrgMember = OrgMember> = {
+  key: string;
+  label: string;
+  members: U[];
+  offices: OfficeGroup<U>[];
 };
 
 const UNASSIGNED_CENTER_KEY = '__unassigned_center__';
 const UNASSIGNED_CENTER_LABEL = '미분류 조직';
-
 const POSITION_PRIORITY = ['이사', '수석', '책임', '선임', '전임', '인턴'] as const;
 
 function positionRank(position: string | null | undefined) {
@@ -31,7 +37,7 @@ function positionRank(position: string | null | undefined) {
   return index === -1 ? POSITION_PRIORITY.length : index;
 }
 
-function sortUsers(users: UserBrief[]) {
+function sortUsers<U extends OrgMember>(users: U[]): U[] {
   return [...users].sort((left, right) => {
     const rankDiff = positionRank(left.position) - positionRank(right.position);
     if (rankDiff !== 0) return rankDiff;
@@ -47,22 +53,22 @@ function sortByLabel<T extends { label: string }>(items: T[]) {
   return items.sort((left, right) => left.label.localeCompare(right.label, 'ko'));
 }
 
-function normalizedLeaf(user: UserBrief) {
+function normalizedLeaf(user: OrgMember) {
   return (user.team ?? user.office ?? user.center ?? '').trim();
 }
 
-export function groupUsersByTeam(users: UserBrief[]): CenterGroup[] {
+export function groupUsersByTeam<U extends OrgMember>(users: U[]): CenterGroup<U>[] {
   const centers = new Map<
     string,
     {
       label: string;
-      members: UserBrief[];
+      members: U[];
       offices: Map<
         string,
         {
           label: string;
-          members: UserBrief[];
-          teams: Map<string, TeamGroup>;
+          members: U[];
+          teams: Map<string, TeamGroup<U>>;
         }
       >;
     }
@@ -139,8 +145,8 @@ export function groupUsersByTeam(users: UserBrief[]): CenterGroup[] {
   return groups;
 }
 
-export function initialExpandedKeys(
-  groups: CenterGroup[],
+export function initialExpandedKeys<U extends OrgMember>(
+  groups: CenterGroup<U>[],
   myTeam: string | null | undefined,
 ): Set<string> {
   if (groups.length === 0) return new Set();
@@ -184,8 +190,8 @@ export function initialExpandedKeys(
   );
 }
 
-export function expandedKeysForMember(
-  groups: CenterGroup[],
+export function expandedKeysForMember<U extends OrgMember>(
+  groups: CenterGroup<U>[],
   memberId: number,
 ): string[] {
   for (const center of groups) {
@@ -209,8 +215,10 @@ export function expandedKeysForMember(
   return [];
 }
 
-export function flattenTeamGroups(groups: CenterGroup[]): TeamGroup[] {
-  const flat: TeamGroup[] = [];
+export function flattenTeamGroups<U extends OrgMember>(
+  groups: CenterGroup<U>[],
+): TeamGroup<U>[] {
+  const flat: TeamGroup<U>[] = [];
 
   for (const center of groups) {
     if (center.members.length > 0) {

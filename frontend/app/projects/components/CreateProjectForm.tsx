@@ -73,15 +73,13 @@ export default function CreateProjectForm({ users, onCreated, onError }: Props) 
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="예: 2026 Q2 정기 검증"
+              placeholder="예: 2026 Q2 정기 점검"
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600">
-              유형
-            </label>
+            <label className="block text-xs font-medium text-slate-600">유형</label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as ProjectType)}
@@ -109,9 +107,7 @@ export default function CreateProjectForm({ users, onCreated, onError }: Props) 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-medium text-slate-700">프로젝트 참여 인원</p>
-            <span className="text-xs text-slate-500">
-              {participantIds.length}명 선택됨
-            </span>
+            <span className="text-xs text-slate-500">{participantIds.length}명 선택됨</span>
           </div>
           <OrganizationMemberPicker
             users={users}

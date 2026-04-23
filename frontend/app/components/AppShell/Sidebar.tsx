@@ -87,12 +87,16 @@ export default function Sidebar({
                       onClick={() => onProjectSelect(project.id)}
                       className={itemClass(selectedProjectId === project.id)}
                     >
-                      <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(project.id)}`} />
+                      <span
+                        className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(project.id)}`}
+                      />
                       <span className="truncate">{project.name}</span>
                     </button>
                   ) : (
                     <Link href={`/projects/${project.id}`} className={itemClass(false)}>
-                      <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(project.id)}`} />
+                      <span
+                        className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(project.id)}`}
+                      />
                       <span className="truncate">{project.name}</span>
                     </Link>
                   )}
@@ -132,7 +136,7 @@ function CenterGroupItem({
   selectedMemberId,
   onMemberSelect,
 }: {
-  center: CenterGroup;
+  center: CenterGroup<UserBrief>;
   expanded: Set<string>;
   onToggle: (key: string) => void;
   selectedMemberId?: number | null;
@@ -189,7 +193,7 @@ function OfficeGroupItem({
   selectedMemberId,
   onMemberSelect,
 }: {
-  office: OfficeGroup;
+  office: OfficeGroup<UserBrief>;
   expanded: Set<string>;
   onToggle: (key: string) => void;
   selectedMemberId?: number | null;
@@ -241,7 +245,7 @@ function TeamGroupItem({
   selectedMemberId,
   onMemberSelect,
 }: {
-  team: TeamGroup;
+  team: TeamGroup<UserBrief>;
   expanded: boolean;
   onToggle: () => void;
   selectedMemberId?: number | null;
@@ -325,7 +329,9 @@ function MemberList({
               <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(user.id)}`} />
               <span className="truncate">{user.name}</span>
               {user.position && (
-                <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">{user.position}</span>
+                <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">
+                  {user.position}
+                </span>
               )}
             </button>
           ) : (
@@ -333,7 +339,9 @@ function MemberList({
               <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(user.id)}`} />
               <span className="truncate">{user.name}</span>
               {user.position && (
-                <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">{user.position}</span>
+                <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">
+                  {user.position}
+                </span>
               )}
             </div>
           )}
