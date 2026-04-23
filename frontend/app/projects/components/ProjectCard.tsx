@@ -2,6 +2,7 @@
 
 import {
   PROJECT_TYPE_LABEL,
+  type ProjectHistorySummary,
   type Project,
   type ProjectTimeSummary,
   type SubProject,
@@ -13,6 +14,7 @@ type Props = {
   project: Project;
   subprojects: SubProject[];
   timeSummary: ProjectTimeSummary;
+  historySummary: ProjectHistorySummary;
   isAdmin: boolean;
   isOpen: boolean;
   onToggle: (projectId: number) => void;
@@ -26,6 +28,7 @@ export default function ProjectCard({
   project,
   subprojects,
   timeSummary,
+  historySummary,
   isAdmin,
   isOpen,
   onToggle,
@@ -34,12 +37,17 @@ export default function ProjectCard({
   onEditProject,
   onDeleteProject,
 }: Props) {
-  const total = subprojects.length;
-  const done = subprojects.filter((sp) => sp.status === 'completed').length;
-  const inProgress = subprojects.filter((sp) => sp.status === 'in_progress').length;
-  const progress = total > 0 ? (done / total) * 100 : 0;
+  const total = project.subproject_count ?? subprojects.length;
+  const done =
+    project.completed_subproject_count ??
+    subprojects.filter((sp) => sp.status === 'completed').length;
+  const inProgress =
+    project.in_progress_subproject_count ??
+    subprojects.filter((sp) => sp.status === 'in_progress').length;
+  const progress = project.progress_percent ?? 0;
   const typeLabel = PROJECT_TYPE_LABEL[project.project_type] ?? project.project_type;
   const topMembers = timeSummary.members.slice(0, 5);
+  const topHistoryMembers = historySummary.members.slice(0, 5);
 
   return (
     <section className="overflow-hidden rounded-[24px] border border-[#E7E5DD] bg-white shadow-[0_14px_40px_rgba(28,25,23,0.06)]">
@@ -110,6 +118,35 @@ export default function ProjectCard({
             </div>
           </div>
 
+          <div className="min-w-[240px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-[#5F5E5A]">
+              <span>수행 이력</span>
+              <span className="text-[#1D1D1B]">{historySummary.total_completed_count}건</span>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              {topHistoryMembers.length === 0 ? (
+                <p className="text-[11px] text-[#8B897F]">
+                  아직 누적된 완료 이력이 없습니다.
+                </p>
+              ) : (
+                topHistoryMembers.map((member) => (
+                  <div
+                    key={member.user_id}
+                    className="flex items-center justify-between gap-3 text-[11px] text-[#5F5E5A]"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate">{member.user_name}</p>
+                      <p className="text-[10px] text-[#8B897F]">완료 {member.completed_count}건</p>
+                    </div>
+                    <span className="shrink-0 font-semibold text-[#1D1D1B]">
+                      {formatMinutes(member.total_minutes)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
           {isAdmin && (
             <div className="flex flex-wrap gap-2">
               <button
@@ -161,6 +198,14 @@ export default function ProjectCard({
 function formatDuration(totalSeconds: number) {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (hours === 0) return `${minutes}분`;
+  if (minutes === 0) return `${hours}시간`;
+  return `${hours}시간 ${minutes}분`;
+}
+
+function formatMinutes(totalMinutes: number) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
   if (hours === 0) return `${minutes}분`;
   if (minutes === 0) return `${hours}시간`;
   return `${hours}시간 ${minutes}분`;

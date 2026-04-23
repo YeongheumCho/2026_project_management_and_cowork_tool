@@ -67,16 +67,11 @@ export default function ProjectSummaryGrid({
                 .map((sp) => sp.assignee_id)
                 .filter((id): id is number => id !== null),
             );
-            const avgProgress =
-              related.length === 0
-                ? 0
-                : Math.round(
-                    related.reduce((sum, sp) => sum + (sp.progress ?? 0), 0) /
-                      related.length,
-                  );
-            const doneCount = related.filter(
+            const avgProgress = Math.round(project.progress_percent ?? 0);
+            const doneCount = project.completed_subproject_count ?? related.filter(
               (sp) => sp.status === 'completed',
             ).length;
+            const subprojectCount = project.subproject_count ?? related.length;
             const typeLabel =
               PROJECT_TYPE_LABEL[project.project_type] ?? project.project_type;
 
@@ -113,7 +108,7 @@ export default function ProjectSummaryGrid({
                 <div className="mt-auto flex items-center gap-3 pt-2 text-[10px] text-[#888780]">
                   <span className="inline-flex items-center gap-1">
                     <span className="font-semibold text-[#1A1A1A]">
-                      {related.length}
+                      {subprojectCount}
                     </span>
                     소프로젝트
                   </span>

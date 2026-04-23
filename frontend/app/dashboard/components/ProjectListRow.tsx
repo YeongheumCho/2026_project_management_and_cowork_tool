@@ -21,9 +21,11 @@ export default function ProjectListRow({
   selected = false,
   onSelect,
 }: Props) {
-  const total = subprojects.length;
-  const done = subprojects.filter((subproject) => subproject.status === 'completed').length;
-  const progress = total === 0 ? 0 : (done / total) * 100;
+  const total = project.subproject_count ?? subprojects.length;
+  const done =
+    project.completed_subproject_count ??
+    subprojects.filter((subproject) => subproject.status === 'completed').length;
+  const progress = project.progress_percent ?? 0;
   const summary =
     subprojects
       .slice()

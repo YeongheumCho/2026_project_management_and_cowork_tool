@@ -13,6 +13,7 @@ from app.dependencies import get_current_user, get_db, require_admin
 from app.models.project import PROJECT_TYPES, Project, SubProject, SubTask
 from app.models.user import User
 from app.models.workflow import (
+    ProjectExecutionHistory,
     ProjectTemplate,
     UserSetting,
     WorkLog,
@@ -69,11 +70,12 @@ def _recommendation_reasons(
     capability_score: float,
     remaining_minutes: int,
     keyword_hits: int,
+    history_hits: int,
 ) -> list[str]:
     free_minutes = max(0, 2400 - remaining_minutes)
     return [
         f"예상 가용 시간이 약 {free_minutes}분으로 계산되어 가용성 점수가 {availability_score:.0f}점입니다.",
-        f"유사 업무 경험치 {keyword_hits}건이 반영되어 역량 점수가 {capability_score:.0f}점입니다.",
+        f"유사 업무 경험치 {keyword_hits}건과 누적 수행 이력 {history_hits}건이 반영되어 역량 점수가 {capability_score:.0f}점입니다.",
         f"{user.name}님의 현재 잔여 업무량은 약 {remaining_minutes}분입니다.",
     ]
 
@@ -149,6 +151,7 @@ async def _rerank_candidates_with_claude(
             "capability_score": candidate.capability_score,
             "remaining_minutes": candidate.remaining_minutes,
             "keyword_experience_count": candidate.keyword_experience_count,
+            "history_experience_count": candidate.history_experience_count,
             "reasons": candidate.reasons,
         }
         for candidate in sorted(candidates, key=lambda item: item.score, reverse=True)[:5]
@@ -450,8 +453,10 @@ async def recommend_assignees(
     completed_logs = db.scalars(
         select(WorkLog).where(WorkLog.status == WORKLOG_COMPLETED)
     ).all()
+    history_rows = db.scalars(select(ProjectExecutionHistory)).all()
 
     keyword = payload.project_name.strip().lower()
+    recent_history_cutoff = date.fromordinal(max(1, date.today().toordinal() - 180))
     candidates: list[RecommendationCandidate] = []
 
     for user in users:
@@ -481,7 +486,38 @@ async def recommend_assignees(
             for log in completed_logs
             if log.user_id == user.id and keyword and keyword[:6] in log.task_name.lower()
         )
-        capability_score = min(100.0, same_type_count * 18 + keyword_hits * 12 + 20)
+        history_for_user = [
+            row for row in history_rows if row.user_id == user.id
+        ]
+        history_type_count = sum(
+            1 for row in history_for_user if row.project_type == payload.project_type
+        )
+        history_keyword_hits = sum(
+            1
+            for row in history_for_user
+            if keyword and keyword[:6] in (row.keyword_text or "").lower()
+        )
+        recent_history_count = sum(
+            1
+            for row in history_for_user
+            if row.ended_on and row.ended_on >= recent_history_cutoff
+        )
+        average_completion_rate = (
+            sum(float(row.completion_rate) for row in history_for_user) / len(history_for_user)
+            if history_for_user
+            else 0.0
+        )
+        history_experience_count = history_type_count + history_keyword_hits + recent_history_count
+        capability_score = min(
+            100.0,
+            same_type_count * 12
+            + keyword_hits * 10
+            + history_type_count * 14
+            + history_keyword_hits * 16
+            + recent_history_count * 6
+            + average_completion_rate * 0.2
+            + 20,
+        )
         final_score = (
             payload.availability_weight * availability_score
             + payload.capability_weight * capability_score
@@ -499,6 +535,7 @@ async def recommend_assignees(
                 capability_score=round(capability_score, 2),
                 remaining_minutes=remaining_minutes,
                 keyword_experience_count=keyword_hits + same_type_count,
+                history_experience_count=history_experience_count,
                 recommendation_source="rule",
                 reasons=_recommendation_reasons(
                     user=user,
@@ -506,6 +543,7 @@ async def recommend_assignees(
                     capability_score=capability_score,
                     remaining_minutes=remaining_minutes,
                     keyword_hits=keyword_hits + same_type_count,
+                    history_hits=history_experience_count,
                 ),
             )
         )

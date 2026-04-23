@@ -2,7 +2,6 @@
 
 import AppShell from '../components/AppShell';
 import { useMe } from '../lib/useMe';
-import TemplateManager from './components/TemplateManager';
 import UserTable from './components/UserTable';
 import { useAdminUsers } from './hooks/useAdminUsers';
 
@@ -13,9 +12,12 @@ export default function AdminPage() {
     users,
     loading,
     savingId,
+    deletingId,
     message,
     handleRoleChange,
     handleRoleSave,
+    handleUserCreate,
+    handleUserDelete,
   } = useAdminUsers(isAdmin);
 
   if (meLoading || !me) {
@@ -53,11 +55,13 @@ export default function AdminPage() {
           users={users}
           canEdit
           savingId={savingId}
+          deletingId={deletingId}
           message={message}
           onRoleChange={handleRoleChange}
           onRoleSave={(member) => void handleRoleSave(member)}
+          onUserCreate={(payload) => handleUserCreate(payload)}
+          onUserDelete={(member) => void handleUserDelete(member)}
         />
-        <TemplateManager />
       </div>
     </AppShell>
   );

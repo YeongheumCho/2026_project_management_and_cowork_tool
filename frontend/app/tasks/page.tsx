@@ -389,7 +389,8 @@ export default function TasksPage() {
                       <p className="mt-1 text-[10px] text-[#888780]">
                         {candidate.position ? `${candidate.position} · ` : ''}
                         {candidate.role === 'admin' ? '관리자' : '구성원'} · 유사 업무{' '}
-                        {candidate.keyword_experience_count}건
+                        {candidate.keyword_experience_count}건 · 수행 이력{' '}
+                        {candidate.history_experience_count}건
                       </p>
                     </div>
                     <div className="rounded-2xl bg-[#FAFAFA] px-4 py-3 text-right">

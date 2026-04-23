@@ -3,10 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  createUser,
+  deleteUser,
   fetchMe,
   fetchUsers,
   patchUserRole,
   type ErrorResponse,
+  type UserCreatePayload,
   type UserResponse,
 } from '../lib/adminApi';
 
@@ -15,10 +18,13 @@ type UseAdminUsersResult = {
   users: UserResponse[];
   loading: boolean;
   savingId: string | null;
+  deletingId: string | null;
   message: string | null;
   setMessage: (msg: string | null) => void;
   handleRoleChange: (idnum: string, role: string) => void;
   handleRoleSave: (member: UserResponse) => Promise<void>;
+  handleUserCreate: (payload: UserCreatePayload) => Promise<boolean>;
+  handleUserDelete: (member: UserResponse) => Promise<void>;
 };
 
 export function useAdminUsers(enabled = true): UseAdminUsersResult {
@@ -27,6 +33,7 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,6 +41,7 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
       setUser(null);
       setUsers([]);
       setSavingId(null);
+      setDeletingId(null);
       setMessage(null);
       setLoading(false);
       return;
@@ -132,14 +140,81 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
     }
   };
 
+  const handleUserCreate = async (payload: UserCreatePayload) => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.replace('/login');
+      return false;
+    }
+
+    setMessage(null);
+
+    try {
+      const res = await createUser({ token }, payload);
+      const data = await res.json();
+
+      if (!res.ok) {
+        const err = data as ErrorResponse;
+        setMessage(err.detail ?? '사용자 추가에 실패했습니다.');
+        return false;
+      }
+
+      const created = data as UserResponse;
+      setUsers((prev) =>
+        [...prev, created].sort((left, right) =>
+          `${left.name}-${left.idnum}`.localeCompare(`${right.name}-${right.idnum}`, 'ko'),
+        ),
+      );
+      setMessage(`${created.name}님 계정을 추가했습니다.`);
+      return true;
+    } catch {
+      setMessage('사용자 추가 중 오류가 발생했습니다.');
+      return false;
+    }
+  };
+
+  const handleUserDelete = async (member: UserResponse) => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
+    setDeletingId(member.idnum);
+    setMessage(null);
+
+    try {
+      const res = await deleteUser({ token }, member.idnum);
+      if (!res.ok) {
+        let detail = '사용자 삭제에 실패했습니다.';
+        try {
+          const err = (await res.json()) as ErrorResponse;
+          detail = err.detail ?? detail;
+        } catch {}
+        setMessage(detail);
+        return;
+      }
+
+      setUsers((prev) => prev.filter((current) => current.idnum !== member.idnum));
+      setMessage(`${member.name}님 계정을 삭제했습니다.`);
+    } catch {
+      setMessage('사용자 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return {
     user,
     users,
     loading,
     savingId,
+    deletingId,
     message,
     setMessage,
     handleRoleChange,
     handleRoleSave,
+    handleUserCreate,
+    handleUserDelete,
   };
 }

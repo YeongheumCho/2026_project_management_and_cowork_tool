@@ -6,6 +6,7 @@ import TeamModal from '../components/TeamModal';
 import {
   apiFetch,
   type Project,
+  type ProjectHistorySummary,
   type ProjectTimeSummary,
   type SubProject,
 } from '../lib/api';
@@ -24,6 +25,7 @@ export default function ProjectsPage() {
     users,
     byProject,
     timeByProject,
+    historyByProject,
     loading,
     error,
     reload,
@@ -135,6 +137,7 @@ export default function ProjectsPage() {
             project={project}
             subprojects={byProject.get(project.id) ?? []}
             timeSummary={timeByProject.get(project.id) ?? emptyTimeSummary(project.id)}
+            historySummary={historyByProject.get(project.id) ?? emptyHistorySummary(project.id)}
             isAdmin={!!isAdmin}
             isOpen={expanded.has(project.id)}
             onToggle={toggleExpand}
@@ -177,6 +180,14 @@ function emptyTimeSummary(projectId: number): ProjectTimeSummary {
   return {
     project_id: projectId,
     total_seconds: 0,
+    members: [],
+  };
+}
+
+function emptyHistorySummary(projectId: number): ProjectHistorySummary {
+  return {
+    project_id: projectId,
+    total_completed_count: 0,
     members: [],
   };
 }

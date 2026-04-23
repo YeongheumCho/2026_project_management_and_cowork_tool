@@ -1,15 +1,17 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Date,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
 
@@ -81,3 +83,40 @@ class ProjectTemplate(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class ProjectExecutionHistory(Base):
+    __tablename__ = "project_execution_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    subproject_id: Mapped[int] = mapped_column(
+        ForeignKey("subprojects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    project_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    subproject_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    project_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    role_in_project: Mapped[str] = mapped_column(String(30), default="assignee", nullable=False)
+    started_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    ended_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    worked_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completion_rate: Mapped[float] = mapped_column(Numeric(5, 2), default=100, nullable=False)
+    keyword_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    user = relationship("User")
+    project = relationship("Project")
+    subproject = relationship("SubProject")

@@ -78,6 +78,7 @@ class RecommendationCandidate(BaseModel):
     capability_score: float
     remaining_minutes: int
     keyword_experience_count: int
+    history_experience_count: int = 0
     recommendation_source: str = "rule"
     reasons: list[str]
 

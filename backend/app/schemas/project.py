@@ -72,6 +72,10 @@ class ProjectResponse(BaseModel):
     created_by: Optional[int] = None
     created_at: datetime
     participants: list[ProjectParticipantBrief] = []
+    progress_percent: float = 0
+    subproject_count: int = 0
+    completed_subproject_count: int = 0
+    in_progress_subproject_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -86,6 +90,37 @@ class ProjectTimeSummary(BaseModel):
     project_id: int
     total_seconds: int
     members: list[ProjectMemberTimeSummary]
+
+
+class ProjectHistoryEntry(BaseModel):
+    id: int
+    user_id: int
+    user_name: str
+    project_id: int
+    project_name: str
+    subproject_id: int
+    subproject_name: str
+    project_type: str
+    role_in_project: str
+    started_on: date | None = None
+    ended_on: date | None = None
+    worked_minutes: int
+    completion_rate: float
+    recorded_at: datetime
+
+
+class ProjectHistoryMemberSummary(BaseModel):
+    user_id: int
+    user_name: str
+    completed_count: int
+    total_minutes: int
+    last_completed_on: date | None = None
+
+
+class ProjectHistorySummary(BaseModel):
+    project_id: int
+    total_completed_count: int
+    members: list[ProjectHistoryMemberSummary]
 
 
 # ---------- SubTask ----------
