@@ -12,6 +12,7 @@ type Props = {
   f: FormState;
   set: FormSetter;
   users: UserBrief[];
+  projectParticipants: UserBrief[];
   isOfficial: boolean;
 };
 
@@ -23,6 +24,7 @@ export default function InspectionMetaSection({
   f,
   set,
   users,
+  projectParticipants,
   isOfficial,
 }: Props) {
   return (
@@ -116,13 +118,22 @@ export default function InspectionMetaSection({
             className="input"
           />
         </Field>
+        
         <Field label="기능 담당자">
-          <input
+          <select
             value={f.functionOwner}
             onChange={(e) => set('functionOwner', e.target.value)}
             className="input"
-          />
+          >
+            <option value="">선택</option>
+            {projectParticipants.map((user) => (
+              <option key={user.id} value={user.name}>
+                {user.name}
+              </option>
+            ))}
+          </select>
         </Field>
+
         <Field label="검증(자동화) 담당">
           <select
             value={f.verifierId}
@@ -135,12 +146,13 @@ export default function InspectionMetaSection({
             className="input"
           >
             <option value="">선택</option>
-            {users.map((u) => (
+            {projectParticipants.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name}
               </option>
             ))}
           </select>
+
         </Field>
         <Field label="리뷰 담당">
           <select
@@ -154,7 +166,7 @@ export default function InspectionMetaSection({
             className="input"
           >
             <option value="">선택</option>
-            {users.map((u) => (
+            {projectParticipants.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name}
               </option>

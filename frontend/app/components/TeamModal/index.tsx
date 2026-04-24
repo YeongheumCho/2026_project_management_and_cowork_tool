@@ -75,18 +75,44 @@ export default function TeamModal({
     () => projects.find((project) => project.id === f.projectId),
     [projects, f.projectId],
   );
+  const projectParticipants = useMemo(
+    () => selectedProject?.participants ?? [],
+    [selectedProject],
+  );
   const availableAssigneeIds = useMemo(() => {
     if (!selectedProject || selectedProject.participants.length === 0) {
       return new Set(users.map((user) => user.id));
     }
     return new Set(selectedProject.participants.map((user) => user.id));
   }, [selectedProject, users]);
+  const availableFunctionOwnerNames = useMemo(
+    () => new Set(projectParticipants.map((user) => user.name)),
+    [projectParticipants],
+  );
 
   useEffect(() => {
     if (f.assigneeId === '') return;
     if (availableAssigneeIds.has(f.assigneeId)) return;
     setF((prev) => ({ ...prev, assigneeId: '' }));
   }, [availableAssigneeIds, f.assigneeId]);
+
+  useEffect(() => {
+    if (!f.functionOwner.trim()) return;
+    if (availableFunctionOwnerNames.has(f.functionOwner)) return;
+    setF((prev) => ({ ...prev, functionOwner: '' }));
+  }, [availableFunctionOwnerNames, f.functionOwner]);
+
+  useEffect(() => {
+    if (f.verifierId === '') return;
+    if (availableAssigneeIds.has(f.verifierId)) return;
+    setF((prev) => ({ ...prev, verifierId: '' }));
+  }, [availableAssigneeIds, f.verifierId]);
+
+  useEffect(() => {
+    if (f.reviewerId === '') return;
+    if (availableAssigneeIds.has(f.reviewerId)) return;
+    setF((prev) => ({ ...prev, reviewerId: '' }));
+  }, [availableAssigneeIds, f.reviewerId]);
 
   const projectType = selectedProject?.project_type ?? 'general';
   const isInspection =
@@ -201,6 +227,7 @@ export default function TeamModal({
               f={f}
               set={set}
               users={users}
+              projectParticipants={projectParticipants}
               isOfficial={isOfficial}
             />
             <InspectionStatusSection f={f} set={set} />
