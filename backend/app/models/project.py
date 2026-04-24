@@ -143,7 +143,9 @@ class SubProject(Base):
     verification_level: Mapped[str] = mapped_column(String(20), nullable=True)  # 기초/LV1/LV2/BSW/LV3/LV4
     vehicle_type: Mapped[str] = mapped_column(String(50), nullable=True)        # HEV/PHEV/CN8 LV2 등
     function_name: Mapped[str] = mapped_column(String(200), nullable=True)      # 기능명 (자세히)
-    function_owner: Mapped[str] = mapped_column(String(100), nullable=True)     # 기능 담당자
+    function_owner: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )    # 기능 담당자
     verifier_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )  # 검증(자동화) 담당자
