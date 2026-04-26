@@ -42,6 +42,35 @@ from app.schemas.workflow import (
 router = APIRouter(tags=["workflow"])
 SERVICE_DEVELOPER_NAMES = {"조영흠", "박상은", "신현지", "김한결"}
 
+# ---------------------------------------------------------------------------
+# 업무 가용성 / 역량 추천 알고리즘 상수
+# ---------------------------------------------------------------------------
+
+# 1일 최대 업무 적재량(분). 40시간 기준: 40h × 60min = 2400.
+# 이 값에서 현재 잔여 업무량을 빼 예상 가용 시간을 산출한다.
+MAX_DAILY_WORKLOAD_MINUTES = 2400
+
+# 가용성 점수 계산 분모.
+# availability_score = 100 − (remaining_minutes / AVAILABILITY_SCALE)
+# 즉, AVAILABILITY_SCALE 분(24분)마다 점수 1점 감소.
+AVAILABILITY_SCALE = 24
+
+# 담당자 예상 소요 시간이 미입력됐을 때 사용하는 기본값(분).
+DEFAULT_TASK_MINUTES = 120
+
+# 역량 점수 계산에 사용하는 가중치
+# (값 조정 시 _recommendation_reasons 문자열도 함께 검토할 것)
+SCORE_WEIGHT_SAME_TYPE = 12       # 현재 동일 유형 진행 중인 소프로젝트당 가중치
+SCORE_WEIGHT_LOG_KEYWORD = 10     # 완료 WorkLog 키워드 일치건당 가중치
+SCORE_WEIGHT_HISTORY_TYPE = 14    # 이력(ProjectExecutionHistory) 유형 일치건당 가중치
+SCORE_WEIGHT_HISTORY_KEYWORD = 16 # 이력 키워드 일치건당 가중치 (최고 신뢰도)
+SCORE_WEIGHT_RECENT_HISTORY = 6   # 최근 RECENT_HISTORY_DAYS 이내 이력건당 가중치
+SCORE_WEIGHT_COMPLETION_RATE = 0.2  # 평균 완료율 반영 비율 (0~100점 → 최대 20점 기여)
+SCORE_BASE = 20                   # 모든 후보에게 부여하는 기본 점수 (0점 방지용)
+
+# 최근 이력으로 간주할 기간(일). 6개월 ≒ 180일.
+RECENT_HISTORY_DAYS = 180
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -72,7 +101,7 @@ def _recommendation_reasons(
     keyword_hits: int,
     history_hits: int,
 ) -> list[str]:
-    free_minutes = max(0, 2400 - remaining_minutes)
+    free_minutes = max(0, MAX_DAILY_WORKLOAD_MINUTES - remaining_minutes)
     return [
         f"예상 가용 시간이 약 {free_minutes}분으로 계산되어 가용성 점수가 {availability_score:.0f}점입니다.",
         f"유사 업무 경험치 {keyword_hits}건과 누적 수행 이력 {history_hits}건이 반영되어 역량 점수가 {capability_score:.0f}점입니다.",
@@ -355,7 +384,7 @@ def pause_work_log(
 ):
     log = db.get(WorkLog, log_id)
     if not log or log.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="작업 기록을 찾을 수 없습니다.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업 기록을 찾을 수 없습니다.")
     if log.status != WORKLOG_RUNNING:
         return log
 
@@ -377,9 +406,9 @@ def resume_work_log(
 ):
     log = db.get(WorkLog, log_id)
     if not log or log.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="작업 기록을 찾을 수 없습니다.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업 기록을 찾을 수 없습니다.")
     if log.status == WORKLOG_COMPLETED:
-        raise HTTPException(status_code=400, detail="완료된 작업은 다시 시작할 수 없습니다.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="완료된 작업은 다시 시작할 수 없습니다.")
 
     log.status = WORKLOG_RUNNING
     log.current_started_at = _utcnow()
@@ -397,7 +426,7 @@ def complete_work_log(
 ):
     log = db.get(WorkLog, log_id)
     if not log or log.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="작업 기록을 찾을 수 없습니다.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업 기록을 찾을 수 없습니다.")
 
     now = _utcnow()
     if log.status == WORKLOG_RUNNING and log.current_started_at:
@@ -431,7 +460,7 @@ def delete_work_log(
 ):
     log = db.get(WorkLog, log_id)
     if not log or log.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="작업 기록을 찾을 수 없습니다.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업 기록을 찾을 수 없습니다.")
     db.delete(log)
     db.commit()
     return None
@@ -456,7 +485,7 @@ async def recommend_assignees(
     history_rows = db.scalars(select(ProjectExecutionHistory)).all()
 
     keyword = payload.project_name.strip().lower()
-    recent_history_cutoff = date.fromordinal(max(1, date.today().toordinal() - 180))
+    recent_history_cutoff = date.fromordinal(max(1, date.today().toordinal() - RECENT_HISTORY_DAYS))
     candidates: list[RecommendationCandidate] = []
 
     for user in users:
@@ -470,10 +499,10 @@ async def recommend_assignees(
             if subproject.assignee_id == user.id
         ]
         remaining_minutes = sum(
-            subproject.total_minutes or subproject.avg_expected_minutes or 120
+            subproject.total_minutes or subproject.avg_expected_minutes or DEFAULT_TASK_MINUTES
             for subproject in assigned_subprojects
         )
-        availability_score = max(0.0, min(100.0, 100 - (remaining_minutes / 24)))
+        availability_score = max(0.0, min(100.0, 100 - (remaining_minutes / AVAILABILITY_SCALE)))
 
         same_type_count = sum(
             1
@@ -510,13 +539,13 @@ async def recommend_assignees(
         history_experience_count = history_type_count + history_keyword_hits + recent_history_count
         capability_score = min(
             100.0,
-            same_type_count * 12
-            + keyword_hits * 10
-            + history_type_count * 14
-            + history_keyword_hits * 16
-            + recent_history_count * 6
-            + average_completion_rate * 0.2
-            + 20,
+            same_type_count * SCORE_WEIGHT_SAME_TYPE
+            + keyword_hits * SCORE_WEIGHT_LOG_KEYWORD
+            + history_type_count * SCORE_WEIGHT_HISTORY_TYPE
+            + history_keyword_hits * SCORE_WEIGHT_HISTORY_KEYWORD
+            + recent_history_count * SCORE_WEIGHT_RECENT_HISTORY
+            + average_completion_rate * SCORE_WEIGHT_COMPLETION_RATE
+            + SCORE_BASE,
         )
         final_score = (
             payload.availability_weight * availability_score
@@ -579,7 +608,7 @@ def assign_recommended_work(
 ):
     assignee = db.get(User, payload.assignee_id)
     if not assignee:
-        raise HTTPException(status_code=404, detail="담당자를 찾을 수 없습니다.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="담당자를 찾을 수 없습니다.")
 
     project = Project(
         name=payload.project_name,
@@ -670,7 +699,7 @@ def update_my_settings(
         if not payload.current_password or not verify_password(
             payload.current_password, current_user.password_hash
         ):
-            raise HTTPException(status_code=400, detail="현재 비밀번호가 올바르지 않습니다.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="현재 비밀번호가 올바르지 않습니다.")
         current_user.password_hash = hash_password(payload.new_password)
     if payload.default_calendar_view is not None:
         settings_row.default_calendar_view = payload.default_calendar_view
@@ -730,7 +759,7 @@ def update_template(
 ):
     template = db.get(ProjectTemplate, template_id)
     if not template:
-        raise HTTPException(status_code=404, detail="템플릿을 찾을 수 없습니다.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="템플릿을 찾을 수 없습니다.")
 
     template.name = payload.name
     template.project_type = payload.project_type
@@ -750,7 +779,7 @@ def delete_template(
 ):
     template = db.get(ProjectTemplate, template_id)
     if not template:
-        raise HTTPException(status_code=404, detail="템플릿을 찾을 수 없습니다.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="템플릿을 찾을 수 없습니다.")
     db.delete(template)
     db.commit()
     return None
