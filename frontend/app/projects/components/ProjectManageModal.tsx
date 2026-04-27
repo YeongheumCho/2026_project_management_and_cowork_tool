@@ -78,15 +78,16 @@ export default function ProjectManageModal({
 
   return (
     <Modal open={open} onClose={onClose} size="lg" ariaLabel="프로젝트 수정">
-      <form onSubmit={submit} className="space-y-5">
-        <div>
+      {/* Modal(flex-col max-h-[90vh])을 부모로 삼아 조직도 영역만 스크롤되도록 한다. */}
+      <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-5">
+        <div className="flex-shrink-0">
           <h2 className="text-xl font-semibold text-slate-900">프로젝트 수정</h2>
           <p className="mt-1 text-sm text-slate-500">
             프로젝트 이름, 유형, 참여 인원을 수정할 수 있습니다.
           </p>
         </div>
 
-        <div>
+        <div className="flex-shrink-0">
           <label
             htmlFor="project-edit-name"
             className="block text-sm font-medium text-slate-700"
@@ -101,7 +102,7 @@ export default function ProjectManageModal({
           />
         </div>
 
-        <div>
+        <div className="flex-shrink-0">
           <label
             htmlFor="project-edit-type"
             className="block text-sm font-medium text-slate-700"
@@ -122,17 +123,17 @@ export default function ProjectManageModal({
           </select>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between">
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex flex-shrink-0 items-center justify-between">
             <label className="block text-sm font-medium text-slate-700">
               프로젝트 참여 인원
             </label>
             <span className="text-xs text-slate-500">{participantIds.length}명 선택됨</span>
           </div>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 flex-shrink-0 text-xs text-slate-500">
             이미 배정된 하위 프로젝트 담당자는 참여 인원에서 제외할 수 없습니다.
           </p>
-          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
             <OrganizationMemberPicker
               users={users}
               selectedIds={participantIds}
@@ -142,7 +143,7 @@ export default function ProjectManageModal({
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-shrink-0 justify-end gap-2 border-t border-slate-100 pt-4">
           <button
             type="button"
             onClick={onClose}

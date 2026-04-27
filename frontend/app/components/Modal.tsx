@@ -44,9 +44,12 @@ export default function Modal({
   if (!open) return null;
 
   const containerCls = [
-    'relative w-full rounded-2xl border border-[#D3D1C7] bg-white p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]',
+    // max-h + flex flex-col: 내부 자식이 flex-1/flex-shrink-0으로 높이를 제어할 수 있게 한다.
+    // scrollable 모드는 컨테이너 전체를 스크롤하고,
+    // 비-scrollable 모드는 컨테이너 높이만 제한해 내부 레이아웃에 위임한다.
+    'relative flex w-full flex-col rounded-2xl border border-[#D3D1C7] bg-white p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]',
     SIZE_CLASS[size],
-    scrollable ? 'max-h-[88vh] overflow-y-auto' : '',
+    scrollable ? 'max-h-[88vh] overflow-y-auto' : 'max-h-[90vh]',
   ]
     .filter(Boolean)
     .join(' ');
