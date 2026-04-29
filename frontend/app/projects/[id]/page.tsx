@@ -90,7 +90,7 @@ export default function ProjectDetailPage() {
     <AppShell me={me}>
       <div className="mb-4">
         <Link href="/projects" className="text-sm text-blue-600 hover:underline">
-          ← 프로젝트 목록
+          {'← 프로젝트 목록'}
         </Link>
       </div>
 
@@ -98,7 +98,7 @@ export default function ProjectDetailPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold">{project.name}</h1>
           <p className="mt-1 text-xs text-slate-500">
-            생성 {new Date(project.created_at).toLocaleDateString('ko-KR')} · 유형:{' '}
+            {'생성 '}{new Date(project.created_at).toLocaleDateString('ko-KR')}{' · 유형: '}
             {project.project_type}
           </p>
         </div>
@@ -115,15 +115,15 @@ export default function ProjectDetailPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">진행률 기록 추가</h2>
+        <section className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold">{'진행률 기록 추가'}</h2>
           <p className="mt-1 text-xs text-slate-500">
-            오늘 이 프로젝트에서 진행한 내용을 기록하세요.
+            {'오늘 이 프로젝트에서 진행한 내용을 기록하세요.'}
           </p>
 
-          <form onSubmit={submit} className="mt-4 space-y-3">
+          <form onSubmit={submit} className="mt-4 flex flex-1 flex-col gap-3">
             <label className="block">
-              <span className="text-xs font-medium text-slate-600">진행률 (%)</span>
+              <span className="text-xs font-medium text-slate-600">{'진행률 (%)'}</span>
               <input
                 type="number"
                 min={0}
@@ -136,7 +136,7 @@ export default function ProjectDetailPage() {
             </label>
 
             <label className="block">
-              <span className="text-xs font-medium text-slate-600">날짜</span>
+              <span className="text-xs font-medium text-slate-600">{'날짜'}</span>
               <input
                 type="date"
                 value={workDate}
@@ -146,40 +146,40 @@ export default function ProjectDetailPage() {
               />
             </label>
 
-            <label className="block">
-              <span className="text-xs font-medium text-slate-600">메모</span>
+            <label className="block flex-1">
+              <span className="text-xs font-medium text-slate-600">{'메모'}</span>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="오늘 한 일 / 이슈 / 다음 계획"
-                className="mt-1 min-h-24 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                className="mt-1 min-h-[96px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
               />
             </label>
 
             <button
               type="submit"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="self-start rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
-              기록 저장
+              {'기록 저장'}
             </button>
           </form>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">내 진행 기록</h2>
+        <section className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold">{'수행 이력'}</h2>
           <p className="mt-1 text-xs text-slate-500">
-            이 프로젝트에서 내가 남긴 진행 기록입니다.
+            {'이 프로젝트에서 남긴 진행 기록입니다.'}
           </p>
 
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 flex-1 space-y-2 overflow-y-auto">
             {loading && (
               <p className="py-6 text-center text-sm text-slate-400">
-                불러오는 중...
+                {'불러오는 중...'}
               </p>
             )}
             {!loading && logs.length === 0 && (
               <p className="py-6 text-center text-sm text-slate-400">
-                아직 진행 기록이 없습니다.
+                {'아직 진행 기록이 없습니다.'}
               </p>
             )}
             {logs.map((log) => (
@@ -187,9 +187,9 @@ export default function ProjectDetailPage() {
                 key={log.id}
                 className="rounded-xl border border-slate-100 bg-slate-50 p-3"
               >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">{log.progress_percent}%</p>
-                  <p className="text-micro text-slate-500">{log.work_date}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-800">{log.progress_percent}%</p>
+                  <p className="shrink-0 text-xs text-slate-500">{log.work_date}</p>
                 </div>
                 <p className="mt-1 text-xs text-slate-600">
                   {log.comment || '메모 없음'}

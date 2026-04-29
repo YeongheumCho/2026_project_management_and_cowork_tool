@@ -17,8 +17,8 @@ type Props = {
 };
 
 /**
- * 1차 검증 / InReview 에서 공통으로 쓰이는 상태+소요시간 블록.
- * 총 소요(분)는 세 필드의 단순 합.
+ * 1ì°¨ ê²ì¦ / InReview ìì ê³µíµì¼ë¡ ì°ì´ë ìí+ìììê° ë¸ë¡.
+ * ì´ ìì(ë¶)ë ì¸ íëì ë¨ì í©.
  */
 export default function InspectionBlock({
   title,
@@ -38,13 +38,13 @@ export default function InspectionBlock({
   return (
     <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
       <p className="mb-2 text-xs font-semibold text-slate-600">{title}</p>
-      <Field label="검증 상태">
+      <Field label="ê²ì¦ ìí">
         <select
           value={status}
           onChange={(e) => onStatus(e.target.value as VerifyState | '')}
           className="input"
         >
-          <option value="">선택</option>
+          <option value="">ì í</option>
           {Object.entries(VERIFY_STATE_LABEL).map(([v, l]) => (
             <option key={v} value={v}>
               {l}
@@ -53,7 +53,7 @@ export default function InspectionBlock({
         </select>
       </Field>
       <div className="mt-2 grid grid-cols-3 gap-2">
-        <Field label="세팅(분)">
+        <Field label="ì¸í(ë¶)">
           <input
             type="number"
             min={0}
@@ -62,7 +62,7 @@ export default function InspectionBlock({
             className="input"
           />
         </Field>
-        <Field label="AUD(분)">
+        <Field label="AUD(ë¶)">
           <input
             type="number"
             min={0}
@@ -71,7 +71,9 @@ export default function InspectionBlock({
             className="input"
           />
         </Field>
-        <Field label={extraLabel}>
+        {/* extraLabelì´ ê¸¸ì´ë ì¤ ëì´ê° ë§ëë¡ flex ì ë ¬ */}
+        <div className="flex flex-col">
+          <label className="field-label min-h-[2.5em] leading-tight">{extraLabel}</label>
           <input
             type="number"
             min={0}
@@ -79,10 +81,10 @@ export default function InspectionBlock({
             onChange={(e) => onExtra(e.target.value)}
             className="input"
           />
-        </Field>
+        </div>
       </div>
       <p className="mt-2 text-right text-micro text-slate-500">
-        총 소요 {total}분
+        ì´ ìì {total}ë¶
       </p>
     </div>
   );
