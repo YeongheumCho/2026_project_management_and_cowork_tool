@@ -36,8 +36,8 @@ export default function SignupPage() {
   const validationError = useMemo(() => {
     if (!/^\d{4,9}$/.test(idnum)) return '사번은 4~9자리 숫자로 입력해주세요.';
     if (name.trim().length < 2) return '이름은 2자 이상 입력해주세요.';
-    if (!/^01\d-\d{3,4}-\d{4}$/.test(phone)) {
-      return '휴대폰 번호는 010-0000-0000 형식으로 입력해주세요.';
+    if (!/^01\d\d{3,4}\d{4}$/.test(phone)) {
+      return '휴대폰 번호는 01000000000 형식으로 입력해주세요.';
     }
     if (password.length < 8) return '비밀번호는 8자 이상이어야 합니다.';
     if (password !== confirmPassword) return '비밀번호 확인이 일치하지 않습니다.';
@@ -78,7 +78,7 @@ export default function SignupPage() {
   }
 
   function requestPhoneVerification() {
-    if (!/^01\d-\d{3,4}-\d{4}$/.test(phone)) {
+    if (!/^01\d\d{3,4}\d{4}$/.test(phone)) {
       setMessage('휴대폰 번호 형식을 먼저 맞춰주세요.');
       return;
     }
@@ -105,9 +105,7 @@ export default function SignupPage() {
             WorkFlow AI
           </p>
           <h1 className="mt-2 text-3xl font-bold">회원가입</h1>
-          <p className="mt-2 text-sm text-[#888780]">
-            PRD 요구사항에 맞춘 사번, 본인인증, 약관 동의 절차를 포함합니다.
-          </p>
+
         </div>
 
         <form onSubmit={handleSignup} className="space-y-5">
@@ -134,9 +132,9 @@ export default function SignupPage() {
             <div className="flex gap-2">
               <input
                 value={phone}
-                onChange={(event) => setPhone(event.target.value)}
+                onChange={(event) => setPhone(event.target.value.replace(/-/g, ''))}
                 className="input"
-                placeholder="010-0000-0000"
+                placeholder="01000000000"
               />
               <button
                 type="button"

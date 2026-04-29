@@ -108,10 +108,7 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
 
   const handleRoleSave = async (member: UserResponse) => {
     const token = localStorage.getItem('access_token');
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
+    if (!token) { router.replace('/login'); return; }
 
     setSavingId(member.idnum);
     setMessage(null);
@@ -128,12 +125,9 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
 
       const updated = data as UserResponse;
       setUsers((prev) =>
-        prev.map((current) =>
-          current.idnum === updated.idnum ? updated : current,
-        ),
+        prev.map((current) => (current.idnum === updated.idnum ? updated : current)),
       );
       if (user?.idnum === updated.idnum) setUser(updated);
-
       setMessage(`${updated.name}의 권한을 ${updated.role}(으)로 변경했습니다.`);
     } catch {
       setMessage('권한 변경 중 오류가 발생했습니다.');
@@ -144,10 +138,7 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
 
   const handleUserCreate = async (payload: UserCreatePayload) => {
     const token = localStorage.getItem('access_token');
-    if (!token) {
-      router.replace('/login');
-      return false;
-    }
+    if (!token) { router.replace('/login'); return false; }
 
     setMessage(null);
 
@@ -163,8 +154,8 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
 
       const created = data as UserResponse;
       setUsers((prev) =>
-        [...prev, created].sort((left, right) =>
-          `${left.name}-${left.idnum}`.localeCompare(`${right.name}-${right.idnum}`, 'ko'),
+        [...prev, created].sort((a, b) =>
+          `${a.name}-${a.idnum}`.localeCompare(`${b.name}-${b.idnum}`, 'ko'),
         ),
       );
       setMessage(`${created.name}님 계정을 추가했습니다.`);
@@ -177,10 +168,7 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
 
   const handleUserDelete = async (member: UserResponse) => {
     const token = localStorage.getItem('access_token');
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
+    if (!token) { router.replace('/login'); return; }
 
     setDeletingId(member.idnum);
     setMessage(null);
@@ -196,7 +184,6 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
         setMessage(detail);
         return;
       }
-
       setUsers((prev) => prev.filter((current) => current.idnum !== member.idnum));
       setMessage(`${member.name}님 계정을 삭제했습니다.`);
     } catch {
@@ -208,10 +195,7 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
 
   const handlePasswordReset = async (member: UserResponse, newPassword: string) => {
     const token = localStorage.getItem('access_token');
-    if (!token) {
-      router.replace('/login');
-      return false;
-    }
+    if (!token) { router.replace('/login'); return false; }
 
     setMessage(null);
 
@@ -226,7 +210,6 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
         setMessage(detail);
         return false;
       }
-
       setMessage(`${member.name}님의 비밀번호를 초기화했습니다.`);
       return true;
     } catch {

@@ -89,27 +89,13 @@ type CenterNodeProps = {
   onPasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
 };
 
-function CenterNode({
-  center,
-  expanded,
-  onToggle,
-  canEdit,
-  savingId,
-  deletingId,
-  onRoleChange,
-  onRoleSave,
-  onDelete,
-  onOpenHistory,
-  onPasswordReset,
-}: CenterNodeProps) {
+function CenterNode({ center, expanded, onToggle, canEdit, savingId, deletingId, onRoleChange, onRoleSave, onDelete, onOpenHistory, onPasswordReset }: CenterNodeProps) {
   const isOpen = expanded.has(center.key);
   const totalMembers =
     center.members.length +
     center.offices.reduce(
       (sum, office) =>
-        sum +
-        office.members.length +
-        office.teams.reduce((acc, team) => acc + team.members.length, 0),
+        sum + office.members.length + office.teams.reduce((acc, team) => acc + team.members.length, 0),
       0,
     );
 
@@ -126,38 +112,13 @@ function CenterNode({
           <span className="text-[11px] text-[#888780]">총 {totalMembers}명</span>
         </span>
       </button>
-
       {isOpen && (
         <div className="space-y-2 border-t border-[#F1EFE8] bg-[#FAFAFA] px-3 py-3">
           {center.members.length > 0 && (
-            <MembersBlock
-              members={center.members}
-              canEdit={canEdit}
-              savingId={savingId}
-              deletingId={deletingId}
-              onRoleChange={onRoleChange}
-              onRoleSave={onRoleSave}
-              onDelete={onDelete}
-              onOpenHistory={onOpenHistory}
-              onPasswordReset={onPasswordReset}
-            />
+            <MembersBlock members={center.members} canEdit={canEdit} savingId={savingId} deletingId={deletingId} onRoleChange={onRoleChange} onRoleSave={onRoleSave} onDelete={onDelete} onOpenHistory={onOpenHistory} onPasswordReset={onPasswordReset} />
           )}
-
           {center.offices.map((office) => (
-            <OfficeNode
-              key={office.key}
-              office={office}
-              expanded={expanded}
-              onToggle={onToggle}
-              canEdit={canEdit}
-              savingId={savingId}
-              deletingId={deletingId}
-              onRoleChange={onRoleChange}
-              onRoleSave={onRoleSave}
-              onDelete={onDelete}
-              onOpenHistory={onOpenHistory}
-              onPasswordReset={onPasswordReset}
-            />
+            <OfficeNode key={office.key} office={office} expanded={expanded} onToggle={onToggle} canEdit={canEdit} savingId={savingId} deletingId={deletingId} onRoleChange={onRoleChange} onRoleSave={onRoleSave} onDelete={onDelete} onOpenHistory={onOpenHistory} onPasswordReset={onPasswordReset} />
           ))}
         </div>
       )}
@@ -179,23 +140,9 @@ type OfficeNodeProps = {
   onPasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
 };
 
-function OfficeNode({
-  office,
-  expanded,
-  onToggle,
-  canEdit,
-  savingId,
-  deletingId,
-  onRoleChange,
-  onRoleSave,
-  onDelete,
-  onOpenHistory,
-  onPasswordReset,
-}: OfficeNodeProps) {
+function OfficeNode({ office, expanded, onToggle, canEdit, savingId, deletingId, onRoleChange, onRoleSave, onDelete, onOpenHistory, onPasswordReset }: OfficeNodeProps) {
   const isOpen = expanded.has(office.key);
-  const totalMembers =
-    office.members.length +
-    office.teams.reduce((acc, team) => acc + team.members.length, 0);
+  const totalMembers = office.members.length + office.teams.reduce((acc, team) => acc + team.members.length, 0);
 
   return (
     <div className="overflow-hidden rounded-lg border border-[#EAEAE4] bg-white">
@@ -210,38 +157,13 @@ function OfficeNode({
           <span className="text-[11px] text-[#888780]">총 {totalMembers}명</span>
         </span>
       </button>
-
       {isOpen && (
         <div className="space-y-2 border-t border-[#F1EFE8] px-3 py-2">
           {office.members.length > 0 && (
-            <MembersBlock
-              members={office.members}
-              canEdit={canEdit}
-              savingId={savingId}
-              deletingId={deletingId}
-              onRoleChange={onRoleChange}
-              onRoleSave={onRoleSave}
-              onDelete={onDelete}
-              onOpenHistory={onOpenHistory}
-              onPasswordReset={onPasswordReset}
-            />
+            <MembersBlock members={office.members} canEdit={canEdit} savingId={savingId} deletingId={deletingId} onRoleChange={onRoleChange} onRoleSave={onRoleSave} onDelete={onDelete} onOpenHistory={onOpenHistory} onPasswordReset={onPasswordReset} />
           )}
-
           {office.teams.map((team) => (
-            <TeamNode
-              key={team.key}
-              team={team}
-              expanded={expanded}
-              onToggle={onToggle}
-              canEdit={canEdit}
-              savingId={savingId}
-              deletingId={deletingId}
-              onRoleChange={onRoleChange}
-              onRoleSave={onRoleSave}
-              onDelete={onDelete}
-              onOpenHistory={onOpenHistory}
-              onPasswordReset={onPasswordReset}
-            />
+            <TeamNode key={team.key} team={team} expanded={expanded} onToggle={onToggle} canEdit={canEdit} savingId={savingId} deletingId={deletingId} onRoleChange={onRoleChange} onRoleSave={onRoleSave} onDelete={onDelete} onOpenHistory={onOpenHistory} onPasswordReset={onPasswordReset} />
           ))}
         </div>
       )}
@@ -263,19 +185,7 @@ type TeamNodeProps = {
   onPasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
 };
 
-function TeamNode({
-  team,
-  expanded,
-  onToggle,
-  canEdit,
-  savingId,
-  deletingId,
-  onRoleChange,
-  onRoleSave,
-  onDelete,
-  onOpenHistory,
-  onPasswordReset,
-}: TeamNodeProps) {
+function TeamNode({ team, expanded, onToggle, canEdit, savingId, deletingId, onRoleChange, onRoleSave, onDelete, onOpenHistory, onPasswordReset }: TeamNodeProps) {
   const isOpen = expanded.has(team.key);
 
   return (
@@ -291,20 +201,9 @@ function TeamNode({
           <span className="text-[11px] text-[#888780]">총 {team.members.length}명</span>
         </span>
       </button>
-
       {isOpen && (
         <div className="border-t border-[#F1EFE8] bg-white px-2 py-2">
-          <MembersBlock
-            members={team.members}
-            canEdit={canEdit}
-            savingId={savingId}
-            deletingId={deletingId}
-            onRoleChange={onRoleChange}
-            onRoleSave={onRoleSave}
-            onDelete={onDelete}
-            onOpenHistory={onOpenHistory}
-            onPasswordReset={onPasswordReset}
-          />
+          <MembersBlock members={team.members} canEdit={canEdit} savingId={savingId} deletingId={deletingId} onRoleChange={onRoleChange} onRoleSave={onRoleSave} onDelete={onDelete} onOpenHistory={onOpenHistory} onPasswordReset={onPasswordReset} />
         </div>
       )}
     </div>
@@ -323,17 +222,7 @@ type MembersBlockProps = {
   onPasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
 };
 
-function MembersBlock({
-  members,
-  canEdit,
-  savingId,
-  deletingId,
-  onRoleChange,
-  onRoleSave,
-  onDelete,
-  onOpenHistory,
-  onPasswordReset,
-}: MembersBlockProps) {
+function MembersBlock({ members, canEdit, savingId, deletingId, onRoleChange, onRoleSave, onDelete, onOpenHistory, onPasswordReset }: MembersBlockProps) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-[12px]">

@@ -1,10 +1,5 @@
 import { API_BASE_URL } from '../../lib/api';
 
-/**
- * 백엔드 `/auth/*` 관리자 엔드포인트 전용 타입.
- * 현재 백엔드가 `auth.users` 로 직접 권한 CRUD 를 노출하므로
- * 공용 `lib/api` 의 UserBrief 와 분리해서 유지한다.
- */
 export type UserResponse = {
   id: number;
   idnum: string;
@@ -66,24 +61,14 @@ function authHeaders(token: string, withJson = false): HeadersInit {
 }
 
 export async function fetchMe({ token, signal }: FetchOptions) {
-  return fetch(`${API_BASE_URL}/auth/me`, {
-    headers: authHeaders(token),
-    signal,
-  });
+  return fetch(`${API_BASE_URL}/auth/me`, { headers: authHeaders(token), signal });
 }
 
 export async function fetchUsers({ token, signal }: FetchOptions) {
-  return fetch(`${API_BASE_URL}/auth/users`, {
-    headers: authHeaders(token),
-    signal,
-  });
+  return fetch(`${API_BASE_URL}/auth/users`, { headers: authHeaders(token), signal });
 }
 
-export async function patchUserRole(
-  { token }: FetchOptions,
-  idnum: string,
-  role: string,
-) {
+export async function patchUserRole({ token }: FetchOptions, idnum: string, role: string) {
   return fetch(`${API_BASE_URL}/auth/users/${idnum}/role`, {
     method: 'PATCH',
     headers: authHeaders(token, true),
@@ -91,10 +76,7 @@ export async function patchUserRole(
   });
 }
 
-export async function createUser(
-  { token }: FetchOptions,
-  payload: UserCreatePayload,
-) {
+export async function createUser({ token }: FetchOptions, payload: UserCreatePayload) {
   return fetch(`${API_BASE_URL}/auth/users`, {
     method: 'POST',
     headers: authHeaders(token, true),
@@ -102,21 +84,14 @@ export async function createUser(
   });
 }
 
-export async function deleteUser(
-  { token }: FetchOptions,
-  idnum: string,
-) {
+export async function deleteUser({ token }: FetchOptions, idnum: string) {
   return fetch(`${API_BASE_URL}/auth/users/${idnum}`, {
     method: 'DELETE',
     headers: authHeaders(token),
   });
 }
 
-export async function resetUserPassword(
-  { token }: FetchOptions,
-  idnum: string,
-  password: string,
-) {
+export async function resetUserPassword({ token }: FetchOptions, idnum: string, password: string) {
   return fetch(`${API_BASE_URL}/auth/users/${idnum}/password`, {
     method: 'PATCH',
     headers: authHeaders(token, true),
