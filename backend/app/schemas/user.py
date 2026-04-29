@@ -37,6 +37,10 @@ class UserRoleUpdate(BaseModel):
     role: str = Field(pattern="^(admin|member)$")
 
 
+class UserPasswordReset(BaseModel):
+    password: str = Field(min_length=8, max_length=128)
+
+
 class UserBrief(BaseModel):
     id: int
     idnum: str

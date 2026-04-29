@@ -8,6 +8,7 @@ import {
   fetchMe,
   fetchUsers,
   patchUserRole,
+  resetUserPassword,
   type ErrorResponse,
   type UserCreatePayload,
   type UserResponse,
@@ -25,6 +26,7 @@ type UseAdminUsersResult = {
   handleRoleSave: (member: UserResponse) => Promise<void>;
   handleUserCreate: (payload: UserCreatePayload) => Promise<boolean>;
   handleUserDelete: (member: UserResponse) => Promise<void>;
+  handlePasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
 };
 
 export function useAdminUsers(enabled = true): UseAdminUsersResult {
@@ -204,6 +206,35 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
     }
   };
 
+  const handlePasswordReset = async (member: UserResponse, newPassword: string) => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.replace('/login');
+      return false;
+    }
+
+    setMessage(null);
+
+    try {
+      const res = await resetUserPassword({ token }, member.idnum, newPassword);
+      if (!res.ok) {
+        let detail = '비밀번호 초기화에 실패했습니다.';
+        try {
+          const err = (await res.json()) as ErrorResponse;
+          detail = err.detail ?? detail;
+        } catch {}
+        setMessage(detail);
+        return false;
+      }
+
+      setMessage(`${member.name}님의 비밀번호를 초기화했습니다.`);
+      return true;
+    } catch {
+      setMessage('비밀번호 초기화 중 오류가 발생했습니다.');
+      return false;
+    }
+  };
+
   return {
     user,
     users,
@@ -216,5 +247,6 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
     handleRoleSave,
     handleUserCreate,
     handleUserDelete,
+    handlePasswordReset,
   };
 }

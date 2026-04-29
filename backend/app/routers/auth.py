@@ -7,7 +7,7 @@ from app.core.security import create_access_token, hash_password, verify_passwor
 from app.dependencies import get_current_user, get_db, require_admin
 from app.models.user import User
 from app.schemas.auth import TokenResponse
-from app.schemas.user import UserCreate, UserResponse, UserRoleUpdate
+from app.schemas.user import UserCreate, UserPasswordReset, UserResponse, UserRoleUpdate
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -126,6 +126,25 @@ def update_user_role(
     db.commit()
     db.refresh(target_user)
     return target_user
+
+
+@router.patch("/users/{idnum}/password", status_code=status.HTTP_204_NO_CONTENT)
+def reset_user_password(
+    idnum: str,
+    payload: UserPasswordReset,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    target_user = db.scalar(select(User).where(User.idnum == idnum))
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다.",
+        )
+
+    target_user.password_hash = hash_password(payload.password)
+    db.commit()
+    return None
 
 
 @router.delete("/users/{idnum}", status_code=status.HTTP_204_NO_CONTENT)
