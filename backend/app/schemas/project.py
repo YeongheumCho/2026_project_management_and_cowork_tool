@@ -3,10 +3,11 @@
 
 KEFICO 5층 업무 반영: 공식검증 / 정기검증 / 변경점검증 / 기타업무 유형별 필드.
 """
+import json
 from datetime import date, datetime
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 ProjectType = Literal[
@@ -192,6 +193,9 @@ class _SubProjectKeficoFields(BaseModel):
     etc_days: Optional[float] = Field(default=None, ge=0)
     etc_note: Optional[str] = None
 
+    # 커스텀 필드 (자유 형식)
+    custom_fields: Optional[dict[str, Any]] = None
+
 
 class SubProjectCreate(_SubProjectKeficoFields):
     project_id: int
@@ -199,7 +203,6 @@ class SubProjectCreate(_SubProjectKeficoFields):
     assignee_id: int
     start_date: date
     end_date: date
-
     @model_validator(mode="after")
     def _check_dates(self):
         if self.end_date < self.start_date:
@@ -293,4 +296,23 @@ class SubProjectResponse(BaseModel):
     etc_days: Optional[float] = None
     etc_note: Optional[str] = None
 
+    custom_fields: Optional[dict[str, Any]] = None
+
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("custom_fields", mode="before")
+    @classmethod
+    def _parse_custom_fields(cls, value: Any) -> Optional[dict[str, Any]]:
+        if value is None or isinstance(value, dict):
+            return value
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except json.JSONDecodeError:
+                return None
+            return parsed if isinstance(parsed, dict) else None
+        return None
+
+    @classmethod
+    def from_orm_with_custom(cls, sp: Any) -> "SubProjectResponse":
+        return cls.model_validate(sp)

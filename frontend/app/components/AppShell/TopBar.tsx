@@ -23,8 +23,7 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
     const visibleNav = isAdmin
       ? TOP_NAV
       : TOP_NAV.filter((item) => item.href !== '/tasks');
-    if (!isAdmin) return visibleNav;
-    return [...visibleNav, { href: '/admin', label: '관리' }];
+    return isAdmin ? [...visibleNav, { href: '/admin', label: '관리' }] : visibleNav;
   }, [isAdmin]);
 
   useEffect(() => {

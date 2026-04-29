@@ -1,7 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
-import { PROJECT_TYPE_LABEL, type Project, type UserBrief } from '../../../lib/api';
+import { useMemo, useState } from 'react';
+import {
+  PROJECT_TYPE_LABEL,
+  type Project,
+  type Template,
+  type UserBrief,
+} from '../../../lib/api';
 import OrganizationMemberPicker from '../../OrganizationMemberPicker';
 import Field from '../../form/Field';
 import type { FormSetter, FormState } from '../types';
@@ -15,6 +20,8 @@ type Props = {
   mode: 'create' | 'edit';
   lockedProjectId?: number;
   isEtc: boolean;
+  templates: Template[];
+  onApplyTemplate: (fields: Record<string, unknown>) => void;
 };
 
 export default function BasicSection({
@@ -26,7 +33,10 @@ export default function BasicSection({
   mode,
   lockedProjectId,
   isEtc,
+  templates,
+  onApplyTemplate,
 }: Props) {
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | ''>('');
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === f.projectId),
     [projects, f.projectId],
@@ -113,6 +123,48 @@ export default function BasicSection({
             </p>
           )}
         </Field>
+
+        {mode === 'create' && templates.length > 0 && (
+          <Field
+            label="입력 템플릿"
+            span={2}
+            helper="템플릿을 선택하면 하드코딩 필드와 자유 형식 필드 값이 함께 채워집니다."
+          >
+            <div className="flex gap-2">
+              <select
+                value={selectedTemplateId}
+                onChange={(e) =>
+                  setSelectedTemplateId(
+                    e.target.value === '' ? '' : Number(e.target.value),
+                  )
+                }
+                disabled={!isAdmin}
+                className="input flex-1"
+              >
+                <option value="">템플릿 선택...</option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                    {template.is_default ? ' (기본)' : ''}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={!isAdmin || selectedTemplateId === ''}
+                onClick={() => {
+                  const template = templates.find(
+                    (item) => item.id === selectedTemplateId,
+                  );
+                  if (template) onApplyTemplate(template.fields);
+                }}
+                className="shrink-0 rounded-lg bg-[#534AB7] px-3 py-2 text-xs font-bold text-white disabled:opacity-40 hover:bg-[#433A9A]"
+              >
+                불러오기
+              </button>
+            </div>
+          </Field>
+        )}
       </div>
     </section>
   );

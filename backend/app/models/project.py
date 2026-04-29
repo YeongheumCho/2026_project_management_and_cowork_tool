@@ -184,6 +184,9 @@ class SubProject(Base):
     etc_days: Mapped[float] = mapped_column(Numeric(5, 2), nullable=True)       # 소요일
     etc_note: Mapped[str] = mapped_column(Text, nullable=True)                  # 비고/상세
 
+    # ---------- 커스텀 필드 (자유 형식 JSON) ----------
+    custom_fields: Mapped[str] = mapped_column(Text, nullable=True)             # dict[str, Any] as JSON
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

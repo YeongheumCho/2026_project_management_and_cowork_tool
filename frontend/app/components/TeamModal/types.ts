@@ -57,6 +57,9 @@ export type FormState = {
   etcMonth: string;
   etcDays: string;
   etcNote: string;
+
+  // 커스텀 필드 (프로젝트 유형별 동적 필드)
+  customFields: Record<string, string>;
 };
 
 export const EMPTY_FORM: FormState = {
@@ -101,6 +104,7 @@ export const EMPTY_FORM: FormState = {
   etcMonth: '',
   etcDays: '',
   etcNote: '',
+  customFields: {},
 };
 
 export function fromSubProject(sp: SubProject): FormState {
@@ -152,6 +156,11 @@ export function fromSubProject(sp: SubProject): FormState {
     etcMonth: sp.etc_month ?? '',
     etcDays: sp.etc_days != null ? String(sp.etc_days) : '',
     etcNote: sp.etc_note ?? '',
+    customFields: sp.custom_fields
+      ? Object.fromEntries(
+          Object.entries(sp.custom_fields).map(([k, v]) => [k, String(v ?? '')])
+        )
+      : {},
   };
 }
 

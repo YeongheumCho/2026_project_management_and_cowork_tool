@@ -85,6 +85,35 @@ class ProjectTemplate(Base):
     )
 
 
+class ProjectFieldSchema(Base):
+    """프로젝트 유형별 커스텀 필드 스키마 정의.
+
+    각 project_type 마다 0개 이상의 레코드를 가질 수 있지만,
+    실제로는 한 project_type당 하나의 '섹션'을 정의하도록 관리한다.
+    fields_json: list[FieldDefinition] 을 JSON으로 직렬화한 문자열.
+    """
+
+    __tablename__ = "project_field_schemas"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    project_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, unique=True, index=True
+    )
+    section_label: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="추가 정보"
+    )
+    fields_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
 class ProjectExecutionHistory(Base):
     __tablename__ = "project_execution_history"
 

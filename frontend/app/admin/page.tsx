@@ -2,6 +2,7 @@
 
 import AppShell from '../components/AppShell';
 import { useMe } from '../lib/useMe';
+import TemplateManager from './components/TemplateManager';
 import UserTable from './components/UserTable';
 import { useAdminUsers } from './hooks/useAdminUsers';
 
@@ -45,8 +46,7 @@ export default function AdminPage() {
           관리자 설정
         </h1>
         <p className="mt-1 text-[12px] text-[#888780]">
-          팀원 권한과 프로젝트 템플릿만 여기에서 관리합니다. 그 외 조회는
-          좌측 상단 네비게이션(개요 / 프로젝트 / 캘린더)에서 바로 확인하세요.
+          사용자 권한과 프로젝트 유형별 필드 구성을 관리합니다.
         </p>
       </div>
 
@@ -62,6 +62,8 @@ export default function AdminPage() {
           onUserCreate={(payload) => handleUserCreate(payload)}
           onUserDelete={(member) => void handleUserDelete(member)}
         />
+
+        <TemplateManager />
       </div>
     </AppShell>
   );

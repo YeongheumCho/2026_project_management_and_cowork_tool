@@ -14,6 +14,7 @@
   # SubTasks
   PATCH  /subtasks/{id}                체크/해제 — 담당자 본인 또는 관리자
 """
+import json
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Optional
@@ -236,6 +237,11 @@ def _apply_kefico_fields(sp: SubProject, payload) -> None:
     for fname in _KEFICO_COPY_FIELDS:
         if fname in data:
             setattr(sp, fname, data[fname])
+    # 커스텀 필드 반영
+    if "custom_fields" in data and data["custom_fields"] is not None:
+        sp.custom_fields = json.dumps(data["custom_fields"], ensure_ascii=False)
+    elif "custom_fields" in data and data["custom_fields"] is None:
+        sp.custom_fields = None
 
 
 def _subproject_weight_minutes(subproject: SubProject) -> int:
@@ -522,9 +528,10 @@ def create_subproject(
     # KEFICO 필드 복사
     _apply_kefico_fields(sp, payload)
 
-    # 프로젝트 유형에 따른 세부 태스크 템플릿 선택
-    template = _TEMPLATE_BY_TYPE.get(project.project_type, DEFAULT_SUBTASK_TEMPLATE)
-    for idx, (task_name, weight) in enumerate(template, start=1):
+    # 세부 태스크: 프로젝트 유형별 코드 내장 템플릿 적용
+    task_source = [(name, float(w)) for name, w in _TEMPLATE_BY_TYPE.get(project.project_type, DEFAULT_SUBTASK_TEMPLATE)]
+
+    for idx, (task_name, weight) in enumerate(task_source, start=1):
         sp.subtasks.append(
             SubTask(name=task_name, order_index=idx, weight=weight, is_done=False)
         )
@@ -532,7 +539,8 @@ def create_subproject(
     db.add(sp)
     db.commit()
 
-    return _load_subproject(db, sp.id)
+    sp = _load_subproject(db, sp.id)
+    return SubProjectResponse.from_orm_with_custom(sp)
 
 
 @router.get("/subprojects", response_model=list[SubProjectResponse])
@@ -561,7 +569,7 @@ def list_subprojects(
     if assignee_id is not None and current_user.role == "admin":
         stmt = stmt.where(SubProject.assignee_id == assignee_id)
     stmt = stmt.order_by(SubProject.start_date.asc())
-    return db.scalars(stmt).all()
+    return [SubProjectResponse.from_orm_with_custom(sp) for sp in db.scalars(stmt).all()]
 
 
 @router.get("/subprojects/{subproject_id}", response_model=SubProjectResponse)
@@ -572,7 +580,7 @@ def get_subproject(
 ):
     sp = _load_subproject(db, subproject_id)
     _ensure_subproject_access(sp, current_user)
-    return sp
+    return SubProjectResponse.from_orm_with_custom(sp)
 
 
 @router.put("/subprojects/{subproject_id}", response_model=SubProjectResponse)
@@ -636,7 +644,8 @@ def update_subproject(
     if project is not None:
         _sync_subproject_execution_history(db, project, sp)
     db.commit()
-    return _load_subproject(db, subproject_id)
+    sp = _load_subproject(db, subproject_id)
+    return SubProjectResponse.from_orm_with_custom(sp)
 
 
 @router.delete(

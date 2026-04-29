@@ -11,7 +11,6 @@ import type { FormSetter, FormState } from '../types';
 type Props = {
   f: FormState;
   set: FormSetter;
-  users: UserBrief[];
   projectParticipants: UserBrief[];
   isOfficial: boolean;
 };
@@ -23,7 +22,6 @@ type Props = {
 export default function InspectionMetaSection({
   f,
   set,
-  users,
   projectParticipants,
   isOfficial,
 }: Props) {

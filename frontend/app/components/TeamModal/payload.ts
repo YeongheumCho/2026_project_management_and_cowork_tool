@@ -53,5 +53,12 @@ export function buildSubProjectPayload(f: FormState) {
     etc_month: strOrNull(f.etcMonth),
     etc_days: numOrUndef(f.etcDays) ?? null,
     etc_note: strOrNull(f.etcNote),
+
+    custom_fields:
+      Object.keys(f.customFields).length > 0
+        ? Object.fromEntries(
+            Object.entries(f.customFields).filter(([, v]) => v !== '')
+          )
+        : null,
   };
 }

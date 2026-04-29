@@ -129,6 +129,8 @@ export type SubProject = {
   etc_month?: string | null;
   etc_days?: number | null;
   etc_note?: string | null;
+
+  custom_fields?: Record<string, unknown> | null;
 };
 
 export type Project = {
@@ -275,20 +277,35 @@ export type UserSettings = {
   notifications_enabled: boolean;
 };
 
-export type TemplateTaskItem = {
-  name: string;
-  weight: number;
+export type FieldType =
+  | 'text'
+  | 'number'
+  | 'date'
+  | 'select'
+  | 'textarea'
+  | 'checkbox';
+
+export type FieldOption = {
+  label: string;
+  value: string;
 };
 
-export type Template = {
+export type FieldDefinition = {
+  key: string;
+  label: string;
+  field_type: FieldType;
+  options: FieldOption[];
+  required: boolean;
+  order: number;
+};
+
+export type ProjectFieldSchema = {
   id: number;
-  name: string;
   project_type: ProjectType | string;
-  trigger_keyword: string | null;
-  is_default: boolean;
-  tasks: TemplateTaskItem[];
+  section_label: string;
+  fields: FieldDefinition[];
   created_by: number | null;
-  created_at: string;
+  updated_at: string;
 };
 
 export const PROJECT_TYPE_LABEL: Record<string, string> = {
@@ -327,6 +344,142 @@ export const ETC_CATEGORY_LABEL: Record<EtcCategory, string> = {
   business_trip: '개인 출장',
   fail_classification: 'FAIL 유형 분류',
   other: '기타',
+};
+
+const verifyStateOptions = Object.entries(VERIFY_STATE_LABEL).map(
+  ([value, label]) => ({ value, label }),
+);
+const verificationLevelOptions = Object.entries(VERIFICATION_LEVEL_LABEL).map(
+  ([value, label]) => ({ value, label }),
+);
+const etcCategoryOptions = Object.entries(ETC_CATEGORY_LABEL).map(
+  ([value, label]) => ({ value, label }),
+);
+
+function field(
+  order: number,
+  key: string,
+  label: string,
+  field_type: FieldType = 'text',
+  options: FieldOption[] = [],
+): FieldDefinition {
+  return { key, label, field_type, options, required: false, order };
+}
+
+const inspectionFields: FieldDefinition[] = [
+  field(0, 'priority', '우선순위'),
+  field(1, 'controller_name', '제어기명'),
+  field(2, 'controller_version', '버전 정보'),
+  field(3, 'controller_country', '국가'),
+  field(4, 'to_number', 'TO 번호'),
+  field(5, 'to_assignee', 'TO 담당자'),
+  field(6, 'verification_level', '검증 LEVEL', 'select', verificationLevelOptions),
+  field(7, 'vehicle_type', '차종'),
+  field(8, 'completed_on', '완료일', 'date'),
+  field(9, 'function_name', '기능명'),
+  field(10, 'function_owner', '기능 담당자', 'select'),
+  field(11, 'verifier_id', '검증 담당자', 'select'),
+  field(12, 'reviewer_id', '리뷰 담당자', 'select'),
+  field(13, 'seat_no', '검증 자리'),
+  field(14, 'controller_no', '제어기 번호'),
+  field(15, 'avg_expected_minutes', '평균 예상 소요(분)', 'number'),
+  field(16, 'first_verify_status', '1차 검증 상태', 'select', verifyStateOptions),
+  field(17, 'first_setup_min', '1차 Setup(분)', 'number'),
+  field(18, 'first_aud_min', '1차 AUD(분)', 'number'),
+  field(19, 'first_review_min', '1차 Review(분)', 'number'),
+  field(20, 'inreview_status', 'InReview 상태', 'select', verifyStateOptions),
+  field(21, 'inreview_setup_min', 'InReview Setup(분)', 'number'),
+  field(22, 'inreview_aud_min', 'InReview AUD(분)', 'number'),
+  field(23, 'inreview_feedback_min', 'InReview 반영(분)', 'number'),
+  field(24, 'upload_done', '업로드 완료', 'checkbox'),
+  field(25, 'special_note', '특이사항', 'textarea'),
+  field(26, 'issue_note', '이슈 / 진행 상황', 'textarea'),
+];
+
+export const DEFAULT_PROJECT_FIELD_SCHEMAS: Record<string, ProjectFieldSchema> = {
+  general: {
+    id: 0,
+    project_type: 'general',
+    section_label: '추가 정보',
+    fields: [],
+    created_by: null,
+    updated_at: '',
+  },
+  official_inspection: {
+    id: 0,
+    project_type: 'official_inspection',
+    section_label: '검증 정보',
+    fields: inspectionFields,
+    created_by: null,
+    updated_at: '',
+  },
+  regular_inspection: {
+    id: 0,
+    project_type: 'regular_inspection',
+    section_label: '검증 정보',
+    fields: inspectionFields.filter((item) => item.key !== 'priority'),
+    created_by: null,
+    updated_at: '',
+  },
+  change_inspection: {
+    id: 0,
+    project_type: 'change_inspection',
+    section_label: '변경점 검증 정보',
+    fields: [
+      ...inspectionFields.filter((item) => item.key !== 'priority'),
+      field(100, 'cr_no', 'CR.No'),
+      field(101, 'ip_addr', 'IP'),
+      field(102, 'change_feedback_min', '검토 피드백(분)', 'number'),
+      field(103, 'change_revalidate_min', '재검증(분)', 'number'),
+      field(104, 'lin_std_hold_note', 'LIN/STD/HOLD/FAIL 메모', 'textarea'),
+    ].map((item, order) => ({ ...item, order })),
+    created_by: null,
+    updated_at: '',
+  },
+  etc_task: {
+    id: 0,
+    project_type: 'etc_task',
+    section_label: '기타 업무 정보',
+    fields: [
+      field(0, 'etc_category', '카테고리', 'select', etcCategoryOptions),
+      field(1, 'etc_month', '월(YYYY-MM)'),
+      field(2, 'etc_days', '소요일(DAY)', 'number'),
+      field(3, 'etc_note', '비고 / 상세', 'textarea'),
+    ],
+    created_by: null,
+    updated_at: '',
+  },
+};
+
+export function emptyFieldSchema(project_type: string): ProjectFieldSchema {
+  return {
+    id: 0,
+    project_type,
+    section_label: '추가 정보',
+    fields: [],
+    created_by: null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export function defaultFieldSchema(project_type: string): ProjectFieldSchema {
+  return DEFAULT_PROJECT_FIELD_SCHEMAS[project_type] ?? emptyFieldSchema(project_type);
+}
+
+export function effectiveFieldSchema(schema: ProjectFieldSchema): ProjectFieldSchema {
+  if (schema.id !== 0 || schema.fields.length > 0) return schema;
+  return defaultFieldSchema(schema.project_type);
+}
+
+export type Template = {
+  id: number;
+  name: string;
+  project_type: ProjectType | string;
+  trigger_keyword: string | null;
+  is_default: boolean;
+  fields: Record<string, unknown>;
+  created_by: number | null;
+  created_at: string;
 };
 
 type ErrorBody = {
