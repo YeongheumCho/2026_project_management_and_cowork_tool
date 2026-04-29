@@ -19,6 +19,7 @@ type Props = {
   onRoleSave: (member: UserResponse) => void;
   onDelete: (member: UserResponse) => void;
   onOpenHistory: (member: UserResponse) => void;
+  onPasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
 };
 
 export default function OrgChartView({
@@ -30,6 +31,7 @@ export default function OrgChartView({
   onRoleSave,
   onDelete,
   onOpenHistory,
+  onPasswordReset,
 }: Props) {
   const groups = useMemo(() => groupUsersByTeam(users), [users]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -66,6 +68,7 @@ export default function OrgChartView({
           onRoleSave={onRoleSave}
           onDelete={onDelete}
           onOpenHistory={onOpenHistory}
+          onPasswordReset={onPasswordReset}
         />
       ))}
     </div>
@@ -83,6 +86,7 @@ type CenterNodeProps = {
   onRoleSave: (member: UserResponse) => void;
   onDelete: (member: UserResponse) => void;
   onOpenHistory: (member: UserResponse) => void;
+  onPasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
 };
 
 function CenterNode({
@@ -96,6 +100,7 @@ function CenterNode({
   onRoleSave,
   onDelete,
   onOpenHistory,
+  onPasswordReset,
 }: CenterNodeProps) {
   const isOpen = expanded.has(center.key);
   const totalMembers =
@@ -134,6 +139,7 @@ function CenterNode({
               onRoleSave={onRoleSave}
               onDelete={onDelete}
               onOpenHistory={onOpenHistory}
+              onPasswordReset={onPasswordReset}
             />
           )}
 
@@ -150,6 +156,7 @@ function CenterNode({
               onRoleSave={onRoleSave}
               onDelete={onDelete}
               onOpenHistory={onOpenHistory}
+              onPasswordReset={onPasswordReset}
             />
           ))}
         </div>
@@ -169,6 +176,7 @@ type OfficeNodeProps = {
   onRoleSave: (member: UserResponse) => void;
   onDelete: (member: UserResponse) => void;
   onOpenHistory: (member: UserResponse) => void;
+  onPasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
 };
 
 function OfficeNode({
@@ -182,6 +190,7 @@ function OfficeNode({
   onRoleSave,
   onDelete,
   onOpenHistory,
+  onPasswordReset,
 }: OfficeNodeProps) {
   const isOpen = expanded.has(office.key);
   const totalMembers =
@@ -214,6 +223,7 @@ function OfficeNode({
               onRoleSave={onRoleSave}
               onDelete={onDelete}
               onOpenHistory={onOpenHistory}
+              onPasswordReset={onPasswordReset}
             />
           )}
 
@@ -230,6 +240,7 @@ function OfficeNode({
               onRoleSave={onRoleSave}
               onDelete={onDelete}
               onOpenHistory={onOpenHistory}
+              onPasswordReset={onPasswordReset}
             />
           ))}
         </div>
@@ -249,6 +260,7 @@ type TeamNodeProps = {
   onRoleSave: (member: UserResponse) => void;
   onDelete: (member: UserResponse) => void;
   onOpenHistory: (member: UserResponse) => void;
+  onPasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
 };
 
 function TeamNode({
@@ -262,6 +274,7 @@ function TeamNode({
   onRoleSave,
   onDelete,
   onOpenHistory,
+  onPasswordReset,
 }: TeamNodeProps) {
   const isOpen = expanded.has(team.key);
 
@@ -290,6 +303,7 @@ function TeamNode({
             onRoleSave={onRoleSave}
             onDelete={onDelete}
             onOpenHistory={onOpenHistory}
+            onPasswordReset={onPasswordReset}
           />
         </div>
       )}
@@ -306,6 +320,7 @@ type MembersBlockProps = {
   onRoleSave: (member: UserResponse) => void;
   onDelete: (member: UserResponse) => void;
   onOpenHistory: (member: UserResponse) => void;
+  onPasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
 };
 
 function MembersBlock({
@@ -317,6 +332,7 @@ function MembersBlock({
   onRoleSave,
   onDelete,
   onOpenHistory,
+  onPasswordReset,
 }: MembersBlockProps) {
   return (
     <div className="overflow-x-auto">
@@ -333,6 +349,7 @@ function MembersBlock({
               onRoleSave={onRoleSave}
               onDelete={onDelete}
               onOpenHistory={onOpenHistory}
+              onPasswordReset={onPasswordReset}
             />
           ))}
         </tbody>

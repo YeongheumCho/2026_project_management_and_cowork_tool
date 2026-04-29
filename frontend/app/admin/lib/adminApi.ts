@@ -112,6 +112,18 @@ export async function deleteUser(
   });
 }
 
+export async function resetUserPassword(
+  { token }: FetchOptions,
+  idnum: string,
+  password: string,
+) {
+  return fetch(`${API_BASE_URL}/auth/users/${idnum}/password`, {
+    method: 'PATCH',
+    headers: authHeaders(token, true),
+    body: JSON.stringify({ password }),
+  });
+}
+
 export async function fetchUserProjectHistory(
   { token, signal }: FetchOptions,
   userId: number,

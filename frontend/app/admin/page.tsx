@@ -19,6 +19,7 @@ export default function AdminPage() {
     handleRoleSave,
     handleUserCreate,
     handleUserDelete,
+    handlePasswordReset,
   } = useAdminUsers(isAdmin);
 
   if (meLoading || !me) {
@@ -61,6 +62,7 @@ export default function AdminPage() {
           onRoleSave={(member) => void handleRoleSave(member)}
           onUserCreate={(payload) => handleUserCreate(payload)}
           onUserDelete={(member) => void handleUserDelete(member)}
+          onPasswordReset={(member, pw) => handlePasswordReset(member, pw)}
         />
 
         <TemplateManager />
