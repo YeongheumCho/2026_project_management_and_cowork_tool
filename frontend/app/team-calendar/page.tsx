@@ -208,7 +208,9 @@ export default function TeamCalendarPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      {/* 이슈5: 전체 캘린더를 상단 전체폭, 하단 2열 구성으로 변경 → 빈 여백 해소 */}
+      <div className="space-y-4">
+        {/* 캘린더 A — 전체 프로젝트 (연속 바, 이슈7) */}
         <MonthCalendar
           year={cursor.getFullYear()}
           month={cursor.getMonth()}
@@ -220,6 +222,7 @@ export default function TeamCalendarPage() {
           title="전체 프로젝트 캘린더"
           tag="캘린더 A"
           tagColor="#534AB7"
+          continuousBars
           rightAction={
             isAdmin ? (
               <button
@@ -233,30 +236,94 @@ export default function TeamCalendarPage() {
           }
         />
 
-        <div className="space-y-4">
-          <MonthCalendar
-            year={cursor.getFullYear()}
-            month={cursor.getMonth()}
-            subprojects={selectedMemberTasks}
-            onPrevMonth={() => setCursor((current) => shiftMonth(current, -1))}
-            onNextMonth={() => setCursor((current) => shiftMonth(current, 1))}
-            onSelectSubProject={openEdit}
-            title="담당자별 캘린더"
-            tag="캘린더 B"
-            tagColor="#0F6E56"
-            filterSlot={
-              <div className="flex flex-col items-start gap-1.5">
-                <span className="text-[10px] text-[#888780]">담당자</span>
-                <TeamMemberFilter
-                  users={users}
-                  selectedId={selectedMemberId ?? null}
-                  onSelect={setSelectedMemberId}
-                  myTeam={me.team}
-                  singleSelection
-                />
+        {/* 하단 2열: 캘린더 B + 담당자 보드 */}
+        <div className="grid gap-4 xl:grid-cols-2">
+          <div className="space-y-4">
+            {/* 캘린더 B — 담당자별 */}
+            <MonthCalendar
+              year={cursor.getFullYear()}
+              month={cursor.getMonth()}
+              subprojects={selectedMemberTasks}
+              onPrevMonth={() => setCursor((current) => shiftMonth(current, -1))}
+              onNextMonth={() => setCursor((current) => shiftMonth(current, 1))}
+              onSelectDate={(iso) => openCreate(iso)}
+              onSelectSubProject={openEdit}
+              title="담당자별 캘린더"
+              tag="캘린더 B"
+              tagColor="#0F6E56"
+              filterSlot={
+                <div className="flex flex-col items-start gap-1.5">
+                  {/* 이슈6: 담당자 레이블 볼드 */}
+                  <span className="text-[10px] font-bold text-[#1A1A1A]">담당자</span>
+                  <TeamMemberFilter
+                    users={users}
+                    selectedId={selectedMemberId ?? null}
+                    onSelect={setSelectedMemberId}
+                    myTeam={me.team}
+                    singleSelection
+                  />
+                </div>
+              }
+            />
+
+            {/* 이슈6-1·6-2: 차월 캘린더 + 진행 중 프로젝트를 금월 아래 배치 */}
+            <MonthCalendar
+              year={shiftMonth(cursor, 1).getFullYear()}
+              month={shiftMonth(cursor, 1).getMonth()}
+              subprojects={selectedMemberTasks}
+              onPrevMonth={() => setCursor((current) => shiftMonth(current, -1))}
+              onNextMonth={() => setCursor((current) => shiftMonth(current, 1))}
+              onSelectSubProject={openEdit}
+              title="담당자별 캘린더 (차월)"
+              tag="캘린더 B+1"
+              tagColor="#0F6E56"
+            />
+
+            {/* 이슈6-2: 진행 중 프로젝트 블록을 캘린더 밑에 배치 */}
+            <section className="rounded-2xl border border-[#EAEAE4] bg-white p-5 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-[15px] font-bold text-[#1A1A1A]">진행 중 프로젝트</h2>
+                  <p className="mt-0.5 text-[11px] text-[#888780]">클릭하면 상세 모달로 이동합니다.</p>
+                </div>
+                <span className="text-[11px] text-[#888780]">{activeProjects.length}</span>
               </div>
-            }
-          />
+              <div className="space-y-2">
+                {loading && (
+                  <p className="rounded-xl bg-[#FAFAFA] px-4 py-6 text-center text-sm text-[#888780]">불러오는 중...</p>
+                )}
+                {!loading && activeProjects.map((project) => {
+                  const related = orderedList.filter((sp) => sp.project_id === project.id);
+                  const doneCount = related.filter((sp) => sp.status === 'completed').length;
+                  const progress = related.length === 0 ? 0 : (doneCount / related.length) * 100;
+                  return (
+                    <button
+                      key={project.id}
+                      type="button"
+                      onClick={() => related[0] && openEdit(related[0])}
+                      className="flex w-full items-center gap-3 rounded-xl border border-[#EAEAE4] bg-white px-4 py-3 text-left transition hover:border-[#D3D1C7] hover:bg-[#FAFAFA]"
+                    >
+                      <span className={`h-[9px] w-[9px] shrink-0 rounded-full ${colorForId(project.id)}`} />
+                      {/* 이슈2: 프로젝트명이 길어도 진행률이 항상 표시되도록 min-w-0 + shrink 제어 */}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold text-[#1A1A1A]">{project.name}</p>
+                        <p className="mt-0.5 truncate text-[11px] text-[#888780]">
+                          {related[0]?.name ?? '소프로젝트 준비 중'}
+                        </p>
+                      </div>
+                      <div className="w-[80px] shrink-0">
+                        <ProgressBar value={progress} className="h-1" />
+                        <div className="mt-[3px] text-right text-[10px] text-[#888780]">{Math.round(progress)}%</div>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-[#E6F1FB] px-2 py-1 text-[10px] font-bold text-[#185FA5]">
+                        진행 중
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
 
           <SelectedMemberProjectBoard
             member={selectedMember}
@@ -267,62 +334,6 @@ export default function TeamCalendarPage() {
           />
         </div>
       </div>
-
-      <div className="my-6 h-px bg-[#EAEAE4]" />
-
-      <section className="rounded-2xl border border-[#EAEAE4] bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-[15px] font-bold text-[#1A1A1A]">진행 중 프로젝트</h2>
-            <p className="mt-1 text-[11px] text-[#888780]">
-              일정 항목을 클릭하면 상세 모달로 이동합니다.
-            </p>
-          </div>
-          <span className="text-[11px] text-[#888780]">{activeProjects.length}</span>
-        </div>
-
-        <div className="space-y-3">
-          {loading && (
-            <p className="rounded-xl bg-[#FAFAFA] px-4 py-6 text-center text-sm text-[#888780]">
-              불러오는 중...
-            </p>
-          )}
-
-          {!loading &&
-            activeProjects.map((project) => {
-              const related = orderedList.filter((subproject) => subproject.project_id === project.id);
-              const doneCount = related.filter((subproject) => subproject.status === 'completed').length;
-              const progress = related.length === 0 ? 0 : (doneCount / related.length) * 100;
-              return (
-                <button
-                  key={project.id}
-                  type="button"
-                  onClick={() => related[0] && openEdit(related[0])}
-                  className="flex w-full items-center gap-[14px] rounded-xl border border-[#EAEAE4] bg-white px-4 py-[13px] text-left transition hover:border-[#D3D1C7] hover:bg-[#FAFAFA]"
-                >
-                  <span className={`h-[9px] w-[9px] rounded-full ${colorForId(project.id)}`} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold text-[#1A1A1A]">
-                      {project.name}
-                    </p>
-                    <p className="mt-0.5 truncate text-[11px] text-[#888780]">
-                      {related[0]?.name ?? '소프로젝트 준비 중'}
-                    </p>
-                  </div>
-                  <div className="hidden w-[90px] shrink-0 md:block">
-                    <ProgressBar value={progress} className="h-1" />
-                    <div className="mt-[3px] text-right text-[10px] text-[#888780]">
-                      {Math.round(progress)}%
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-[#E6F1FB] px-2 py-1 text-[10px] font-bold text-[#185FA5]">
-                    진행 중
-                  </span>
-                </button>
-              );
-            })}
-        </div>
-      </section>
 
       <TeamModal
         open={modalOpen}
@@ -393,7 +404,8 @@ function SelectedMemberProjectBoard({
           <p className="mt-1 text-[11px] leading-5 text-[#888780]">{viewStyle.summary}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {/* 이슈1: 카드 높이 통일 — items-stretch로 줄 맞춤 */}
+        <div className="grid grid-cols-2 items-stretch gap-2 sm:grid-cols-4">
           <MetricCard label="프로젝트" value={String(summary.projectCount)} />
           <MetricCard label="일정 수" value={String(summary.subprojectCount)} />
           <MetricCard label="평균 진행률" value={`${Math.round(summary.averageProgress)}%`} />
@@ -490,7 +502,8 @@ function SelectedMemberProjectBoard({
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-[#EAEAE4] bg-[#FAFAF7] px-3 py-2">
+    /* 이슈1: flex-col justify-between으로 레이블/값이 항상 같은 위치에 고정 */
+    <div className="flex flex-col justify-between rounded-xl border border-[#EAEAE4] bg-[#FAFAF7] px-3 py-2">
       <div className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[#888780]">
         {label}
       </div>
@@ -562,13 +575,13 @@ function deriveMemberViewStyle(groups: MemberProjectGroup[]): MemberViewStyle {
   if (totalPlanned > totalCompleted) {
     return {
       label: '계획 중심',
-      summary: '예정된 일정 비중이 더 높아 향후 시작 일정과 대기 중인 작업이 먼저 보이도록 구성했습니다.',
+      summary: '예정된 일정 비중이 더 높아 향후 시작 일정와 대기 중인 작업이 먼저 보이도록 구성했습니다.',
     };
   }
 
   return {
     label: '완료 추적',
-    summary: '완료되었거나 마무리 단계인 일정이 많아 현재 납품 진행 상태를 중심으로 보여줍니다.',
+    summary: '완료되었거나 마무리 단계인 일정이 많아 현재 낙품 진행 상태를 중심으로 보여줍니다.',
   };
 }
 
