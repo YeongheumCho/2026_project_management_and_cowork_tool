@@ -10,7 +10,6 @@ import {
 import OrgChartView from './OrgChartView';
 import UserRoleRow from './UserRoleRow';
 
-// ─── 조직 마스터 데이터 ────────────────────────────────────────────────────────
 const ORG_DATA = {
   centers: ['E-모빌리티센터'],
   offices: ['Automotive시스템실', 'E-모빌리티시스템실', 'SDV시스템실'],
@@ -27,7 +26,6 @@ const ORG_DATA = {
   positions: ['인턴', '전임연구원', '선임연구원', '책임연구원', '수석연구원', '이사'],
 };
 
-// ─── 콤보박스 컴포넌트 ─────────────────────────────────────────────────────────
 function ComboBox({
   value,
   onChange,
@@ -88,7 +86,6 @@ function ComboBox({
   );
 }
 
-// ─── 에러 팝업 모달 ─────────────────────────────────────────────────────────────
 function ErrorModal({ message, onClose }: { message: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -164,7 +161,7 @@ export default function UserTable({
   }, [users, query, roleFilter]);
 
   const adminCount = useMemo(
-    () => users.filter((user) => user.role === 'admin').length,
+    () => users.filter((u) => u.role === 'admin').length,
     [users],
   );
 
@@ -211,34 +208,34 @@ export default function UserTable({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-full border border-[#EAEAE4] bg-[#FAFAFA] p-0.5">
-            {(['table', 'org'] as ViewMode[]).map((value) => (
+            {(['table', 'org'] as ViewMode[]).map((v) => (
               <button
-                key={value}
+                key={v}
                 type="button"
-                onClick={() => setViewMode(value)}
+                onClick={() => setViewMode(v)}
                 className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${
-                  viewMode === value
+                  viewMode === v
                     ? 'bg-white text-[#534AB7] shadow-sm'
                     : 'text-[#888780] hover:text-[#1A1A1A]'
                 }`}
               >
-                {value === 'table' ? '테이블' : '조직도'}
+                {v === 'table' ? '테이블' : '조직도'}
               </button>
             ))}
           </div>
           <div className="flex items-center gap-1 rounded-full border border-[#EAEAE4] bg-[#FAFAFA] p-0.5">
-            {(['all', 'admin', 'member'] as RoleFilter[]).map((value) => (
+            {(['all', 'admin', 'member'] as RoleFilter[]).map((v) => (
               <button
-                key={value}
+                key={v}
                 type="button"
-                onClick={() => setRoleFilter(value)}
+                onClick={() => setRoleFilter(v)}
                 className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${
-                  roleFilter === value
+                  roleFilter === v
                     ? 'bg-white text-[#534AB7] shadow-sm'
                     : 'text-[#888780] hover:text-[#1A1A1A]'
                 }`}
               >
-                {value === 'all' ? '전체' : value === 'admin' ? '관리자' : '일반'}
+                {v === 'all' ? '전체' : v === 'admin' ? '관리자' : '일반'}
               </button>
             ))}
           </div>
@@ -293,9 +290,7 @@ export default function UserTable({
             </table>
             {filtered.length === 0 && (
               <p className="py-8 text-center text-[12px] text-[#888780]">
-                {users.length === 0
-                  ? '등록된 사용자가 없습니다.'
-                  : '검색 조건에 맞는 사용자가 없습니다.'}
+                {users.length === 0 ? '등록된 사용자가 없습니다.' : '검색 조건에 맞는 사용자가 없습니다.'}
               </p>
             )}
           </div>
@@ -331,23 +326,10 @@ export default function UserTable({
   );
 }
 
-// ─── 사용자 추가 패널 ───────────────────────────────────────────────────────────
-function CreateUserPanel({
-  onCreate,
-}: {
-  onCreate: (payload: UserCreatePayload) => Promise<boolean>;
-}) {
+function CreateUserPanel({ onCreate }: { onCreate: (payload: UserCreatePayload) => Promise<boolean> }) {
   const [form, setForm] = useState<UserCreatePayload>({
-    idnum: '',
-    name: '',
-    password: '',
-    role: 'member',
-    center: '',
-    office: '',
-    team: '',
-    position: '',
-    email: '',
-    phone: '',
+    idnum: '', name: '', password: '', role: 'member',
+    center: '', office: '', team: '', position: '', email: '', phone: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [errorModal, setErrorModal] = useState<string | null>(null);
@@ -355,7 +337,6 @@ function CreateUserPanel({
   const updateField = (key: keyof UserCreatePayload, value: string) => {
     setForm((prev) => {
       const next = { ...prev, [key]: value };
-      // 실이 바뀌면 팀을 초기화
       if (key === 'office') next.team = '';
       return next;
     });
@@ -390,27 +371,14 @@ function CreateUserPanel({
     });
     setSubmitting(false);
     if (!ok) return;
-    setForm({
-      idnum: '',
-      name: '',
-      password: '',
-      role: 'member',
-      center: '',
-      office: '',
-      team: '',
-      position: '',
-      email: '',
-      phone: '',
-    });
+    setForm({ idnum: '', name: '', password: '', role: 'member', center: '', office: '', team: '', position: '', email: '', phone: '' });
   };
 
   const isIdnumInvalid = form.idnum.length > 9;
 
   return (
     <>
-      {errorModal && (
-        <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />
-      )}
+      {errorModal && <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />}
       <div className="mt-4 rounded-2xl border border-[#EAEAE4] bg-[#FAFAFA] p-4">
         <div className="mb-3">
           <h4 className="text-[13px] font-bold text-[#1A1A1A]">사용자 추가</h4>
@@ -426,9 +394,7 @@ function CreateUserPanel({
               placeholder="사번 (9자리 이하)"
               maxLength={20}
               className={`rounded-lg border bg-white px-3 py-2 text-[12px] focus:outline-none ${
-                isIdnumInvalid
-                  ? 'border-[#E05C5C] focus:border-[#E05C5C]'
-                  : 'border-[#EAEAE4] focus:border-[#534AB7]'
+                isIdnumInvalid ? 'border-[#E05C5C] focus:border-[#E05C5C]' : 'border-[#EAEAE4] focus:border-[#534AB7]'
               }`}
             />
             {isIdnumInvalid && (
@@ -497,13 +463,7 @@ function CreateUserPanel({
           <button
             type="button"
             onClick={() => void handleSubmit()}
-            disabled={
-              submitting ||
-              !form.idnum.trim() ||
-              !form.name.trim() ||
-              !form.password.trim() ||
-              isIdnumInvalid
-            }
+            disabled={submitting || !form.idnum.trim() || !form.name.trim() || !form.password.trim() || isIdnumInvalid}
             className="rounded-lg bg-[#534AB7] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-[#43399C] disabled:cursor-not-allowed disabled:bg-[#D3D1C7]"
           >
             {submitting ? '추가 중...' : '사용자 추가'}
@@ -514,13 +474,16 @@ function CreateUserPanel({
   );
 }
 
-// ─── 수행 이력 패널 ─────────────────────────────────────────────────────────────
+function formatMinutes(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}분`;
+  if (m === 0) return `${h}시간`;
+  return `${h}시간 ${m}분`;
+}
+
 function UserHistoryPanel({
-  user,
-  items,
-  loading,
-  error,
-  onClose,
+  user, items, loading, error, onClose,
 }: {
   user: UserResponse;
   items: ProjectHistoryEntry[];
@@ -532,9 +495,7 @@ function UserHistoryPanel({
     <div className="mt-4 rounded-2xl border border-[#EAEAE4] bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h4 className="text-[15px] font-bold text-[#1A1A1A]">
-            {user.name}님 수행 업무 이력
-          </h4>
+          <h4 className="text-[15px] font-bold text-[#1A1A1A]">{user.name}님 수행 업무 이력</h4>
           <p className="mt-1 text-[11px] text-[#888780]">
             {user.center || '미지정'} / {user.office || '미지정'} / {user.team || '미지정'}
           </p>
@@ -553,9 +514,7 @@ function UserHistoryPanel({
         </p>
       )}
       {!loading && error && (
-        <p className="mt-4 rounded-xl bg-[#FFF4F4] px-4 py-3 text-[12px] text-[#A32D2D]">
-          {error}
-        </p>
+        <p className="mt-4 rounded-xl bg-[#FFF4F4] px-4 py-3 text-[12px] text-[#A32D2D]">{error}</p>
       )}
       {!loading && !error && items.length === 0 && (
         <p className="mt-4 rounded-xl bg-[#FAFAFA] px-4 py-6 text-center text-[12px] text-[#888780]">
@@ -582,8 +541,8 @@ function UserHistoryPanel({
                   <td className="py-3 pr-4 text-[#5F5E5A]">{item.subproject_name}</td>
                   <td className="py-3 pr-4 text-[#5F5E5A]">{item.project_type}</td>
                   <td className="py-3 pr-4 text-[#5F5E5A]">{formatMinutes(item.worked_minutes)}</td>
-                  <td className="py-3 pr-4 text-[#5F5E5A]">{Math.round(item.completion_rate)}%</td>
-                  <td className="py-3 text-[#5F5E5A]">{item.ended_on ?? '-'}</td>
+                  <td className="py-3 pr-4 text-[#5F5E5A]">{item.completion_rate}%</td>
+                  <td className="py-3 text-[#5F5E5A]">{item.ended_on ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -592,12 +551,4 @@ function UserHistoryPanel({
       )}
     </div>
   );
-}
-
-function formatMinutes(totalMinutes: number) {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours === 0) return `${minutes}분`;
-  if (minutes === 0) return `${hours}시간`;
-  return `${hours}시간 ${minutes}분`;
 }
