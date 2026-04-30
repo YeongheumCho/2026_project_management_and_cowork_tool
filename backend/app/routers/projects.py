@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.dependencies import get_current_user, get_db, require_admin
@@ -34,6 +34,8 @@ from app.models.project import (
     Project,
     SubProject,
     SubTask,
+    project_participants,
+    subproject_assignees,
 )
 from app.models.progress_log import ProgressLog
 from app.models.user import User
@@ -104,6 +106,7 @@ def _load_subproject(db: Session, subproject_id: int) -> SubProject:
         .options(
             selectinload(SubProject.subtasks),
             selectinload(SubProject.assignee),
+            selectinload(SubProject.assignees),
             selectinload(SubProject.verifier),
             selectinload(SubProject.reviewer),
         )
@@ -117,27 +120,101 @@ def _load_subproject(db: Session, subproject_id: int) -> SubProject:
     return sp
 
 
+def _subproject_assignee_ids(sp: SubProject) -> set[int]:
+    ids = {user.id for user in (sp.assignees or [])}
+    if sp.assignee_id is not None:
+        ids.add(sp.assignee_id)
+    return ids
+
+
+def _payload_assignee_ids(payload) -> list[int] | None:
+    if "assignee_ids" in payload.model_fields_set:
+        return list(dict.fromkeys(payload.assignee_ids or []))
+    if "assignee_id" in payload.model_fields_set and payload.assignee_id is not None:
+        return [payload.assignee_id]
+    return None
+
+
+def _load_valid_assignees(
+    db: Session,
+    project: Project | None,
+    assignee_ids: list[int],
+) -> list[User]:
+    if not assignee_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="담당자를 1명 이상 선택해주세요.",
+        )
+
+    assignees = db.scalars(
+        select(User)
+        .where(User.id.in_(assignee_ids), User.is_active.is_(True))
+        .order_by(User.name.asc())
+    ).all()
+    if len(assignees) != len(assignee_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="유효하지 않은 담당자가 포함되어 있습니다.",
+        )
+
+    if project and project.participants:
+        participant_ids = {member.id for member in project.participants}
+        invalid = [user.name for user in assignees if user.id not in participant_ids]
+        if invalid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="담당자는 해당 프로젝트 참여 인원 중에서만 선택할 수 있습니다.",
+            )
+
+    order = {user_id: index for index, user_id in enumerate(assignee_ids)}
+    return sorted(assignees, key=lambda user: order[user.id])
+
+
+def _set_subproject_assignees(sp: SubProject, assignees: list[User]) -> None:
+    sp.assignees = assignees
+    sp.assignee_id = assignees[0].id if assignees else None
+
+
 def _get_visible_project_ids_for_user(db: Session, current_user: User) -> set[int]:
     if current_user.role == "admin":
         return set(
             db.scalars(select(Project.id)).all()
         )
 
-    return set(
+    # Use whole-project membership as the primary visibility rule. Keep assigned
+    # subprojects as a fallback for older data that may not have participants.
+    participant_project_ids = set(
         db.scalars(
-            select(SubProject.project_id)
-            .where(
-                SubProject.assignee_id == current_user.id,
-                SubProject.status != STATUS_COMPLETED,
+            select(project_participants.c.project_id).where(
+                project_participants.c.user_id == current_user.id
             )
         ).all()
     )
+    assigned_project_ids = set(
+        db.scalars(
+            select(SubProject.project_id)
+            .where(SubProject.assignee_id == current_user.id)
+            .distinct()
+        ).all()
+    )
+    assigned_project_ids |= set(
+        db.scalars(
+            select(SubProject.project_id)
+            .join(
+                subproject_assignees,
+                subproject_assignees.c.subproject_id == SubProject.id,
+            )
+            .where(subproject_assignees.c.user_id == current_user.id)
+            .distinct()
+        ).all()
+    )
+    return participant_project_ids | assigned_project_ids
 
 
 def _ensure_subproject_access(sp: SubProject, current_user: User) -> None:
     if current_user.role == "admin":
         return
-    if sp.assignee_id != current_user.id:
+    if current_user.id not in _subproject_assignee_ids(sp):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="해당 소프로젝트에 접근할 수 없습니다.",
@@ -269,6 +346,8 @@ def _serialize_project_response(project: Project) -> ProjectResponse:
         id=project.id,
         name=project.name,
         project_type=project.project_type,
+        start_date=project.start_date,
+        end_date=project.end_date,
         created_by=project.created_by,
         created_at=project.created_at,
         participants=list(project.participants or []),
@@ -306,6 +385,8 @@ def create_project(
     project = Project(
         name=payload.name,
         project_type=payload.project_type,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
         created_by=admin.id,
     )
     project.participants = participants
@@ -313,7 +394,10 @@ def create_project(
     db.commit()
     project = db.scalar(
         select(Project)
-        .options(selectinload(Project.participants), selectinload(Project.subprojects))
+        .options(
+            selectinload(Project.participants),
+            selectinload(Project.subprojects).selectinload(SubProject.assignees),
+        )
         .where(Project.id == project.id)
     )
     return _serialize_project_response(project)
@@ -348,7 +432,7 @@ def update_project(
         select(Project)
         .options(
             selectinload(Project.participants),
-            selectinload(Project.subprojects),
+            selectinload(Project.subprojects).selectinload(SubProject.assignees),
         )
         .where(Project.id == project_id)
     )
@@ -374,7 +458,7 @@ def update_project(
     invalid_assignees = [
         subproject.name
         for subproject in project.subprojects
-        if subproject.assignee_id is not None and subproject.assignee_id not in participant_id_set
+        if any(user_id not in participant_id_set for user_id in _subproject_assignee_ids(subproject))
     ]
     if invalid_assignees:
         raise HTTPException(
@@ -387,6 +471,10 @@ def update_project(
 
     project.name = payload.name
     project.project_type = payload.project_type
+    if "start_date" in payload.model_fields_set:
+        project.start_date = payload.start_date
+    if "end_date" in payload.model_fields_set:
+        project.end_date = payload.end_date
     project.participants = participants
     db.commit()
     project = db.scalar(
@@ -502,28 +590,21 @@ def create_subproject(
             detail="프로젝트를 찾을 수 없습니다.",
         )
 
-    assignee = db.get(User, payload.assignee_id)
-    if not assignee:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="담당자를 찾을 수 없습니다.",
-        )
-
-    if project.participants and assignee.id not in {member.id for member in project.participants}:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="담당자는 해당 프로젝트 참여 인원 중에서만 선택할 수 있습니다.",
-        )
+    assignees = _load_valid_assignees(
+        db,
+        project,
+        _payload_assignee_ids(payload) or [],
+    )
 
     sp = SubProject(
         project_id=project.id,
         name=payload.name,
-        assignee_id=assignee.id,
         start_date=payload.start_date,
         end_date=payload.end_date,
         status=STATUS_PLANNED,
         progress=0,
     )
+    _set_subproject_assignees(sp, assignees)
 
     # KEFICO 필드 복사
     _apply_kefico_fields(sp, payload)
@@ -553,6 +634,7 @@ def list_subprojects(
     stmt = select(SubProject).options(
         selectinload(SubProject.subtasks),
         selectinload(SubProject.assignee),
+        selectinload(SubProject.assignees),
         selectinload(SubProject.verifier),
         selectinload(SubProject.reviewer),
     )
@@ -561,13 +643,29 @@ def list_subprojects(
         if not visible_project_ids:
             return []
         stmt = stmt.where(
-            SubProject.assignee_id == current_user.id,
+            or_(
+                SubProject.assignee_id == current_user.id,
+                SubProject.id.in_(
+                    select(subproject_assignees.c.subproject_id).where(
+                        subproject_assignees.c.user_id == current_user.id
+                    )
+                ),
+            ),
             SubProject.project_id.in_(visible_project_ids),
         )
     if project_id is not None:
         stmt = stmt.where(SubProject.project_id == project_id)
     if assignee_id is not None and current_user.role == "admin":
-        stmt = stmt.where(SubProject.assignee_id == assignee_id)
+        stmt = stmt.where(
+            or_(
+                SubProject.assignee_id == assignee_id,
+                SubProject.id.in_(
+                    select(subproject_assignees.c.subproject_id).where(
+                        subproject_assignees.c.user_id == assignee_id
+                    )
+                ),
+            )
+        )
     stmt = stmt.order_by(SubProject.start_date.asc())
     return [SubProjectResponse.from_orm_with_custom(sp) for sp in db.scalars(stmt).all()]
 
@@ -607,21 +705,12 @@ def update_subproject(
 
     if payload.name is not None:
         sp.name = payload.name
-    if payload.assignee_id is not None:
-        assignee = db.get(User, payload.assignee_id)
-        if not assignee:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="담당자를 찾을 수 없습니다.",
-            )
-        if project and project.participants and assignee.id not in {
-            member.id for member in project.participants
-        }:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="담당자는 해당 프로젝트 참여 인원 중에서만 선택할 수 있습니다.",
-            )
-        sp.assignee_id = assignee.id
+    next_assignee_ids = _payload_assignee_ids(payload)
+    if next_assignee_ids is not None:
+        _set_subproject_assignees(
+            sp,
+            _load_valid_assignees(db, project, next_assignee_ids),
+        )
     if payload.start_date is not None:
         sp.start_date = payload.start_date
     if payload.end_date is not None:
@@ -685,7 +774,7 @@ def update_subtask(
         )
 
     sp = _load_subproject(db, task.subproject_id)
-    if current_user.role != "admin" and sp.assignee_id != current_user.id:
+    if current_user.role != "admin" and current_user.id not in _subproject_assignee_ids(sp):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="본인이 담당한 태스크만 변경할 수 있습니다.",

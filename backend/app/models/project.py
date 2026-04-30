@@ -42,6 +42,13 @@ project_participants = Table(
     Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
 )
 
+subproject_assignees = Table(
+    "subproject_assignees",
+    Base.metadata,
+    Column("subproject_id", ForeignKey("subprojects.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+)
+
 
 # SubProject 상위 상태
 STATUS_PLANNED = "planned"
@@ -84,6 +91,8 @@ class Project(Base):
     project_type: Mapped[str] = mapped_column(
         String(50), default="general", nullable=False
     )
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
@@ -205,6 +214,10 @@ class SubProject(Base):
         back_populates="assigned_subprojects",
         foreign_keys=[assignee_id],
     )
+    assignees = relationship(
+        "User",
+        secondary=subproject_assignees,
+    )
     verifier = relationship("User", foreign_keys=[verifier_id])
     reviewer = relationship("User", foreign_keys=[reviewer_id])
     subtasks = relationship(
@@ -220,6 +233,12 @@ class SubProject(Base):
             v or 0
             for v in (self.first_setup_min, self.first_aud_min, self.first_review_min)
         )
+
+    @property
+    def assignee_ids(self) -> list[int]:
+        if self.assignees:
+            return [user.id for user in self.assignees]
+        return [] if self.assignee_id is None else [self.assignee_id]
 
     @property
     def inreview_total_min(self) -> int:

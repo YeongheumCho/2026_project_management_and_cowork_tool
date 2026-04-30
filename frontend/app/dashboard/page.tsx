@@ -42,16 +42,20 @@ export default function DashboardPage() {
   const filteredSubprojects = useMemo(() => {
     if (!selectedMemberId) return subprojects;
     return subprojects.filter(
-      (subproject) => subproject.assignee_id === selectedMemberId,
+      (subproject) => subproject.assignee_ids.includes(selectedMemberId),
     );
   }, [selectedMemberId, subprojects]);
 
   const visibleProjects = useMemo(() => {
     if (!selectedMemberId) return projects;
-    const visibleIds = new Set(
+    const assignedProjectIds = new Set(
       filteredSubprojects.map((subproject) => subproject.project_id),
     );
-    return projects.filter((project) => visibleIds.has(project.id));
+    return projects.filter(
+      (project) =>
+        assignedProjectIds.has(project.id) ||
+        project.participants.some((member) => member.id === selectedMemberId),
+    );
   }, [filteredSubprojects, projects, selectedMemberId]);
 
   useEffect(() => {
@@ -102,7 +106,12 @@ export default function DashboardPage() {
     const hasVisibleTask = filteredSubprojects.some(
       (subproject) => subproject.project_id === projectId,
     );
-    if (selectedMemberId && !hasVisibleTask) {
+    const hasVisibleProject = projects.some(
+      (project) =>
+        project.id === projectId &&
+        project.participants.some((member) => member.id === selectedMemberId),
+    );
+    if (selectedMemberId && !hasVisibleTask && !hasVisibleProject) {
       setSelectedMemberId(null);
     }
     setSelectedProjectId(projectId);

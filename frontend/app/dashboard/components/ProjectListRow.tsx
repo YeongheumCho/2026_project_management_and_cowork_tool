@@ -26,23 +26,32 @@ export default function ProjectListRow({
     project.completed_subproject_count ??
     subprojects.filter((subproject) => subproject.status === 'completed').length;
   const progress = project.progress_percent ?? 0;
-  const summary =
-    subprojects
-      .slice()
-      .sort((left, right) => right.progress - left.progress)[0]?.name ??
-    `소프로젝트 ${total}건 · 완료 ${done}건`;
+  const summary = `소프로젝트 ${total}건 · 완료 ${done}건`;
 
   const assignees = Array.from(
     new Map(
-      subprojects
-        .filter((subproject) => subproject.assignee)
-        .map((subproject) => [subproject.assignee!.id, subproject.assignee!]),
+      (subprojects.length > 0
+        ? subprojects
+            .flatMap((subproject) =>
+              (subproject.assignees.length > 0
+                ? subproject.assignees
+                : subproject.assignee
+                  ? [subproject.assignee]
+                  : []
+              ).map((assignee) => [assignee.id, assignee] as const),
+            )
+        : project.participants.map((member) => [
+            member.id,
+            { id: member.id, name: member.name },
+          ])),
     ).values(),
   ).slice(0, 4);
 
   const content = (
     <>
-      <span className={`h-[9px] w-[9px] shrink-0 rounded-full ${colorForId(project.id)}`} />
+      <span
+        className={`h-[9px] w-[9px] shrink-0 rounded-full ${colorForId(project.id)}`}
+      />
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-semibold text-[#1A1A1A]">
@@ -90,7 +99,11 @@ export default function ProjectListRow({
 
   if (onSelect) {
     return (
-      <button type="button" onClick={() => onSelect(project.id)} className={containerClass}>
+      <button
+        type="button"
+        onClick={() => onSelect(project.id)}
+        className={containerClass}
+      >
         {content}
       </button>
     );

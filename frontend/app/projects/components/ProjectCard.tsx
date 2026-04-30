@@ -2,8 +2,8 @@
 
 import {
   PROJECT_TYPE_LABEL,
-  type ProjectHistorySummary,
   type Project,
+  type ProjectHistorySummary,
   type ProjectTimeSummary,
   type SubProject,
 } from '../../lib/api';
@@ -45,6 +45,7 @@ export default function ProjectCard({
     project.in_progress_subproject_count ??
     subprojects.filter((sp) => sp.status === 'in_progress').length;
   const progress = project.progress_percent ?? 0;
+  const isCompleted = total > 0 && done >= total;
   const typeLabel = PROJECT_TYPE_LABEL[project.project_type] ?? project.project_type;
   const topMembers = timeSummary.members.slice(0, 5);
   const topHistoryMembers = historySummary.members.slice(0, 5);
@@ -71,23 +72,42 @@ export default function ProjectCard({
               <span className="rounded-full border border-[#E5E2FF] bg-[#F5F3FF] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#534AB7]">
                 {typeLabel}
               </span>
+              <span
+                className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                  isCompleted
+                    ? 'bg-[#E1F5EE] text-[#0F6E56]'
+                    : 'bg-[#E6F1FB] text-[#185FA5]'
+                }`}
+              >
+                {isCompleted ? '완료' : '진행중'}
+              </span>
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[#7A786F]">
               <span>생성일 {new Date(project.created_at).toLocaleDateString('ko-KR')}</span>
-              <span>하위 프로젝트 {total}개</span>
-              <span>완료 {done}개</span>
-              <span>진행 중 {inProgress}개</span>
+              <span>하위 프로젝트 {total}건</span>
+              <span>완료 {done}건</span>
+              <span>진행 중 {inProgress}건</span>
               <span>참여 인원 {project.participants.length}명</span>
             </div>
           </div>
 
           <div className="min-w-[180px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
             <div className="flex items-center justify-between text-[11px] font-semibold text-[#5F5E5A]">
-              <span>프로젝트 진행률</span>
-              <span className="text-[#1D1D1B]">{Math.round(progress)}%</span>
+              <span>완료 항목</span>
+              <span className={isCompleted ? 'text-[#0F6E56]' : 'text-[#185FA5]'}>
+                {done}/{total}
+              </span>
             </div>
-            <ProgressBar value={progress} className="mt-2" ariaLabel={`${project.name} 진행률`} />
+            <div className="mt-2 flex items-center justify-between text-[12px] font-bold text-[#1D1D1B]">
+              <span>{isCompleted ? '프로젝트 완료' : '진행 중 프로젝트'}</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            <ProgressBar
+              value={progress}
+              className="mt-2"
+              ariaLabel={`${project.name} 진행률`}
+            />
           </div>
 
           <div className="min-w-[240px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
@@ -121,7 +141,9 @@ export default function ProjectCard({
           <div className="min-w-[240px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
             <div className="flex items-center justify-between text-[11px] font-semibold text-[#5F5E5A]">
               <span>수행 이력</span>
-              <span className="text-[#1D1D1B]">{historySummary.total_completed_count}건</span>
+              <span className="text-[#1D1D1B]">
+                {historySummary.total_completed_count}건
+              </span>
             </div>
             <div className="mt-2 space-y-1.5">
               {topHistoryMembers.length === 0 ? (
@@ -136,7 +158,9 @@ export default function ProjectCard({
                   >
                     <div className="min-w-0">
                       <p className="truncate">{member.user_name}</p>
-                      <p className="text-[10px] text-[#8B897F]">완료 {member.completed_count}건</p>
+                      <p className="text-[10px] text-[#8B897F]">
+                        완료 {member.completed_count}건
+                      </p>
                     </div>
                     <span className="shrink-0 font-semibold text-[#1D1D1B]">
                       {formatMinutes(member.total_minutes)}

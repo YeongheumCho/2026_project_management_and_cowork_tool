@@ -2,6 +2,7 @@
 
 import AppShell from '../components/AppShell';
 import { useMe } from '../lib/useMe';
+import ProjectDeletionManager from './components/ProjectDeletionManager';
 import TemplateManager from './components/TemplateManager';
 import UserTable from './components/UserTable';
 import { useAdminUsers } from './hooks/useAdminUsers';
@@ -64,6 +65,8 @@ export default function AdminPage() {
           onUserDelete={(member) => void handleUserDelete(member)}
           onPasswordReset={(member, pw) => handlePasswordReset(member, pw)}
         />
+
+        <ProjectDeletionManager enabled={isAdmin} />
 
         <TemplateManager />
       </div>

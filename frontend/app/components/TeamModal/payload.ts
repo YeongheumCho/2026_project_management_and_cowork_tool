@@ -9,7 +9,8 @@ export function buildSubProjectPayload(f: FormState) {
   return {
     project_id: f.projectId,
     name: f.name,
-    assignee_id: f.assigneeId,
+    assignee_id: f.assigneeIds[0] ?? f.assigneeId,
+    assignee_ids: f.assigneeIds,
     start_date: f.startDate,
     end_date: f.endDate,
 

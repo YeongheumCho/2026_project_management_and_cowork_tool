@@ -14,6 +14,7 @@ export type FormState = {
   projectId: number | '';
   name: string;
   assigneeId: number | '';
+  assigneeIds: number[];
   startDate: string;
   endDate: string;
 
@@ -66,6 +67,7 @@ export const EMPTY_FORM: FormState = {
   projectId: '',
   name: '',
   assigneeId: '',
+  assigneeIds: [],
   startDate: '',
   endDate: '',
   priority: '',
@@ -111,7 +113,12 @@ export function fromSubProject(sp: SubProject): FormState {
   return {
     projectId: sp.project_id,
     name: sp.name,
-    assigneeId: sp.assignee_id ?? '',
+    assigneeId: sp.assignee_id ?? sp.assignee_ids?.[0] ?? '',
+    assigneeIds: sp.assignee_ids?.length
+      ? sp.assignee_ids
+      : sp.assignee_id == null
+        ? []
+        : [sp.assignee_id],
     startDate: sp.start_date,
     endDate: sp.end_date,
     priority: sp.priority ?? '',

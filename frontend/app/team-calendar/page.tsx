@@ -6,6 +6,7 @@ import MonthCalendar, { shiftMonth } from '../components/MonthCalendar';
 import TeamModal from '../components/TeamModal';
 import ProgressBar from '../components/ProgressBar';
 import TeamMemberFilter from '../components/TeamMemberFilter';
+import CreateProjectModal from '../projects/components/CreateProjectModal';
 import {
   colorForId,
   softColorForId,
@@ -43,8 +44,9 @@ export default function TeamCalendarPage() {
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-  const [modalDate, setModalDate] = useState<string | undefined>(undefined);
   const [modalInitial, setModalInitial] = useState<SubProject | null>(null);
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [projectModalDate, setProjectModalDate] = useState<string | undefined>(undefined);
 
   const load = useCallback(async () => {
     if (!me) return;
@@ -77,6 +79,34 @@ export default function TeamCalendarPage() {
     [subprojects],
   );
 
+  const projectCalendarItems = useMemo<SubProject[]>(
+    () =>
+      projects
+        .filter((project) => project.start_date && project.end_date)
+        .map((project) => ({
+          id: project.id,
+          project_id: project.id,
+          name: project.name,
+          assignee_id: null,
+          assignee: null,
+          assignee_ids: [],
+          assignees: [],
+          start_date: project.start_date!,
+          end_date: project.end_date!,
+          status:
+            project.progress_percent >= 100
+              ? 'completed'
+              : project.progress_percent > 0
+                ? 'in_progress'
+                : 'planned',
+          progress: project.progress_percent ?? 0,
+          subtasks: [],
+          created_at: project.created_at,
+          updated_at: project.created_at,
+        })),
+    [projects],
+  );
+
   const selectedMember = useMemo(
     () => users.find((user) => user.id === selectedMemberId) ?? null,
     [users, selectedMemberId],
@@ -85,7 +115,9 @@ export default function TeamCalendarPage() {
   const selectedMemberTasks = useMemo(
     () =>
       selectedMemberId
-        ? orderedList.filter((subproject) => subproject.assignee_id === selectedMemberId)
+        ? orderedList.filter((subproject) =>
+            subproject.assignee_ids.includes(selectedMemberId),
+          )
         : [],
     [orderedList, selectedMemberId],
   );
@@ -167,18 +199,16 @@ export default function TeamCalendarPage() {
     };
   }, [selectedMemberGroups.length, selectedMemberTasks]);
 
-  function openCreate(iso?: string) {
-    if (!isAdmin) return;
-    setModalMode('create');
-    setModalDate(iso);
-    setModalInitial(null);
-    setModalOpen(true);
-  }
-
   function openEdit(subproject: SubProject) {
     setModalMode('edit');
     setModalInitial(subproject);
     setModalOpen(true);
+  }
+
+  function openCreateProject(iso?: string) {
+    if (!isAdmin) return;
+    setProjectModalDate(iso);
+    setProjectModalOpen(true);
   }
 
   if (meLoading || !me) {
@@ -214,11 +244,10 @@ export default function TeamCalendarPage() {
         <MonthCalendar
           year={cursor.getFullYear()}
           month={cursor.getMonth()}
-          subprojects={subprojects}
+          subprojects={projectCalendarItems}
           onPrevMonth={() => setCursor((current) => shiftMonth(current, -1))}
           onNextMonth={() => setCursor((current) => shiftMonth(current, 1))}
-          onSelectDate={(iso) => openCreate(iso)}
-          onSelectSubProject={openEdit}
+          onSelectDate={(iso) => openCreateProject(iso)}
           title="전체 프로젝트 캘린더"
           tag="캘린더 A"
           tagColor="#534AB7"
@@ -227,10 +256,10 @@ export default function TeamCalendarPage() {
             isAdmin ? (
               <button
                 type="button"
-                onClick={() => openCreate()}
+                onClick={() => openCreateProject()}
                 className="rounded-lg border border-[#AFA9EC] bg-[#EEEDFE] px-3 py-1.5 text-[11px] font-bold text-[#534AB7]"
               >
-                + 일정 추가
+                + 프로젝트 추가
               </button>
             ) : undefined
           }
@@ -246,7 +275,6 @@ export default function TeamCalendarPage() {
               subprojects={selectedMemberTasks}
               onPrevMonth={() => setCursor((current) => shiftMonth(current, -1))}
               onNextMonth={() => setCursor((current) => shiftMonth(current, 1))}
-              onSelectDate={(iso) => openCreate(iso)}
               onSelectSubProject={openEdit}
               title="담당자별 캘린더"
               tag="캘린더 B"
@@ -341,10 +369,24 @@ export default function TeamCalendarPage() {
         isAdmin={!!isAdmin}
         users={users}
         projects={projects}
-        defaultDate={modalDate}
         initial={modalInitial}
         onClose={() => setModalOpen(false)}
         onSaved={load}
+      />
+
+      <CreateProjectModal
+        open={projectModalOpen}
+        users={users}
+        defaultDate={projectModalDate}
+        onClose={() => {
+          setProjectModalOpen(false);
+          setProjectModalDate(undefined);
+        }}
+        onCreated={async () => {
+          await load();
+          setProjectModalDate(undefined);
+        }}
+        onError={setError}
       />
     </AppShell>
   );
@@ -588,7 +630,9 @@ function deriveMemberViewStyle(groups: MemberProjectGroup[]): MemberViewStyle {
 function buildSubprojectNarrative(member: UserBrief, subproject: SubProject) {
   const completedSubtasks = subproject.subtasks.filter((task) => task.is_done).length;
   const totalSubtasks = subproject.subtasks.length;
-  const assigneeLabel = subproject.assignee?.name ?? member.name;
+  const assigneeLabel =
+    subproject.assignees?.find((assignee) => assignee.id === member.id)?.name ??
+    member.name;
   const status = statusLabel(subproject.status);
 
   if (totalSubtasks === 0) {

@@ -58,18 +58,44 @@ class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     project_type: ProjectType = "general"
     participant_ids: list[int] = Field(min_length=1)
+    start_date: date | None = None
+    end_date: date | None = None
+
+    @model_validator(mode="after")
+    def _check_dates(self):
+        if (
+            self.start_date is not None
+            and self.end_date is not None
+            and self.end_date < self.start_date
+        ):
+            raise ValueError("종료일은 시작일 이후여야 합니다.")
+        return self
 
 
 class ProjectUpdate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     project_type: ProjectType = "general"
     participant_ids: list[int] = Field(min_length=1)
+    start_date: date | None = None
+    end_date: date | None = None
+
+    @model_validator(mode="after")
+    def _check_dates(self):
+        if (
+            self.start_date is not None
+            and self.end_date is not None
+            and self.end_date < self.start_date
+        ):
+            raise ValueError("종료일은 시작일 이후여야 합니다.")
+        return self
 
 
 class ProjectResponse(BaseModel):
     id: int
     name: str
     project_type: str
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
     created_by: Optional[int] = None
     created_at: datetime
     participants: list[ProjectParticipantBrief] = []
@@ -200,19 +226,23 @@ class _SubProjectKeficoFields(BaseModel):
 class SubProjectCreate(_SubProjectKeficoFields):
     project_id: int
     name: str = Field(min_length=1, max_length=200)
-    assignee_id: int
+    assignee_id: Optional[int] = None
+    assignee_ids: list[int] | None = None
     start_date: date
     end_date: date
     @model_validator(mode="after")
     def _check_dates(self):
         if self.end_date < self.start_date:
             raise ValueError("종료일은 시작일 이후여야 합니다.")
+        if not self.assignee_ids and self.assignee_id is None:
+            raise ValueError("담당자를 1명 이상 선택해주세요.")
         return self
 
 
 class SubProjectUpdate(_SubProjectKeficoFields):
     name: Optional[str] = Field(default=None, min_length=1, max_length=200)
     assignee_id: Optional[int] = None
+    assignee_ids: list[int] | None = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
 
@@ -240,6 +270,8 @@ class SubProjectResponse(BaseModel):
     name: str
     assignee_id: Optional[int] = None
     assignee: Optional[AssigneeBrief] = None
+    assignee_ids: list[int] = []
+    assignees: list[AssigneeBrief] = []
     start_date: date
     end_date: date
     status: str

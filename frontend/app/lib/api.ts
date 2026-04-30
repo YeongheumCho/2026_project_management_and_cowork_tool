@@ -75,6 +75,8 @@ export type SubProject = {
   name: string;
   assignee_id: number | null;
   assignee: { id: number; name: string } | null;
+  assignee_ids: number[];
+  assignees: { id: number; name: string }[];
   start_date: string;
   end_date: string;
   status: 'planned' | 'in_progress' | 'completed';
@@ -137,6 +139,8 @@ export type Project = {
   id: number;
   name: string;
   project_type: ProjectType | string;
+  start_date?: string | null;
+  end_date?: string | null;
   created_by: number | null;
   created_at: string;
   participants: UserBrief[];

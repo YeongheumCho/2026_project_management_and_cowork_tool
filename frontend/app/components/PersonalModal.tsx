@@ -45,20 +45,31 @@ export default function PersonalModal({
 
   if (!subproject) return null;
 
+  const assignedIds = subproject.assignee_ids?.length
+    ? subproject.assignee_ids
+    : subproject.assignee_id == null
+      ? []
+      : [subproject.assignee_id];
+  const assigneeLabel = subproject.assignees?.length
+    ? subproject.assignees.map((assignee) => assignee.name).join(', ')
+    : (subproject.assignee?.name ?? TEXT.unassigned);
+  const accentUserId = assignedIds.includes(currentUserId)
+    ? currentUserId
+    : assignedIds[0];
   const canEdit =
     isAdmin ||
-    (subproject.assignee_id !== null && subproject.assignee_id === currentUserId);
+    assignedIds.includes(currentUserId);
 
   const tasks = [...subproject.subtasks].sort(
     (left, right) => left.order_index - right.order_index,
   );
   const currentStep = tasks.find((task) => !task.is_done);
   const isAllDone = tasks.length > 0 && tasks.every((task) => task.is_done);
-  const accentSurface = subproject.assignee_id
-    ? softColorForId(subproject.assignee_id)
+  const accentSurface = accentUserId
+    ? softColorForId(accentUserId)
     : 'bg-[#F1EFE8]';
-  const accentText = subproject.assignee_id
-    ? textColorForId(subproject.assignee_id)
+  const accentText = accentUserId
+    ? textColorForId(accentUserId)
     : 'text-[#5F5E5A]';
 
   async function toggle(task: SubTask) {
@@ -97,7 +108,7 @@ export default function PersonalModal({
           className={`rounded-[20px] border px-3 py-2 ${accentSurface} ${accentText}`}
         >
           <p className="text-[11px] font-semibold">
-            {TEXT.assignee} {subproject.assignee?.name ?? TEXT.unassigned}
+            {TEXT.assignee} {assigneeLabel}
           </p>
         </div>
 
