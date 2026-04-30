@@ -27,12 +27,18 @@ const PROJECT_TYPE_OPTIONS: ProjectType[] = [
 export default function CreateProjectForm({ users, onCreated, onError }: Props) {
   const [name, setName] = useState('');
   const [type, setType] = useState<ProjectType>('official_inspection');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [participantIds, setParticipantIds] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
 
   const disabled = useMemo(
-    () => !name.trim() || participantIds.length === 0 || busy,
-    [name, participantIds, busy],
+    () =>
+      !name.trim() ||
+      participantIds.length === 0 ||
+      (startDate !== '' && endDate !== '' && endDate < startDate) ||
+      busy,
+    [busy, endDate, name, participantIds, startDate],
   );
 
   const submit = async (event: FormEvent) => {
@@ -46,10 +52,14 @@ export default function CreateProjectForm({ users, onCreated, onError }: Props) 
           name: name.trim(),
           project_type: type,
           participant_ids: participantIds,
+          start_date: startDate || null,
+          end_date: endDate || null,
         }),
       });
       setName('');
       setType('official_inspection');
+      setStartDate('');
+      setEndDate('');
       setParticipantIds([]);
       onCreated(created);
     } catch (err) {
@@ -91,6 +101,26 @@ export default function CreateProjectForm({ users, onCreated, onError }: Props) 
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-600">시작일</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-600">종료일</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            />
           </div>
 
           <div className="flex items-end justify-end">

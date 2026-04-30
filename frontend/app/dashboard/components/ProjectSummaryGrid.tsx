@@ -63,9 +63,13 @@ export default function ProjectSummaryGrid({
           {projects.map((project) => {
             const related = byProject.get(project.id) ?? [];
             const assigneeIds = new Set(
-              related
-                .map((sp) => sp.assignee_id)
-                .filter((id): id is number => id !== null),
+              related.flatMap((sp) =>
+                sp.assignee_ids.length
+                  ? sp.assignee_ids
+                  : sp.assignee_id == null
+                    ? []
+                    : [sp.assignee_id],
+              ),
             );
             const avgProgress = Math.round(project.progress_percent ?? 0);
             const doneCount = project.completed_subproject_count ?? related.filter(

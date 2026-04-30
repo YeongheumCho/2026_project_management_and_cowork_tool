@@ -92,6 +92,27 @@ export default function OrganizationMemberPicker({
     onChange(Array.from(selected));
   };
 
+  const toggleMembers = (memberIds: number[]) => {
+    if (disabled || singleSelection) return;
+    const selected = new Set(selectedIds);
+    const allSelected = memberIds.every((memberId) => selected.has(memberId));
+    for (const memberId of memberIds) {
+      if (allSelected) selected.delete(memberId);
+      else selected.add(memberId);
+    }
+    onChange(Array.from(selected));
+  };
+
+  const selectAll = () => {
+    if (disabled || singleSelection) return;
+    onChange(users.map((user) => user.id));
+  };
+
+  const clearAll = () => {
+    if (disabled || singleSelection) return;
+    onChange([]);
+  };
+
   if (groups.length === 0) {
     return (
       <div
@@ -104,6 +125,29 @@ export default function OrganizationMemberPicker({
 
   return (
     <div className={`space-y-2 ${className ?? ''}`}>
+      {!singleSelection && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={selectAll}
+            disabled={disabled || selectedIds.length === users.length}
+            className="rounded-full border border-[#D8D3FF] bg-[#F5F3FF] px-3 py-1 text-[11px] font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            전체 선택
+          </button>
+          <button
+            type="button"
+            onClick={clearAll}
+            disabled={disabled || selectedIds.length === 0}
+            className="rounded-full border border-[#EAEAE4] bg-white px-3 py-1 text-[11px] font-bold text-[#66645C] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            전체 해제
+          </button>
+          <span className="text-[11px] text-[#888780]">
+            {selectedIds.length}/{users.length}명 선택
+          </span>
+        </div>
+      )}
       {groups.map((center) => (
         <CenterPickerGroup
           key={center.key}
@@ -112,6 +156,8 @@ export default function OrganizationMemberPicker({
           selectedIds={selectedIds}
           onToggle={toggleGroup}
           onToggleMember={toggleMember}
+          onToggleMembers={toggleMembers}
+          singleSelection={singleSelection}
           disabled={disabled}
         />
       ))}
@@ -125,6 +171,8 @@ function CenterPickerGroup({
   selectedIds,
   onToggle,
   onToggleMember,
+  onToggleMembers,
+  singleSelection,
   disabled,
 }: {
   center: CenterGroup<UserBrief>;
@@ -132,6 +180,8 @@ function CenterPickerGroup({
   selectedIds: number[];
   onToggle: (key: string) => void;
   onToggleMember: (memberId: number) => void;
+  onToggleMembers: (memberIds: number[]) => void;
+  singleSelection: boolean;
   disabled: boolean;
 }) {
   const isOpen = expanded.has(center.key);
@@ -174,6 +224,8 @@ function CenterPickerGroup({
               selectedIds={selectedIds}
               onToggle={onToggle}
               onToggleMember={onToggleMember}
+              onToggleMembers={onToggleMembers}
+              singleSelection={singleSelection}
               disabled={disabled}
             />
           ))}
@@ -189,6 +241,8 @@ function OfficePickerGroup({
   selectedIds,
   onToggle,
   onToggleMember,
+  onToggleMembers,
+  singleSelection,
   disabled,
 }: {
   office: OfficeGroup<UserBrief>;
@@ -196,6 +250,8 @@ function OfficePickerGroup({
   selectedIds: number[];
   onToggle: (key: string) => void;
   onToggleMember: (memberId: number) => void;
+  onToggleMembers: (memberIds: number[]) => void;
+  singleSelection: boolean;
   disabled: boolean;
 }) {
   const isOpen = expanded.has(office.key);
@@ -232,6 +288,8 @@ function OfficePickerGroup({
               selectedIds={selectedIds}
               onToggle={() => onToggle(team.key)}
               onToggleMember={onToggleMember}
+              onToggleMembers={onToggleMembers}
+              singleSelection={singleSelection}
               disabled={disabled}
             />
           ))}
@@ -247,6 +305,8 @@ function TeamPickerGroup({
   selectedIds,
   onToggle,
   onToggleMember,
+  onToggleMembers,
+  singleSelection,
   disabled,
 }: {
   team: TeamGroup<UserBrief>;
@@ -254,18 +314,37 @@ function TeamPickerGroup({
   selectedIds: number[];
   onToggle: () => void;
   onToggleMember: (memberId: number) => void;
+  onToggleMembers: (memberIds: number[]) => void;
+  singleSelection: boolean;
   disabled: boolean;
 }) {
+  const teamMemberIds = team.members.map((member) => member.id);
+  const allSelected =
+    teamMemberIds.length > 0 &&
+    teamMemberIds.every((memberId) => selectedIds.includes(memberId));
+
   return (
     <div className="space-y-1">
-      <GroupButton
-        label={team.label}
-        count={team.members.length}
-        isOpen={expanded}
-        isActive={team.members.some((member) => selectedIds.includes(member.id))}
-        onClick={onToggle}
-        disabled={disabled}
-      />
+      <div className="flex flex-wrap items-center gap-1.5">
+        <GroupButton
+          label={team.label}
+          count={team.members.length}
+          isOpen={expanded}
+          isActive={team.members.some((member) => selectedIds.includes(member.id))}
+          onClick={onToggle}
+          disabled={disabled}
+        />
+        {!singleSelection && (
+          <button
+            type="button"
+            onClick={() => onToggleMembers(teamMemberIds)}
+            disabled={disabled || teamMemberIds.length === 0}
+            className="rounded-full border border-[#D8D3FF] px-[9px] py-1 text-[11px] font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {allSelected ? '팀 해제' : '팀 선택'}
+          </button>
+        )}
+      </div>
 
       {expanded && (
         <div className="pl-4">

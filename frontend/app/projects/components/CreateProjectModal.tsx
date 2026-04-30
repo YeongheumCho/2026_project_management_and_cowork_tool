@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Modal from '../../components/Modal';
 import OrganizationMemberPicker from '../../components/OrganizationMemberPicker';
 import {
@@ -14,6 +14,7 @@ import {
 type Props = {
   open: boolean;
   users: UserBrief[];
+  defaultDate?: string;
   onClose: () => void;
   onCreated: (project: Project) => Promise<void> | void;
   onError: (message: string) => void;
@@ -30,23 +31,38 @@ const PROJECT_TYPE_OPTIONS: ProjectType[] = [
 export default function CreateProjectModal({
   open,
   users,
+  defaultDate,
   onClose,
   onCreated,
   onError,
 }: Props) {
   const [name, setName] = useState('');
   const [type, setType] = useState<ProjectType>('official_inspection');
+  const [startDate, setStartDate] = useState(defaultDate ?? '');
+  const [endDate, setEndDate] = useState(defaultDate ?? '');
   const [participantIds, setParticipantIds] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
 
   const disabled = useMemo(
-    () => !name.trim() || participantIds.length === 0 || busy,
-    [name, participantIds, busy],
+    () =>
+      !name.trim() ||
+      participantIds.length === 0 ||
+      (startDate !== '' && endDate !== '' && endDate < startDate) ||
+      busy,
+    [busy, endDate, name, participantIds, startDate],
   );
+
+  useEffect(() => {
+    if (!open) return;
+    setStartDate(defaultDate ?? '');
+    setEndDate(defaultDate ?? '');
+  }, [defaultDate, open]);
 
   function reset() {
     setName('');
     setType('official_inspection');
+    setStartDate(defaultDate ?? '');
+    setEndDate(defaultDate ?? '');
     setParticipantIds([]);
   }
 
@@ -68,6 +84,8 @@ export default function CreateProjectModal({
           name: name.trim(),
           project_type: type,
           participant_ids: participantIds,
+          start_date: startDate || null,
+          end_date: endDate || null,
         }),
       });
       await onCreated(created);
@@ -126,6 +144,39 @@ export default function CreateProjectModal({
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="grid flex-shrink-0 gap-4 md:grid-cols-2">
+          <div>
+            <label
+              htmlFor="project-start-date"
+              className="block text-sm font-medium text-slate-700"
+            >
+              시작일
+            </label>
+            <input
+              id="project-start-date"
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="project-end-date"
+              className="block text-sm font-medium text-slate-700"
+            >
+              종료일
+            </label>
+            <input
+              id="project-end-date"
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+          </div>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">

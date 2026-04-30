@@ -32,11 +32,14 @@ export default function ProjectListRow({
     new Map(
       (subprojects.length > 0
         ? subprojects
-            .filter((subproject) => subproject.assignee)
-            .map((subproject) => [
-              subproject.assignee!.id,
-              subproject.assignee!,
-            ])
+            .flatMap((subproject) =>
+              (subproject.assignees.length > 0
+                ? subproject.assignees
+                : subproject.assignee
+                  ? [subproject.assignee]
+                  : []
+              ).map((assignee) => [assignee.id, assignee] as const),
+            )
         : project.participants.map((member) => [
             member.id,
             { id: member.id, name: member.name },

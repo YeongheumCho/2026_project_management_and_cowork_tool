@@ -36,6 +36,9 @@ export default function SubProjectListItem({ sp, onClick }: Props) {
     ? VERIFY_STATE_LABEL[sp.inreview_status]
     : null;
   const metaBits = [sp.controller_name, level, sp.vehicle_type].filter(Boolean);
+  const assigneeLabel = sp.assignees?.length
+    ? sp.assignees.map((assignee) => assignee.name).join(', ')
+    : (sp.assignee?.name ?? TEXT.unassigned);
 
   return (
     <li>
@@ -82,7 +85,7 @@ export default function SubProjectListItem({ sp, onClick }: Props) {
               {sp.start_date} - {sp.end_date}
             </p>
             <p className="mt-1 text-[11px] font-semibold text-[#5F5E5A]">
-              {sp.assignee?.name ?? TEXT.unassigned}
+              {assigneeLabel}
             </p>
           </div>
         </div>

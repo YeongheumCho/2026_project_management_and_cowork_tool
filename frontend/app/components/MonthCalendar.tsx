@@ -37,6 +37,12 @@ function projectColor(projectId: number): string {
   return PROJECT_BAR_COLORS[Math.abs(projectId) % PROJECT_BAR_COLORS.length];
 }
 
+function assigneeNames(item: SubProject): string {
+  const names = item.assignees?.map((assignee) => assignee.name).filter(Boolean);
+  if (names?.length) return names.join(', ');
+  return item.assignee?.name ?? '미지정';
+}
+
 const BAR_H = 13;
 const BAR_GAP = 2;
 const DATE_AREA_H = 18;
@@ -235,7 +241,7 @@ export default function MonthCalendar({
                         key={`${seg.sp.id}-${seg.weekRow}-${idx}`}
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onSelectSubProject?.(seg.sp); }}
-                        title={`${seg.sp.name} (${seg.sp.assignee?.name ?? '미지정'}) ${Math.round(seg.sp.progress)}%`}
+                        title={`${seg.sp.name} (${assigneeNames(seg.sp)}) ${Math.round(seg.sp.progress)}%`}
                         className="absolute flex items-center overflow-hidden px-[5px] text-left"
                         style={{ top, left, width, height: BAR_H, backgroundColor: color, opacity: 0.92, borderRadius: br }}
                       >
@@ -288,7 +294,7 @@ export default function MonthCalendar({
                           onClick={(e) => { e.stopPropagation(); onSelectSubProject?.(item); }}
                           className="flex h-[13px] w-full items-center rounded-[4px] px-[4px] text-left"
                           style={{ backgroundColor: barColor, opacity: 0.9 }}
-                          title={`${item.name} (${item.assignee?.name ?? '미지정'}) ${Math.round(item.progress)}%`}
+                          title={`${item.name} (${assigneeNames(item)}) ${Math.round(item.progress)}%`}
                         >
                           <span className="truncate text-[7px] font-bold leading-none text-white">{item.name}</span>
                         </div>
@@ -381,7 +387,7 @@ const DayPopover = forwardRef<
               <p className="mt-0.5 text-[10px] text-[#888780]">{item.start_date} ~ {item.end_date}</p>
               <div className="mt-1 flex items-center gap-1.5">
                 <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${st.cls}`}>{st.label}</span>
-                {item.assignee?.name && <span className="text-[9px] text-[#888780]">{item.assignee.name}</span>}
+                <span className="text-[9px] text-[#888780]">{assigneeNames(item)}</span>
                 <span className="ml-auto text-[10px] font-semibold text-[#1A1A1A]">{Math.round(item.progress)}%</span>
               </div>
             </div>

@@ -20,21 +20,56 @@ Base.metadata.create_all(bind=engine)
 def _ensure_additive_schema_updates() -> None:
     """Apply tiny additive updates that create_all cannot add to existing tables."""
     inspector = inspect(engine)
-    if "subprojects" not in inspector.get_table_names():
+    table_names = inspector.get_table_names()
+    if "subprojects" not in table_names:
         return
+
+    statements: list[str] = []
 
     subproject_columns = {
         column["name"] for column in inspector.get_columns("subprojects")
     }
-    if "custom_fields" in subproject_columns:
-        return
+    if "custom_fields" not in subproject_columns:
+        statements.append("ALTER TABLE subprojects ADD COLUMN custom_fields TEXT")
 
-    statement = "ALTER TABLE subprojects ADD COLUMN custom_fields TEXT"
+    if "projects" in table_names:
+        project_columns = {
+            column["name"] for column in inspector.get_columns("projects")
+        }
+        if "start_date" not in project_columns:
+            statements.append("ALTER TABLE projects ADD COLUMN start_date DATE")
+        if "end_date" not in project_columns:
+            statements.append("ALTER TABLE projects ADD COLUMN end_date DATE")
+
+    if not statements:
+        statements = []
+
     if engine.dialect.name == "postgresql":
-        statement = "ALTER TABLE subprojects ADD COLUMN IF NOT EXISTS custom_fields TEXT"
+        statements = [
+            statement.replace("ADD COLUMN ", "ADD COLUMN IF NOT EXISTS ")
+            for statement in statements
+        ]
 
     with engine.begin() as connection:
-        connection.execute(text(statement))
+        for statement in statements:
+            connection.execute(text(statement))
+        if "subproject_assignees" in inspect(engine).get_table_names():
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO subproject_assignees (subproject_id, user_id)
+                    SELECT sp.id, sp.assignee_id
+                    FROM subprojects sp
+                    WHERE sp.assignee_id IS NOT NULL
+                      AND NOT EXISTS (
+                        SELECT 1
+                        FROM subproject_assignees sa
+                        WHERE sa.subproject_id = sp.id
+                          AND sa.user_id = sp.assignee_id
+                      )
+                    """
+                )
+            )
 
 
 _ensure_additive_schema_updates()

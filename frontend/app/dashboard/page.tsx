@@ -42,7 +42,7 @@ export default function DashboardPage() {
   const filteredSubprojects = useMemo(() => {
     if (!selectedMemberId) return subprojects;
     return subprojects.filter(
-      (subproject) => subproject.assignee_id === selectedMemberId,
+      (subproject) => subproject.assignee_ids.includes(selectedMemberId),
     );
   }, [selectedMemberId, subprojects]);
 

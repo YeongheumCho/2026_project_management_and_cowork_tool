@@ -92,9 +92,11 @@ export default function BasicSection({
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <OrganizationMemberPicker
               users={availableUsers}
-              selectedIds={f.assigneeId === '' ? [] : [f.assigneeId]}
-              onChange={(nextIds) => set('assigneeId', nextIds[0] ?? '')}
-              singleSelection
+              selectedIds={f.assigneeIds}
+              onChange={(nextIds) => {
+                set('assigneeIds', nextIds);
+                set('assigneeId', nextIds[0] ?? '');
+              }}
               disabled={!isAdmin}
             />
           </div>

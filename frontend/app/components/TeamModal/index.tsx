@@ -171,10 +171,17 @@ export default function TeamModal({
   }, [open, selectedProject]);
 
   useEffect(() => {
-    if (f.assigneeId === '') return;
-    if (availableAssigneeIds.has(f.assigneeId)) return;
-    setF((prev) => ({ ...prev, assigneeId: '' }));
-  }, [availableAssigneeIds, f.assigneeId]);
+    if (f.assigneeIds.length === 0) return;
+    const nextAssigneeIds = f.assigneeIds.filter((id) =>
+      availableAssigneeIds.has(id),
+    );
+    if (nextAssigneeIds.length === f.assigneeIds.length) return;
+    setF((prev) => ({
+      ...prev,
+      assigneeIds: nextAssigneeIds,
+      assigneeId: nextAssigneeIds[0] ?? '',
+    }));
+  }, [availableAssigneeIds, f.assigneeIds]);
 
   useEffect(() => {
     if (!f.functionOwner.trim()) return;
@@ -197,7 +204,7 @@ export default function TeamModal({
   const invalid =
     !f.name.trim() ||
     !f.projectId ||
-    !f.assigneeId ||
+    f.assigneeIds.length === 0 ||
     !f.startDate ||
     !f.endDate ||
     f.endDate < f.startDate ||
