@@ -34,6 +34,7 @@ from app.models.project import (
     Project,
     SubProject,
     SubTask,
+    project_participants,
 )
 from app.models.progress_log import ProgressLog
 from app.models.user import User
@@ -123,15 +124,23 @@ def _get_visible_project_ids_for_user(db: Session, current_user: User) -> set[in
             db.scalars(select(Project.id)).all()
         )
 
-    return set(
+    # Use whole-project membership as the primary visibility rule. Keep assigned
+    # subprojects as a fallback for older data that may not have participants.
+    participant_project_ids = set(
         db.scalars(
-            select(SubProject.project_id)
-            .where(
-                SubProject.assignee_id == current_user.id,
-                SubProject.status != STATUS_COMPLETED,
+            select(project_participants.c.project_id).where(
+                project_participants.c.user_id == current_user.id
             )
         ).all()
     )
+    assigned_project_ids = set(
+        db.scalars(
+            select(SubProject.project_id)
+            .where(SubProject.assignee_id == current_user.id)
+            .distinct()
+        ).all()
+    )
+    return participant_project_ids | assigned_project_ids
 
 
 def _ensure_subproject_access(sp: SubProject, current_user: User) -> None:
