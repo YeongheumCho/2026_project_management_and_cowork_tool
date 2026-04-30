@@ -16,6 +16,18 @@ class UserCreate(BaseModel):
     phone: str | None = Field(default=None, max_length=20)
 
 
+class UserSignupCreate(BaseModel):
+    idnum: str = Field(max_length=9)
+    name: str = Field(min_length=2, max_length=50)
+    password: str = Field(min_length=8, max_length=128)
+    role: str = Field(default="member", pattern="^(admin|member)$")
+    center: str | None = Field(default=None, max_length=100)
+    office: str | None = Field(default=None, max_length=100)
+    team: str | None = Field(default=None, max_length=100)
+    position: str | None = Field(default=None, max_length=50)
+    email: str | None = Field(default=None, max_length=120)
+
+
 class UserResponse(BaseModel):
     id: int
     idnum: str

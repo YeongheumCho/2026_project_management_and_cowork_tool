@@ -22,29 +22,25 @@ export default function SignupPage() {
   const router = useRouter();
   const [idnum, setIdnum] = useState('');
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<'admin' | 'member'>('member');
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [authRequested, setAuthRequested] = useState(false);
-  const [authCode, setAuthCode] = useState('');
-  const [authVerified, setAuthVerified] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
   const validationError = useMemo(() => {
-    if (!/^\d{4,9}$/.test(idnum)) return '사번은 4~9자리 숫자로 입력해주세요.';
-    if (name.trim().length < 2) return '이름은 2자 이상 입력해주세요.';
-    if (!/^01\d\d{3,4}\d{4}$/.test(phone)) {
-      return '휴대폰 번호는 01000000000 형식으로 입력해주세요.';
+    if (!/^\d{4,9}$/.test(idnum)) {
+      return '사번은 4~9자리 숫자로 입력해주세요.';
     }
+    if (name.trim().length < 2) return '이름은 2자 이상 입력해주세요.';
     if (password.length < 8) return '비밀번호는 8자 이상이어야 합니다.';
-    if (password !== confirmPassword) return '비밀번호 확인이 일치하지 않습니다.';
-    if (!authVerified) return '휴대폰 본인인증을 완료해주세요.';
+    if (password !== confirmPassword) {
+      return '비밀번호 확인이 일치하지 않습니다.';
+    }
     if (!termsAccepted) return '약관 동의가 필요합니다.';
     return '';
-  }, [authVerified, confirmPassword, idnum, name, password, phone, termsAccepted]);
+  }, [confirmPassword, idnum, name, password, termsAccepted]);
 
   async function handleSignup(event: FormEvent) {
     event.preventDefault();
@@ -77,26 +73,6 @@ export default function SignupPage() {
     }
   }
 
-  function requestPhoneVerification() {
-    if (!/^01\d\d{3,4}\d{4}$/.test(phone)) {
-      setMessage('휴대폰 번호 형식을 먼저 맞춰주세요.');
-      return;
-    }
-    setAuthRequested(true);
-    setAuthVerified(false);
-    setMessage('인증번호가 발송되었습니다. 데모 코드는 123456입니다.');
-  }
-
-  function verifyAuthCode() {
-    if (authCode === '123456') {
-      setAuthVerified(true);
-      setMessage('휴대폰 인증이 완료되었습니다.');
-      return;
-    }
-    setAuthVerified(false);
-    setMessage('인증번호가 올바르지 않습니다.');
-  }
-
   return (
     <main className="min-h-screen bg-[#F8F8F5] px-6 py-12 text-[#1A1A1A]">
       <div className="mx-auto max-w-lg rounded-[28px] border border-[#EAEAE4] bg-white p-8 shadow-sm">
@@ -105,7 +81,6 @@ export default function SignupPage() {
             WorkFlow AI
           </p>
           <h1 className="mt-2 text-3xl font-bold">회원가입</h1>
-
         </div>
 
         <form onSubmit={handleSignup} className="space-y-5">
@@ -127,47 +102,6 @@ export default function SignupPage() {
               />
             </Field>
           </div>
-
-          <Field label="휴대폰 번호">
-            <div className="flex gap-2">
-              <input
-                value={phone}
-                onChange={(event) => setPhone(event.target.value.replace(/-/g, ''))}
-                className="input"
-                placeholder="01000000000"
-              />
-              <button
-                type="button"
-                onClick={requestPhoneVerification}
-                className="rounded-lg border border-[#AFA9EC] bg-[#EEEDFE] px-4 text-xs font-bold text-[#534AB7]"
-              >
-                인증요청
-              </button>
-            </div>
-          </Field>
-
-          {authRequested && (
-            <div className="rounded-xl border border-[#EAEAE4] bg-[#FAFAFA] p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
-                본인인증
-              </p>
-              <div className="mt-3 flex gap-2">
-                <input
-                  value={authCode}
-                  onChange={(event) => setAuthCode(event.target.value)}
-                  className="input"
-                  placeholder="인증번호 6자리"
-                />
-                <button
-                  type="button"
-                  onClick={verifyAuthCode}
-                  className="rounded-lg bg-[#534AB7] px-4 text-xs font-bold text-white"
-                >
-                  확인
-                </button>
-              </div>
-            </div>
-          )}
 
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="비밀번호">
@@ -220,7 +154,7 @@ export default function SignupPage() {
           {message && (
             <p
               className={`rounded-xl px-4 py-3 text-sm ${
-                authVerified || message.includes('완료') || message.includes('발송')
+                message.includes('완료')
                   ? 'bg-[#EEEDFE] text-[#534AB7]'
                   : 'bg-[#FCEBEB] text-[#A32D2D]'
               }`}

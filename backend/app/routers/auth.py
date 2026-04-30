@@ -7,14 +7,20 @@ from app.core.security import create_access_token, hash_password, verify_passwor
 from app.dependencies import get_current_user, get_db, require_admin
 from app.models.user import User
 from app.schemas.auth import TokenResponse
-from app.schemas.user import UserCreate, UserPasswordReset, UserResponse, UserRoleUpdate
+from app.schemas.user import (
+    UserCreate,
+    UserPasswordReset,
+    UserResponse,
+    UserRoleUpdate,
+    UserSignupCreate,
+)
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def signup(payload: UserCreate, db: Session = Depends(get_db)):
+def signup(payload: UserSignupCreate, db: Session = Depends(get_db)):
     existing_user = db.scalar(select(User).where(User.idnum == payload.idnum))
     if existing_user:
         raise HTTPException(
@@ -32,7 +38,6 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
         team=payload.team,
         position=payload.position,
         email=payload.email,
-        phone=payload.phone,
     )
     db.add(user)
     db.commit()
