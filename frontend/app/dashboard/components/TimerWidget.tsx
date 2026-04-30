@@ -5,38 +5,31 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from '../../components/Modal';
 import {
   apiFetch,
+  type Project,
   type SubProject,
   type WorkLog,
 } from '../../lib/api';
 
 type Props = {
   candidates: SubProject[];
-  projectName?: string;
-  helperText?: string;
+  projects?: Project[];
 };
 
 type PendingStart = {
-  subprojectId: number | null;
-  taskName: string;
+  candidate: SubProject;
 };
 
-export default function TimerWidget({
-  candidates,
-  projectName,
-  helperText,
-}: Props) {
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [manualTaskName, setManualTaskName] = useState('');
+export default function TimerWidget({ candidates, projects }: Props) {
   const [logs, setLogs] = useState<WorkLog[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [tick, setTick] = useState(Date.now());
   const [pendingStart, setPendingStart] = useState<PendingStart | null>(null);
 
-  const selected = useMemo(
-    () => candidates.find((candidate) => candidate.id === selectedId) ?? null,
-    [candidates, selectedId],
-  );
+  const projectNameById = useMemo(() => {
+    if (!projects) return new Map<number, string>();
+    return new Map(projects.map((p) => [p.id, p.name]));
+  }, [projects]);
 
   const runningLogs = useMemo(
     () => logs.filter((log) => log.status === 'running'),
@@ -50,16 +43,17 @@ export default function TimerWidget({
     () => logs.filter((log) => log.status === 'completed').slice(0, 5),
     [logs],
   );
-  const primaryRunningLog = runningLogs[0] ?? null;
 
-  useEffect(() => {
-    setSelectedId((current) => {
-      if (current && candidates.some((candidate) => candidate.id === current)) {
-        return current;
+  // Map active (non-completed) work logs by subproject_id for quick card lookup
+  const activeLogBySub = useMemo(() => {
+    const map = new Map<number, WorkLog>();
+    for (const log of logs) {
+      if (log.status !== 'completed' && log.subproject_id !== null) {
+        map.set(log.subproject_id, log);
       }
-      return candidates[0]?.id ?? null;
-    });
-  }, [candidates]);
+    }
+    return map;
+  }, [logs]);
 
   useEffect(() => {
     void loadLogs();
@@ -67,54 +61,46 @@ export default function TimerWidget({
 
   useEffect(() => {
     if (runningLogs.length === 0) return undefined;
-    const intervalId = window.setInterval(() => setTick(Date.now()), 1000);
-    return () => window.clearInterval(intervalId);
+    const id = window.setInterval(() => setTick(Date.now()), 1000);
+    return () => window.clearInterval(id);
   }, [runningLogs.length]);
 
   async function loadLogs() {
     try {
-      const nextLogs = await apiFetch<WorkLog[]>('/work-logs');
-      setLogs(nextLogs);
+      const next = await apiFetch<WorkLog[]>('/work-logs');
+      setLogs(next);
       setError('');
-    } catch (nextError) {
-      setError((nextError as Error).message);
+    } catch (err) {
+      setError((err as Error).message);
     }
   }
 
-  async function startTask(taskName: string, continueWithIds: number[] = []) {
+  async function startTask(candidate: SubProject, continueWithIds: number[] = []) {
     setBusy(true);
     try {
       await apiFetch<WorkLog>('/work-logs/start', {
         method: 'POST',
         body: JSON.stringify({
-          subproject_id: selected?.id ?? null,
-          task_name: taskName,
+          subproject_id: candidate.id,
+          task_name: candidate.name,
           continue_with_ids: continueWithIds,
         }),
       });
-      setManualTaskName('');
       setPendingStart(null);
       await loadLogs();
-    } catch (nextError) {
-      setError((nextError as Error).message);
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setBusy(false);
     }
   }
 
-  async function handleStart() {
-    const taskName = selected?.name ?? manualTaskName.trim();
-    if (!taskName) return;
-
+  function handleStart(candidate: SubProject) {
     if (runningLogs.length > 0) {
-      setPendingStart({
-        subprojectId: selected?.id ?? null,
-        taskName,
-      });
+      setPendingStart({ candidate });
       return;
     }
-
-    await startTask(taskName);
+    void startTask(candidate);
   }
 
   async function mutateLog(
@@ -136,150 +122,186 @@ export default function TimerWidget({
         });
       }
       await loadLogs();
-    } catch (nextError) {
-      setError((nextError as Error).message);
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setBusy(false);
     }
   }
 
-  const bigTimerSeconds = primaryRunningLog
-    ? getElapsedSeconds(primaryRunningLog, tick)
-    : 0;
-
   return (
     <>
       <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-slate-900">
+            스톱워치 — 오늘 담당 업무
+          </h2>
+          {runningLogs.length > 0 && (
+            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+              {runningLogs.length}개 진행 중
+            </span>
+          )}
+        </div>
+
         {error && (
           <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
             {error}
           </p>
         )}
 
-        <div className="flex flex-wrap items-start gap-6">
-          <div>
-            <p className="font-mono text-4xl font-bold tabular-nums tracking-tight text-slate-900">
-              {formatHMS(bigTimerSeconds)}
-            </p>
-            <p className="mt-2 text-xs text-slate-500">
-              {primaryRunningLog
-                ? `${primaryRunningLog.task_name} 진행 중`
-                : '진행 중인 작업이 없습니다.'}
-            </p>
+        {candidates.length === 0 ? (
+          <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+            오늘 날짜 범위에 해당하는 담당 하위 프로젝트가 없습니다.
+          </p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {candidates.map((candidate) => {
+              const activeLog = activeLogBySub.get(candidate.id);
+              const elapsed = activeLog
+                ? getElapsedSeconds(activeLog, tick)
+                : 0;
+              const projName = projectNameById.get(candidate.project_id);
+              const isRunning = activeLog?.status === 'running';
+              const isPaused = activeLog?.status === 'paused';
+
+              return (
+                <article
+                  key={candidate.id}
+                  className={`rounded-xl border p-4 transition ${
+                    isRunning
+                      ? 'border-emerald-200 bg-emerald-50'
+                      : isPaused
+                        ? 'border-amber-200 bg-amber-50'
+                        : 'border-slate-200 bg-white'
+                  }`}
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-900">
+                        {candidate.name}
+                      </p>
+                      {projName && (
+                        <p className="truncate text-xs text-slate-400">
+                          {projName}
+                        </p>
+                      )}
+                    </div>
+                    {activeLog && (
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[activeLog.status]}`}
+                      >
+                        {STATUS_LABEL[activeLog.status]}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Elapsed timer */}
+                  {activeLog ? (
+                    <p className="mt-2 font-mono text-2xl font-bold tabular-nums tracking-tight text-slate-900">
+                      {formatHMS(elapsed)}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-400">
+                      진척률 {Math.round(candidate.progress)}%
+                    </p>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {!activeLog && (
+                      <MiniButton
+                        label="시작"
+                        onClick={() => handleStart(candidate)}
+                        disabled={busy}
+                        tone="emerald"
+                      />
+                    )}
+                    {isRunning && (
+                      <>
+                        <MiniButton
+                          label="일시정지"
+                          onClick={() => mutateLog(activeLog.id, 'pause')}
+                          disabled={busy}
+                          tone="amber"
+                        />
+                        <MiniButton
+                          label="완료"
+                          onClick={() => mutateLog(activeLog.id, 'complete')}
+                          disabled={busy}
+                          tone="rose"
+                        />
+                      </>
+                    )}
+                    {isPaused && (
+                      <>
+                        <MiniButton
+                          label="재개"
+                          onClick={() => mutateLog(activeLog.id, 'resume')}
+                          disabled={busy}
+                          tone="slate"
+                        />
+                        <MiniButton
+                          label="완료"
+                          onClick={() => mutateLog(activeLog.id, 'complete')}
+                          disabled={busy}
+                          tone="rose"
+                        />
+                      </>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
           </div>
+        )}
 
-          <div className="min-w-[260px] flex-1">
-            <p className="text-lg font-semibold text-slate-900">
-              {projectName ?? '선택된 프로젝트 없음'}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              {helperText ?? '오늘 수행할 업무를 선택한 뒤 타이머를 시작하세요.'}
-            </p>
-
-            <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
-              <select
-                value={selectedId ?? ''}
-                onChange={(event) =>
-                  setSelectedId(
-                    event.target.value ? Number(event.target.value) : null,
-                  )
-                }
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-              >
-                <option value="">오늘 배정된 업무 선택</option>
-                {candidates.map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.name}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                value={manualTaskName}
-                onChange={(event) => setManualTaskName(event.target.value)}
-                placeholder="또는 직접 작업명 입력"
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              />
-            </div>
-
-            {selected && (
-              <p className="mt-2 text-xs text-slate-500">
-                {selected.start_date} ~ {selected.end_date} · 진척률{' '}
-                {Math.round(selected.progress)}%
-              </p>
-            )}
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <ActionButton
-                onClick={handleStart}
-                disabled={busy || (!selected && !manualTaskName.trim())}
-                tone="emerald"
-                label="시작"
-              />
-              {primaryRunningLog && (
-                <ActionButton
-                  onClick={() => mutateLog(primaryRunningLog.id, 'pause')}
-                  disabled={busy}
-                  tone="amber"
-                  label="일시정지"
+        {/* Completed logs */}
+        {completedLogs.length > 0 && (
+          <div className="mt-6">
+            <TimerColumn
+              title="완료 작업"
+              emptyText=""
+              items={completedLogs}
+              renderItem={(log) => (
+                <LogCard
+                  key={log.id}
+                  log={log}
+                  onDelete={() => mutateLog(log.id, 'delete')}
+                  busy={busy}
+                  now={tick}
                 />
               )}
-              {pausedLogs[0] && (
-                <ActionButton
-                  onClick={() => mutateLog(pausedLogs[0].id, 'resume')}
-                  disabled={busy}
-                  tone="slate"
-                  label="재개"
-                />
-              )}
-              {primaryRunningLog && (
-                <ActionButton
-                  onClick={() => mutateLog(primaryRunningLog.id, 'complete')}
-                  disabled={busy}
-                  tone="rose"
-                  label="완료"
-                />
-              )}
-            </div>
+            />
           </div>
-        </div>
+        )}
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          <TimerColumn
-            title="진행 중 / 대기 중"
-            emptyText="오늘 등록된 작업이 없습니다."
-            items={[...runningLogs, ...pausedLogs]}
-            renderItem={(log) => (
-              <LogCard
-                key={log.id}
-                log={log}
-                onPause={() => mutateLog(log.id, 'pause')}
-                onResume={() => mutateLog(log.id, 'resume')}
-                onComplete={() => mutateLog(log.id, 'complete')}
-                onDelete={() => mutateLog(log.id, 'delete')}
-                busy={busy}
-                now={tick}
-              />
-            )}
-          />
-
-          <TimerColumn
-            title="완료 작업"
-            emptyText="아직 완료한 작업이 없습니다."
-            items={completedLogs}
-            renderItem={(log) => (
-              <LogCard
-                key={log.id}
-                log={log}
-                onDelete={() => mutateLog(log.id, 'delete')}
-                busy={busy}
-                now={tick}
-              />
-            )}
-          />
-        </div>
+        {/* Paused logs not linked to any candidate */}
+        {pausedLogs.filter((l) => !candidates.some((c) => c.id === l.subproject_id)).length > 0 && (
+          <div className="mt-4">
+            <TimerColumn
+              title="일시정지 (기타)"
+              emptyText=""
+              items={pausedLogs.filter(
+                (l) => !candidates.some((c) => c.id === l.subproject_id),
+              )}
+              renderItem={(log) => (
+                <LogCard
+                  key={log.id}
+                  log={log}
+                  onResume={() => mutateLog(log.id, 'resume')}
+                  onComplete={() => mutateLog(log.id, 'complete')}
+                  onDelete={() => mutateLog(log.id, 'delete')}
+                  busy={busy}
+                  now={tick}
+                />
+              )}
+            />
+          </div>
+        )}
       </section>
 
+      {/* Pending start modal */}
       <Modal
         open={pendingStart !== null}
         onClose={() => setPendingStart(null)}
@@ -317,7 +339,7 @@ export default function TimerWidget({
               type="button"
               disabled={!pendingStart || busy}
               onClick={() =>
-                pendingStart && startTask(pendingStart.taskName, [])
+                pendingStart && void startTask(pendingStart.candidate, [])
               }
               className="rounded-xl border border-amber-200 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50"
             >
@@ -328,8 +350,8 @@ export default function TimerWidget({
               disabled={!pendingStart || busy}
               onClick={() =>
                 pendingStart &&
-                startTask(
-                  pendingStart.taskName,
+                void startTask(
+                  pendingStart.candidate,
                   runningLogs.map((log) => log.id),
                 )
               }
@@ -363,9 +385,11 @@ function TimerColumn<T>({
       </div>
       <div className="space-y-3">
         {items.length === 0 ? (
-          <p className="rounded-xl bg-white px-4 py-5 text-center text-sm text-slate-400">
-            {emptyText}
-          </p>
+          emptyText ? (
+            <p className="rounded-xl bg-white px-4 py-5 text-center text-sm text-slate-400">
+              {emptyText}
+            </p>
+          ) : null
         ) : (
           items.map(renderItem)
         )}
@@ -411,60 +435,17 @@ function LogCard({
 
       <div className="mt-3 flex flex-wrap gap-2">
         {log.status === 'running' && onPause && (
-          <MiniButton
-            label="일시정지"
-            onClick={onPause}
-            disabled={busy}
-            tone="amber"
-          />
+          <MiniButton label="일시정지" onClick={onPause} disabled={busy} tone="amber" />
         )}
         {log.status === 'paused' && onResume && (
-          <MiniButton
-            label="재개"
-            onClick={onResume}
-            disabled={busy}
-            tone="slate"
-          />
+          <MiniButton label="재개" onClick={onResume} disabled={busy} tone="slate" />
         )}
         {log.status !== 'completed' && onComplete && (
-          <MiniButton
-            label="완료"
-            onClick={onComplete}
-            disabled={busy}
-            tone="emerald"
-          />
+          <MiniButton label="완료" onClick={onComplete} disabled={busy} tone="emerald" />
         )}
-        <MiniButton
-          label="삭제"
-          onClick={onDelete}
-          disabled={busy}
-          tone="rose"
-        />
+        <MiniButton label="삭제" onClick={onDelete} disabled={busy} tone="rose" />
       </div>
     </article>
-  );
-}
-
-function ActionButton({
-  label,
-  onClick,
-  disabled,
-  tone,
-}: {
-  label: string;
-  onClick: () => void;
-  disabled: boolean;
-  tone: 'emerald' | 'amber' | 'rose' | 'slate';
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`rounded-xl px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${BUTTON_TONE[tone]}`}
-    >
-      {label}
-    </button>
   );
 }
 
@@ -514,15 +495,13 @@ function getElapsedSeconds(log: WorkLog, now: number) {
   if (log.status !== 'running' || !log.current_started_at) {
     return log.duration_sec;
   }
-  const currentStartedAt = new Date(log.current_started_at).getTime();
-  return log.duration_sec + Math.max(0, Math.floor((now - currentStartedAt) / 1000));
+  const started = new Date(log.current_started_at).getTime();
+  return log.duration_sec + Math.max(0, Math.floor((now - started) / 1000));
 }
 
 function formatHMS(totalSeconds: number) {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return [hours, minutes, seconds]
-    .map((value) => String(value).padStart(2, '0'))
-    .join(':');
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return [h, m, s].map((v) => String(v).padStart(2, '0')).join(':');
 }

@@ -72,35 +72,17 @@ export default function DashboardPage() {
     }
   }, [selectedProjectId, setSelectedProjectId, visibleProjects]);
 
-  const selectedProject = useMemo(
-    () =>
-      visibleProjects.find((project) => project.id === selectedProjectId) ?? null,
-    [selectedProjectId, visibleProjects],
-  );
-
+  // 스톱워치: 프로젝트 선택과 무관하게 본인 담당 하위 프로젝트 전체 표시
   const timerCandidates = useMemo(() => {
-    if (!selectedProject) return [];
-    return filteredSubprojects.filter(
+    if (!me) return [];
+    return subprojects.filter(
       (subproject) =>
-        subproject.project_id === selectedProject.id &&
+        subproject.assignee_ids.includes(me.id) &&
         subproject.start_date <= todayIso &&
         subproject.end_date >= todayIso &&
         subproject.status !== 'completed',
     );
-  }, [filteredSubprojects, selectedProject, todayIso]);
-
-  const timerHelperText = useMemo(() => {
-    if (!selectedProject && selectedMemberId) {
-      return '선택한 담당자에게 해당되는 프로젝트가 없습니다.';
-    }
-    if (!selectedProject) {
-      return '왼쪽에서 프로젝트를 선택해 주세요.';
-    }
-    if (selectedMemberId) {
-      return '선택한 담당자 기준으로 현재 진행 중인 업무만 보여드립니다.';
-    }
-    return '프로젝트를 선택하고 작업을 시작해 보세요.';
-  }, [selectedMemberId, selectedProject]);
+  }, [subprojects, me, todayIso]);
 
   const handleProjectSelect = (projectId: number) => {
     const hasVisibleTask = filteredSubprojects.some(
@@ -168,8 +150,7 @@ export default function DashboardPage() {
 
       <TimerWidget
         candidates={timerCandidates}
-        projectName={selectedProject?.name}
-        helperText={timerHelperText}
+        projects={projects}
       />
 
       <ProjectList

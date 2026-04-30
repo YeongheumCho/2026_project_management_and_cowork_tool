@@ -142,11 +142,16 @@ export default function TeamModal({
     if (mode === 'edit' && initial) {
       setF(fromSubProject(initial));
     } else {
+      const initProjectId = lockedProjectId ?? projects[0]?.id ?? '';
+      const initProject =
+        typeof initProjectId === 'number'
+          ? projects.find((p) => p.id === initProjectId)
+          : undefined;
       setF({
         ...EMPTY_FORM,
-        projectId: lockedProjectId ?? projects[0]?.id ?? '',
-        startDate: defaultDate ?? '',
-        endDate: defaultDate ?? '',
+        projectId: initProjectId,
+        startDate: defaultDate ?? initProject?.start_date ?? '',
+        endDate: defaultDate ?? initProject?.end_date ?? '',
       });
     }
     setError('');

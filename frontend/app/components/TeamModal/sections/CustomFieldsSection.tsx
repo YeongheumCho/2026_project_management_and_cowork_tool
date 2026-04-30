@@ -58,12 +58,12 @@ function FieldInput({
   onChange,
   disabled,
 }: FieldInputProps) {
-  const label = field.label + (field.required ? ' *' : '');
+  const { label } = field;
 
   switch (field.field_type) {
     case 'select':
       return (
-        <Field label={label}>
+        <Field label={label} required={field.required}>
           <select
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -82,7 +82,7 @@ function FieldInput({
 
     case 'number':
       return (
-        <Field label={label}>
+        <Field label={label} required={field.required}>
           <input
             type="number"
             value={value}
@@ -95,7 +95,7 @@ function FieldInput({
 
     case 'date':
       return (
-        <Field label={label}>
+        <Field label={label} required={field.required}>
           <input
             type="date"
             value={value}
@@ -108,7 +108,7 @@ function FieldInput({
 
     case 'checkbox':
       return (
-        <Field label={label}>
+        <Field label={label} required={field.required}>
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -124,7 +124,7 @@ function FieldInput({
 
     case 'textarea':
       return (
-        <Field label={label} full>
+        <Field label={label} full required={field.required}>
           <textarea
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -136,7 +136,7 @@ function FieldInput({
 
     default:
       return (
-        <Field label={label}>
+        <Field label={label} required={field.required}>
           <input
             type="text"
             value={value}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   PROJECT_TYPE_LABEL,
   type Project,
@@ -48,11 +48,20 @@ export default function BasicSection({
     return selectedProject.participants;
   }, [selectedProject, users]);
 
+  // When the selected project changes, sync dates with the new parent project
+  const { projectId } = f;
+  useEffect(() => {
+    if (!selectedProject) return;
+    set('startDate', selectedProject.start_date ?? '');
+    set('endDate', selectedProject.end_date ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
   return (
     <section className="rounded-xl border border-slate-200 p-4">
       <h4 className="mb-3 text-sm font-semibold text-slate-700">기본 정보</h4>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="프로젝트">
+        <Field label="프로젝트" required>
           <select
             value={f.projectId}
             onChange={(e) => set('projectId', Number(e.target.value))}
@@ -70,7 +79,7 @@ export default function BasicSection({
           </select>
         </Field>
 
-        <Field label={isEtc ? '업무 제목' : '하위 프로젝트 / 기능명'}>
+        <Field label={isEtc ? '업무 제목' : '하위 프로젝트 / 기능명'} required>
           <input
             value={f.name}
             onChange={(e) => set('name', e.target.value)}
@@ -83,6 +92,7 @@ export default function BasicSection({
         <Field
           label="담당자"
           span={2}
+          required
           helper={
             selectedProject?.participants.length
               ? '이 프로젝트에 참여 중인 인원만 선택할 수 있습니다.'
