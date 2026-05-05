@@ -81,13 +81,10 @@ export function useDashboardData(enabled: boolean): UseDashboardDataResult {
 
   const summary = useMemo<Summary>(() => {
     // 진행 중 프로젝트: 소프로젝트 중 completed 가 아닌 게 하나라도 있는 프로젝트
-    const activeProjectIds = new Set(
-      subprojects
-        .filter((sp) => sp.status !== 'completed')
-        .map((sp) => sp.project_id),
-    );
-    const inProgressProjects = projects.filter((p) =>
-      activeProjectIds.has(p.id),
+    const inProgressProjects = projects.filter(
+      (p) =>
+        p.subproject_count === 0 ||
+        p.completed_subproject_count < p.subproject_count,
     ).length;
 
     const completedSubs = subprojects.filter(
