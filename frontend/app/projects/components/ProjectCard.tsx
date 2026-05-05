@@ -213,6 +213,29 @@ export default function ProjectCard({
               ))}
             </ul>
           )}
+
+          {isAdmin && (
+            <div className="mt-5 rounded-[18px] border border-[#F4C9C9] bg-[#FFF7F7] px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[12px] font-bold text-[#A32D2D]">
+                    프로젝트 삭제
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[#C77070]">
+                    이 프로젝트와 모든 하위 프로젝트·기록이 영구 삭제됩니다. 이
+                    작업은 되돌릴 수 없습니다.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onDeleteProject(project)}
+                  className="shrink-0 rounded-[12px] border border-[#F4C9C9] bg-white px-4 py-2 text-[11px] font-bold text-[#A32D2D] transition hover:bg-[#FFF0F0]"
+                >
+                  이 프로젝트 삭제
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

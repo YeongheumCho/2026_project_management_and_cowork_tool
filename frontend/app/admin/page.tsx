@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import AppShell from '../components/AppShell';
 import { useMe } from '../lib/useMe';
 import ProjectDeletionManager from './components/ProjectDeletionManager';
@@ -7,9 +8,19 @@ import TemplateManager from './components/TemplateManager';
 import UserTable from './components/UserTable';
 import { useAdminUsers } from './hooks/useAdminUsers';
 
+type AdminTab = 'users' | 'projects' | 'templates';
+
+const TABS: { id: AdminTab; label: string }[] = [
+  { id: 'users', label: '사용자 권한 관리' },
+  { id: 'projects', label: '프로젝트 삭제 관리' },
+  { id: 'templates', label: '템플릿 필드 구성 관리' },
+];
+
 export default function AdminPage() {
   const { me, loading: meLoading } = useMe();
   const isAdmin = me?.role === 'admin';
+  const [activeTab, setActiveTab] = useState<AdminTab>('users');
+
   const {
     users,
     loading,
@@ -52,7 +63,24 @@ export default function AdminPage() {
         </p>
       </div>
 
-      <div className="grid gap-6">
+      <div className="mb-6 flex gap-1 rounded-2xl border border-[#EAEAE4] bg-[#FAFAFA] p-1">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 rounded-xl px-4 py-2.5 text-[13px] font-semibold transition ${
+              activeTab === tab.id
+                ? 'bg-white text-[#534AB7] shadow-sm'
+                : 'text-[#888780] hover:text-[#1A1A1A]'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'users' && (
         <UserTable
           users={users}
           canEdit
@@ -65,11 +93,15 @@ export default function AdminPage() {
           onUserDelete={(member) => void handleUserDelete(member)}
           onPasswordReset={(member, pw) => handlePasswordReset(member, pw)}
         />
+      )}
 
+      {activeTab === 'projects' && (
         <ProjectDeletionManager enabled={isAdmin} />
+      )}
 
+      {activeTab === 'templates' && (
         <TemplateManager />
-      </div>
+      )}
     </AppShell>
   );
 }

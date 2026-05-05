@@ -127,7 +127,14 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
       setUsers((prev) =>
         prev.map((current) => (current.idnum === updated.idnum ? updated : current)),
       );
-      if (user?.idnum === updated.idnum) setUser(updated);
+      if (user?.idnum === updated.idnum) {
+        setUser(updated);
+        // 현재 사용자가 자신의 권한을 admin -> member 로 내린 경우 즉시 대시보드로 이동
+        if (updated.role !== 'admin') {
+          router.replace('/dashboard');
+          return;
+        }
+      }
       setMessage(`${updated.name}의 권한을 ${updated.role}(으)로 변경했습니다.`);
     } catch {
       setMessage('권한 변경 중 오류가 발생했습니다.');
