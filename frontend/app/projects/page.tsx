@@ -14,6 +14,7 @@ import { useMe } from '../lib/useMe';
 import CreateProjectForm from './components/CreateProjectForm';
 import ProjectCard from './components/ProjectCard';
 import ProjectManageModal from './components/ProjectManageModal';
+import CsvImportModal from './components/CsvImportModal';
 import { useProjects } from './hooks/useProjects';
 
 export default function ProjectsPage() {
@@ -44,6 +45,9 @@ export default function ProjectsPage() {
       return next;
     });
 
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
+  const [csvProjectId, setCsvProjectId] = useState<number | undefined>();
+
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [modalProjectId, setModalProjectId] = useState<number | undefined>();
@@ -55,6 +59,12 @@ export default function ProjectsPage() {
     setModalProjectId(projectId);
     setModalInitial(null);
     setModalOpen(true);
+  };
+
+  const openCsvImport = (projectId: number) => {
+    if (!isAdmin) return;
+    setCsvProjectId(projectId);
+    setCsvModalOpen(true);
   };
 
   const openEditSub = (sp: SubProject) => {
@@ -142,6 +152,7 @@ export default function ProjectsPage() {
             isOpen={expanded.has(project.id)}
             onToggle={toggleExpand}
             onAddSub={openCreateSub}
+          onCsvImport={openCsvImport}
             onEditSub={openEditSub}
             onEditProject={openEditProject}
             onDeleteProject={handleDeleteProject}
@@ -159,6 +170,14 @@ export default function ProjectsPage() {
         }}
         onSaved={reload}
         onError={setError}
+      />
+
+      <CsvImportModal
+        open={csvModalOpen}
+        projectId={csvProjectId ?? 0}
+        users={users}
+        onClose={() => setCsvModalOpen(false)}
+        onImported={reload}
       />
 
       <TeamModal

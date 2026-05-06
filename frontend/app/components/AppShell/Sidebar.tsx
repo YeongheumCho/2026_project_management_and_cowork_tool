@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import type { Project, UserBrief } from '../../lib/api';
-import { colorForId } from './colors';
+import { colorForId, colorForPosition } from './colors';
 import {
   expandedKeysForMember,
   groupUsersByTeam,
@@ -326,7 +326,7 @@ function MemberList({
               onClick={() => onMemberSelect(user.id)}
               className={itemClass(selectedMemberId === user.id)}
             >
-              <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(user.id)}`} />
+              <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForPosition(user.position)}`} />
               <span className="truncate">{user.name}</span>
               {user.position && (
                 <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">
@@ -336,7 +336,7 @@ function MemberList({
             </button>
           ) : (
             <div className={itemClass(false)}>
-              <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(user.id)}`} />
+              <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForPosition(user.position)}`} />
               <span className="truncate">{user.name}</span>
               {user.position && (
                 <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">

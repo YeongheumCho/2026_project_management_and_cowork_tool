@@ -19,6 +19,7 @@ type Props = {
   isOpen: boolean;
   onToggle: (projectId: number) => void;
   onAddSub: (projectId: number) => void;
+  onCsvImport: (projectId: number) => void;
   onEditSub: (sp: SubProject) => void;
   onEditProject: (project: Project) => void;
   onDeleteProject: (project: Project) => void;
@@ -33,6 +34,7 @@ export default function ProjectCard({
   isOpen,
   onToggle,
   onAddSub,
+  onCsvImport,
   onEditSub,
   onEditProject,
   onDeleteProject,
@@ -189,6 +191,13 @@ export default function ProjectCard({
               </button>
               <button
                 type="button"
+                onClick={() => onCsvImport(project.id)}
+                className="rounded-[14px] border border-[#D8D3FF] bg-white px-4 py-2 text-[11px] font-bold text-[#534AB7] transition hover:bg-[#F5F3FF]"
+              >
+                CSV 일괄 등록
+              </button>
+              <button
+                type="button"
                 onClick={() => onAddSub(project.id)}
                 className="rounded-[14px] bg-[#534AB7] px-4 py-2 text-[11px] font-bold text-white shadow-[0_8px_20px_rgba(83,74,183,0.24)] transition hover:bg-[#473EA7]"
               >
@@ -214,28 +223,7 @@ export default function ProjectCard({
             </ul>
           )}
 
-          {isAdmin && (
-            <div className="mt-5 rounded-[18px] border border-[#F4C9C9] bg-[#FFF7F7] px-5 py-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-[12px] font-bold text-[#A32D2D]">
-                    프로젝트 삭제
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-[#C77070]">
-                    이 프로젝트와 모든 하위 프로젝트·기록이 영구 삭제됩니다. 이
-                    작업은 되돌릴 수 없습니다.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onDeleteProject(project)}
-                  className="shrink-0 rounded-[12px] border border-[#F4C9C9] bg-white px-4 py-2 text-[11px] font-bold text-[#A32D2D] transition hover:bg-[#FFF0F0]"
-                >
-                  이 프로젝트 삭제
-                </button>
-              </div>
-            </div>
-          )}
+
         </div>
       )}
     </section>
