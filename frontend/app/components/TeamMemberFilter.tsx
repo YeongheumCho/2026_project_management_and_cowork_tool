@@ -11,9 +11,9 @@ import {
   type TeamGroup,
 } from './AppShell/groupUsersByTeam';
 import {
-  colorForId,
-  softColorForId,
-  textColorForId,
+  colorForPosition,
+  softColorForPosition,
+  textColorForPosition,
 } from './AppShell/colors';
 
 type Props = {
@@ -316,11 +316,11 @@ function MemberChips({
             onClick={() => onSelect(user.id)}
             className={`inline-flex items-center gap-1 rounded-full border px-[9px] py-1 text-[11px] ${
               active
-                ? `${softColorForId(user.id)} ${textColorForId(user.id)} border-transparent`
+                ? `${softColorForPosition(user.position)} ${textColorForPosition(user.position)} border-transparent`
                 : 'border-[#EAEAE4] text-[#888780] hover:bg-[#FAFAFA]'
             }`}
           >
-            <span className={`h-[6px] w-[6px] rounded-full ${colorForId(user.id)}`} />
+            <span className={`h-[6px] w-[6px] rounded-full ${colorForPosition(user.position)}`} />
             {user.name}
           </button>
         );
