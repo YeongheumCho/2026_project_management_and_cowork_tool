@@ -8,6 +8,7 @@ import {
   type SubProject,
 } from '../../lib/api';
 import ProgressBar from '../../components/ProgressBar';
+import { colorForId } from '../../components/AppShell/colors';
 import SubProjectListItem from './SubProjectListItem';
 
 type Props = {
@@ -51,6 +52,10 @@ export default function ProjectCard({
   const typeLabel = PROJECT_TYPE_LABEL[project.project_type] ?? project.project_type;
   const topMembers = timeSummary.members.slice(0, 5);
   const topHistoryMembers = historySummary.members.slice(0, 5);
+  const periodLabel =
+    project.start_date && project.end_date
+      ? `${project.start_date} ~ ${project.end_date}`
+      : '기간 미지정';
 
   return (
     <section className="overflow-hidden rounded-[24px] border border-[#E7E5DD] bg-white shadow-[0_14px_40px_rgba(28,25,23,0.06)]">
@@ -67,7 +72,7 @@ export default function ProjectCard({
 
           <div className="min-w-[220px] flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#6D61FF]" />
+              <span className={`h-2.5 w-2.5 rounded-full ${colorForId(project.id)}`} />
               <h3 className="text-[17px] font-semibold tracking-[-0.02em] text-[#1D1D1B]">
                 {project.name}
               </h3>
@@ -91,6 +96,7 @@ export default function ProjectCard({
               <span>완료 {done}건</span>
               <span>진행 중 {inProgress}건</span>
               <span>참여 인원 {project.participants.length}명</span>
+              <span>{periodLabel}</span>
             </div>
           </div>
 

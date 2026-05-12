@@ -10,6 +10,7 @@ import {
   type ProjectType,
   type UserBrief,
 } from '../../lib/api';
+import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 
 type Props = {
   open: boolean;
@@ -38,6 +39,8 @@ export default function ProjectManageModal({
 }: Props) {
   const [name, setName] = useState('');
   const [type, setType] = useState<ProjectType>('official_inspection');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [participantIds, setParticipantIds] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -45,12 +48,19 @@ export default function ProjectManageModal({
     if (!open || !project) return;
     setName(project.name);
     setType(project.project_type as ProjectType);
+    setStartDate(project.start_date ?? '');
+    setEndDate(project.end_date ?? '');
     setParticipantIds(project.participants.map((user) => user.id));
   }, [open, project]);
 
   const disabled = useMemo(
-    () => !project || !name.trim() || participantIds.length === 0 || busy,
-    [project, name, participantIds, busy],
+    () =>
+      !project ||
+      !name.trim() ||
+      participantIds.length === 0 ||
+      (startDate !== '' && endDate !== '' && endDate < startDate) ||
+      busy,
+    [project, name, participantIds, startDate, endDate, busy],
   );
 
   async function submit(event: FormEvent) {
@@ -64,6 +74,8 @@ export default function ProjectManageModal({
         body: JSON.stringify({
           name: name.trim(),
           project_type: type,
+          start_date: startDate || null,
+          end_date: endDate || null,
           participant_ids: participantIds,
         }),
       });
@@ -123,6 +135,47 @@ export default function ProjectManageModal({
           </select>
         </div>
 
+        <div className="grid flex-shrink-0 gap-4 md:grid-cols-2">
+          <div>
+            <label
+              htmlFor="project-edit-start-date"
+              className="block text-sm font-medium text-slate-700"
+            >
+              시작일
+            </label>
+            <input
+              id="project-edit-start-date"
+              type="date"
+              value={startDate}
+              max={MAX_DATE_VALUE}
+              onInput={(event) => {
+                event.currentTarget.value = clampDateYear(event.currentTarget.value);
+              }}
+              onChange={(event) => setStartDate(clampDateYear(event.target.value))}
+              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="project-edit-end-date"
+              className="block text-sm font-medium text-slate-700"
+            >
+              종료일
+            </label>
+            <input
+              id="project-edit-end-date"
+              type="date"
+              value={endDate}
+              max={MAX_DATE_VALUE}
+              onInput={(event) => {
+                event.currentTarget.value = clampDateYear(event.currentTarget.value);
+              }}
+              onChange={(event) => setEndDate(clampDateYear(event.target.value))}
+              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+          </div>
+        </div>
+
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex flex-shrink-0 items-center justify-between">
             <label className="block text-sm font-medium text-slate-700">
@@ -133,7 +186,7 @@ export default function ProjectManageModal({
           <p className="mt-1 flex-shrink-0 text-xs text-slate-500">
             이미 배정된 하위 프로젝트 담당자는 참여 인원에서 제외할 수 없습니다.
           </p>
-          <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <div className="mt-3 max-h-[320px] min-h-0 flex-1 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
             <OrganizationMemberPicker
               users={users}
               selectedIds={participantIds}
