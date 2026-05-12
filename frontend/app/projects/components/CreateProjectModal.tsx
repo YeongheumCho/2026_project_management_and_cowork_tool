@@ -10,6 +10,7 @@ import {
   type ProjectType,
   type UserBrief,
 } from '../../lib/api';
+import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 
 type Props = {
   open: boolean;
@@ -158,7 +159,11 @@ export default function CreateProjectModal({
               id="project-start-date"
               type="date"
               value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
+              max={MAX_DATE_VALUE}
+              onInput={(event) => {
+                event.currentTarget.value = clampDateYear(event.currentTarget.value);
+              }}
+              onChange={(event) => setStartDate(clampDateYear(event.target.value))}
               className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             />
           </div>
@@ -173,7 +178,11 @@ export default function CreateProjectModal({
               id="project-end-date"
               type="date"
               value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
+              max={MAX_DATE_VALUE}
+              onInput={(event) => {
+                event.currentTarget.value = clampDateYear(event.currentTarget.value);
+              }}
+              onChange={(event) => setEndDate(clampDateYear(event.target.value))}
               className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             />
           </div>

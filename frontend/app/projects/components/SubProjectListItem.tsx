@@ -5,6 +5,7 @@ import {
   VERIFY_STATE_LABEL,
   type SubProject,
 } from '../../lib/api';
+import { colorForId } from '../../components/AppShell/colors';
 import ProgressBar from '../../components/ProgressBar';
 import {
   SUBPROJECT_STATUS_BADGE,
@@ -48,7 +49,7 @@ export default function SubProjectListItem({ sp, onClick }: Props) {
         className="block w-full rounded-[20px] border border-[#ECE9DF] bg-white px-4 py-4 text-left shadow-[0_8px_24px_rgba(28,25,23,0.04)] transition hover:border-[#D9D3FF] hover:bg-[#FEFEFF]"
       >
         <div className="flex flex-wrap items-start gap-3">
-          <div className="mt-1 h-2.5 w-2.5 rounded-full bg-[#6D61FF]" />
+          <div className={`mt-1 h-2.5 w-2.5 rounded-full ${colorForId(sp.project_id)}`} />
 
           <div className="min-w-[220px] flex-1">
             <div className="flex flex-wrap items-center gap-2">

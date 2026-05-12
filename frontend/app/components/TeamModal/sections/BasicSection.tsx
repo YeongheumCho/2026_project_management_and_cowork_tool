@@ -7,6 +7,7 @@ import {
   type Template,
   type UserBrief,
 } from '../../../lib/api';
+import { clampDateYear, MAX_DATE_VALUE } from '../../../lib/dateInput';
 import OrganizationMemberPicker from '../../OrganizationMemberPicker';
 import Field from '../../form/Field';
 import type { FormSetter, FormState } from '../types';
@@ -117,14 +118,22 @@ export default function BasicSection({
             <input
               type="date"
               value={f.startDate}
-              onChange={(e) => set('startDate', e.target.value)}
+              max={MAX_DATE_VALUE}
+              onInput={(e) => {
+                e.currentTarget.value = clampDateYear(e.currentTarget.value);
+              }}
+              onChange={(e) => set('startDate', clampDateYear(e.target.value))}
               disabled={!isAdmin}
               className="input"
             />
             <input
               type="date"
               value={f.endDate}
-              onChange={(e) => set('endDate', e.target.value)}
+              max={MAX_DATE_VALUE}
+              onInput={(e) => {
+                e.currentTarget.value = clampDateYear(e.currentTarget.value);
+              }}
+              onChange={(e) => set('endDate', clampDateYear(e.target.value))}
               disabled={!isAdmin}
               className="input"
             />

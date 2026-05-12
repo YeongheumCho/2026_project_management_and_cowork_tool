@@ -15,6 +15,7 @@ import {
   softColorForPosition,
   textColorForPosition,
 } from './AppShell/colors';
+import { compactPosition } from '../lib/display';
 
 type Props = {
   users: UserBrief[];
@@ -314,14 +315,17 @@ function MemberChips({
             key={user.id}
             type="button"
             onClick={() => onSelect(user.id)}
-            className={`inline-flex items-center gap-1 rounded-full border px-[9px] py-1 text-[11px] ${
+            className={`inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full border px-[9px] py-1 text-[11px] ${
               active
                 ? `${softColorForPosition(user.position)} ${textColorForPosition(user.position)} border-transparent`
                 : 'border-[#EAEAE4] text-[#888780] hover:bg-[#FAFAFA]'
             }`}
           >
             <span className={`h-[6px] w-[6px] rounded-full ${colorForPosition(user.position)}`} />
-            {user.name}
+            <span className="truncate">{user.name}</span>
+            {compactPosition(user.position) && (
+              <span className="shrink-0 opacity-80">· {compactPosition(user.position)}</span>
+            )}
           </button>
         );
       })}

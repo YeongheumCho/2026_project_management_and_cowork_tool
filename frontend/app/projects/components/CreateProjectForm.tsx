@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, type ReactNode, useMemo, useState } from 'react';
 import OrganizationMemberPicker from '../../components/OrganizationMemberPicker';
 import {
   apiFetch,
@@ -9,6 +9,7 @@ import {
   type ProjectType,
   type UserBrief,
 } from '../../lib/api';
+import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 
 type Props = {
   users: UserBrief[];
@@ -23,6 +24,9 @@ const PROJECT_TYPE_OPTIONS: ProjectType[] = [
   'etc_task',
   'general',
 ];
+
+const controlClass =
+  'mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm';
 
 export default function CreateProjectForm({ users, onCreated, onError }: Props) {
   const [name, setName] = useState('');
@@ -74,26 +78,22 @@ export default function CreateProjectForm({ users, onCreated, onError }: Props) 
       onSubmit={submit}
       className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
     >
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-slate-600">
-              프로젝트 이름
-            </label>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+        <div className="grid content-center gap-3 sm:grid-cols-2 lg:h-[292px]">
+          <Field label="프로젝트 이름" span>
             <input
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(event) => setName(event.target.value)}
               placeholder="예: 2026 Q2 정기 점검"
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className={controlClass}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-600">유형</label>
+          <Field label="유형" span>
             <select
               value={type}
-              onChange={(e) => setType(e.target.value as ProjectType)}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              onChange={(event) => setType(event.target.value as ProjectType)}
+              className={controlClass}
             >
               {PROJECT_TYPE_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -101,52 +101,84 @@ export default function CreateProjectForm({ users, onCreated, onError }: Props) 
                 </option>
               ))}
             </select>
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-600">시작일</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-          </div>
+          <Field label="시작일">
+            <DateInput value={startDate} onChange={setStartDate} />
+          </Field>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-600">종료일</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-          </div>
+          <Field label="종료일">
+            <DateInput value={endDate} onChange={setEndDate} />
+          </Field>
 
-          <div className="flex items-end justify-end">
+          <div className="flex items-end justify-end sm:col-span-2">
             <button
               type="submit"
               disabled={disabled}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? '생성 중...' : '+ 프로젝트 생성'}
             </button>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        <div className="flex min-h-[292px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 lg:h-[292px]">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-medium text-slate-700">프로젝트 참여 인원</p>
-            <span className="text-xs text-slate-500">{participantIds.length}명 선택됨</span>
+            <span className="text-xs text-slate-500">
+              {participantIds.length}/{users.length}명
+            </span>
           </div>
-          <OrganizationMemberPicker
-            users={users}
-            selectedIds={participantIds}
-            onChange={setParticipantIds}
-            disabled={busy}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <OrganizationMemberPicker
+              users={users}
+              selectedIds={participantIds}
+              onChange={setParticipantIds}
+              disabled={busy}
+            />
+          </div>
         </div>
       </div>
     </form>
+  );
+}
+
+function Field({
+  label,
+  children,
+  span = false,
+}: {
+  label: string;
+  children: ReactNode;
+  span?: boolean;
+}) {
+  return (
+    <label className={span ? 'block sm:col-span-2' : 'block'}>
+      <span className="mb-1 block text-xs font-medium text-slate-600">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function DateInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <input
+      type="date"
+      value={value}
+      max={MAX_DATE_VALUE}
+      onInput={(event) => {
+        event.currentTarget.value = clampDateYear(event.currentTarget.value);
+      }}
+      onChange={(event) => onChange(clampDateYear(event.target.value))}
+      className={controlClass}
+    />
   );
 }

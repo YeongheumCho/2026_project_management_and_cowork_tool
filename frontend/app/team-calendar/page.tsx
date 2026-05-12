@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AppShell from '../components/AppShell';
@@ -10,9 +10,12 @@ import CreateProjectModal from '../projects/components/CreateProjectModal';
 import {
   colorForId,
   softColorForId,
+  softColorForPosition,
   textColorForId,
+  textColorForPosition,
 } from '../components/AppShell/colors';
 import { apiFetch, type Project, type SubProject, type UserBrief } from '../lib/api';
+import { compactPosition } from '../lib/display';
 import { useMe } from '../lib/useMe';
 import { useWorkflowSelection } from '../lib/workflow-selection';
 
@@ -29,7 +32,6 @@ type MemberProjectGroup = {
 
 type MemberViewStyle = {
   label: string;
-  summary: string;
 };
 
 export default function TeamCalendarPage() {
@@ -40,7 +42,6 @@ export default function TeamCalendarPage() {
   const [subprojects, setSubProjects] = useState<SubProject[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<UserBrief[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -50,7 +51,6 @@ export default function TeamCalendarPage() {
 
   const load = useCallback(async () => {
     if (!me) return;
-    setLoading(true);
     try {
       const [sps, ps, us] = await Promise.all([
         apiFetch<SubProject[]>('/subprojects'),
@@ -63,8 +63,6 @@ export default function TeamCalendarPage() {
       setError('');
     } catch (nextError) {
       setError((nextError as Error).message);
-    } finally {
-      setLoading(false);
     }
   }, [me]);
 
@@ -171,11 +169,6 @@ export default function TeamCalendarPage() {
       });
   }, [projects, selectedMemberTasks]);
 
-  const activeProjects = useMemo(
-    () => projects.filter((project) => orderedList.some((subproject) => subproject.project_id === project.id)),
-    [orderedList, projects],
-  );
-
   const memberViewStyle = useMemo(() => {
     return deriveMemberViewStyle(selectedMemberGroups);
   }, [selectedMemberGroups]);
@@ -238,9 +231,9 @@ export default function TeamCalendarPage() {
         </p>
       </div>
 
-      {/* 이슈5: 전체 캘린더를 상단 전체폭, 하단 2열 구성으로 변경 → 빈 여백 해소 */}
+      {/* ?댁뒋5: ?꾩껜 罹섎┛?붾? ?곷떒 ?꾩껜?? ?섎떒 2??援ъ꽦?쇰줈 蹂寃???鍮??щ갚 ?댁냼 */}
       <div className="space-y-4">
-        {/* 캘린더 A — 전체 프로젝트 (연속 바, 이슈7) */}
+        {/* 罹섎┛??A ???꾩껜 ?꾨줈?앺듃 (?곗냽 諛? ?댁뒋7) */}
         <MonthCalendar
           year={cursor.getFullYear()}
           month={cursor.getMonth()}
@@ -265,10 +258,10 @@ export default function TeamCalendarPage() {
           }
         />
 
-        {/* 하단 2열: 캘린더 B + 담당자 보드 */}
+        {/* ?섎떒 2?? 罹섎┛??B + ?대떦??蹂대뱶 */}
         <div className="grid gap-4 xl:grid-cols-2">
           <div className="space-y-4">
-            {/* 캘린더 B — 담당자별 */}
+            {/* 罹섎┛??B ???대떦?먮퀎 */}
             <MonthCalendar
               year={cursor.getFullYear()}
               month={cursor.getMonth()}
@@ -279,9 +272,10 @@ export default function TeamCalendarPage() {
               title="담당자별 캘린더"
               tag="캘린더 B"
               tagColor="#0F6E56"
+              continuousBars
               filterSlot={
                 <div className="flex flex-col items-start gap-1.5">
-                  {/* 이슈6: 담당자 레이블 볼드 */}
+                  {/* ?댁뒋6: ?대떦???덉씠釉?蹂쇰뱶 */}
                   <span className="text-[10px] font-bold text-[#1A1A1A]">담당자</span>
                   <TeamMemberFilter
                     users={users}
@@ -294,7 +288,7 @@ export default function TeamCalendarPage() {
               }
             />
 
-            {/* 이슈6-1·6-2: 차월 캘린더 + 진행 중 프로젝트를 금월 아래 배치 */}
+            {/* ?댁뒋6-1: 李⑥썡 罹섎┛??*/}
             <MonthCalendar
               year={shiftMonth(cursor, 1).getFullYear()}
               month={shiftMonth(cursor, 1).getMonth()}
@@ -305,52 +299,9 @@ export default function TeamCalendarPage() {
               title="담당자별 캘린더 (차월)"
               tag="캘린더 B+1"
               tagColor="#0F6E56"
+              continuousBars
             />
 
-            {/* 이슈6-2: 진행 중 프로젝트 블록을 캘린더 밑에 배치 */}
-            <section className="rounded-2xl border border-[#EAEAE4] bg-white p-5 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <h2 className="text-[15px] font-bold text-[#1A1A1A]">진행 중 프로젝트</h2>
-                  <p className="mt-0.5 text-[11px] text-[#888780]">클릭하면 상세 모달로 이동합니다.</p>
-                </div>
-                <span className="text-[11px] text-[#888780]">{activeProjects.length}</span>
-              </div>
-              <div className="space-y-2">
-                {loading && (
-                  <p className="rounded-xl bg-[#FAFAFA] px-4 py-6 text-center text-sm text-[#888780]">불러오는 중...</p>
-                )}
-                {!loading && activeProjects.map((project) => {
-                  const related = orderedList.filter((sp) => sp.project_id === project.id);
-                  const doneCount = related.filter((sp) => sp.status === 'completed').length;
-                  const progress = related.length === 0 ? 0 : (doneCount / related.length) * 100;
-                  return (
-                    <button
-                      key={project.id}
-                      type="button"
-                      onClick={() => related[0] && openEdit(related[0])}
-                      className="flex w-full items-center gap-3 rounded-xl border border-[#EAEAE4] bg-white px-4 py-3 text-left transition hover:border-[#D3D1C7] hover:bg-[#FAFAFA]"
-                    >
-                      <span className={`h-[9px] w-[9px] shrink-0 rounded-full ${colorForId(project.id)}`} />
-                      {/* 이슈2: 프로젝트명이 길어도 진행률이 항상 표시되도록 min-w-0 + shrink 제어 */}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-semibold text-[#1A1A1A]">{project.name}</p>
-                        <p className="mt-0.5 truncate text-[11px] text-[#888780]">
-                          {related[0]?.name ?? '소프로젝트 준비 중'}
-                        </p>
-                      </div>
-                      <div className="w-[80px] shrink-0">
-                        <ProgressBar value={progress} className="h-1" />
-                        <div className="mt-[3px] text-right text-[10px] text-[#888780]">{Math.round(progress)}%</div>
-                      </div>
-                      <span className="shrink-0 rounded-full bg-[#E6F1FB] px-2 py-1 text-[10px] font-bold text-[#185FA5]">
-                        진행 중
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
           </div>
 
           <SelectedMemberProjectBoard
@@ -407,7 +358,7 @@ function SelectedMemberProjectBoard({
     averageProgress: number;
     nearestDeadline: string | null;
   };
-  viewStyle: { label: string; summary: string };
+  viewStyle: { label: string };
   onOpenSubproject: (subproject: SubProject) => void;
 }) {
   if (!member) {
@@ -427,13 +378,13 @@ function SelectedMemberProjectBoard({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold ${softColorForId(member.id)} ${textColorForId(member.id)}`}
+              className={`inline-flex max-w-full items-center truncate whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold ${softColorForPosition(member.position)} ${textColorForPosition(member.position)}`}
             >
               {member.name}
             </span>
             {member.position && (
-              <span className="rounded-full border border-[#EAEAE4] px-2.5 py-1 text-[10px] font-semibold text-[#66645C]">
-                {member.position}
+              <span className="whitespace-nowrap rounded-full border border-[#EAEAE4] px-2.5 py-1 text-[10px] font-semibold text-[#66645C]">
+                {compactPosition(member.position)}
               </span>
             )}
             <span className="rounded-full border border-[#EAEAE4] px-2.5 py-1 text-[10px] font-semibold text-[#66645C]">
@@ -443,11 +394,10 @@ function SelectedMemberProjectBoard({
           <h2 className="mt-3 text-[15px] font-bold text-[#1A1A1A]">
             {member.name} 담당 프로젝트 보기
           </h2>
-          <p className="mt-1 text-[11px] leading-5 text-[#888780]">{viewStyle.summary}</p>
         </div>
 
-        {/* 이슈1: 카드 높이 통일 — items-stretch로 줄 맞춤 */}
-        <div className="grid grid-cols-2 items-stretch gap-2 sm:grid-cols-4">
+        {/* ?댁뒋1: 移대뱶 ?믪씠 ?듭씪 ??items-stretch濡?以?留욎땄 */}
+        <div className="grid grid-cols-2 items-stretch gap-2 sm:grid-cols-4 lg:min-w-[430px]">
           <MetricCard label="프로젝트" value={String(summary.projectCount)} />
           <MetricCard label="일정 수" value={String(summary.subprojectCount)} />
           <MetricCard label="평균 진행률" value={`${Math.round(summary.averageProgress)}%`} />
@@ -476,7 +426,7 @@ function SelectedMemberProjectBoard({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`h-2.5 w-2.5 rounded-full ${colorForId(group.project.id)}`} />
-                  <h3 className="truncate text-[14px] font-bold text-[#1A1A1A]">
+                  <h3 className="min-w-0 truncate text-[14px] font-bold text-[#1A1A1A]">
                     {group.project.name}
                   </h3>
                   <StatusChip
@@ -485,8 +435,8 @@ function SelectedMemberProjectBoard({
                     plannedCount={group.plannedCount}
                   />
                 </div>
-                <p className="mt-1 text-[11px] text-[#888780]">
-                  {group.startDate} ~ {group.endDate} | 추적 중인 일정 {group.subprojects.length}건
+                <p className="mt-1 truncate text-[11px] text-[#888780]">
+                  {group.startDate} ~ {group.endDate} | 진행 중인 일정 {group.subprojects.length}건
                 </p>
               </div>
 
@@ -505,12 +455,12 @@ function SelectedMemberProjectBoard({
                   key={subproject.id}
                   type="button"
                   onClick={() => onOpenSubproject(subproject)}
-                  className="flex w-full items-start justify-between gap-3 rounded-xl border border-[#F1EFE8] bg-white px-3 py-3 text-left transition hover:border-[#D6D2C5] hover:bg-[#FAFAF7]"
+                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-[#F1EFE8] bg-white px-3 py-3 text-left transition hover:border-[#D6D2C5] hover:bg-[#FAFAF7]"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${softColorForId(member.id)} ${textColorForId(member.id)}`}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${softColorForId(group.project.id)} ${textColorForId(group.project.id)}`}
                       >
                         {statusLabel(subproject.status)}
                       </span>
@@ -521,7 +471,7 @@ function SelectedMemberProjectBoard({
                     <p className="mt-1 text-[11px] text-[#888780]">
                       {subproject.start_date} to {subproject.end_date}
                     </p>
-                    <p className="mt-1 text-[11px] leading-5 text-[#66645C]">
+                    <p className="mt-1 truncate text-[11px] text-[#66645C]">
                       {buildSubprojectNarrative(member, subproject)}
                     </p>
                   </div>
@@ -544,12 +494,12 @@ function SelectedMemberProjectBoard({
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    /* 이슈1: flex-col justify-between으로 레이블/값이 항상 같은 위치에 고정 */
-    <div className="flex flex-col justify-between rounded-xl border border-[#EAEAE4] bg-[#FAFAF7] px-3 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.04em] text-[#888780]">
+    /* ?댁뒋1: flex-col justify-between?쇰줈 ?덉씠釉?媛믪씠 ??긽 媛숈? ?꾩튂??怨좎젙 */
+    <div className="flex min-w-0 flex-col justify-between rounded-xl border border-[#EAEAE4] bg-[#FAFAF7] px-3 py-2">
+      <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.04em] text-[#888780]">
         {label}
       </div>
-      <div className="mt-1 text-[13px] font-bold text-[#1A1A1A]">{value}</div>
+      <div className="mt-1 whitespace-nowrap text-[13px] font-bold text-[#1A1A1A]">{value}</div>
     </div>
   );
 }
@@ -602,7 +552,6 @@ function deriveMemberViewStyle(groups: MemberProjectGroup[]): MemberViewStyle {
     if (diffDays <= 7) {
       return {
         label: '마감 우선',
-        summary: '일주일 이내 마감 일정이 있어 가까운 마감 기한이 먼저 보이도록 구성했습니다.',
       };
     }
   }
@@ -610,20 +559,17 @@ function deriveMemberViewStyle(groups: MemberProjectGroup[]): MemberViewStyle {
   if (totalInProgress >= 2) {
     return {
       label: '동시 진행',
-      summary: '현재 동시에 진행 중인 일정이 여러 개라서 병행 작업 흐름이 눈에 띄도록 구성했습니다.',
     };
   }
 
   if (totalPlanned > totalCompleted) {
     return {
       label: '계획 중심',
-      summary: '예정된 일정 비중이 더 높아 향후 시작 일정와 대기 중인 작업이 먼저 보이도록 구성했습니다.',
     };
   }
 
   return {
     label: '완료 추적',
-    summary: '완료되었거나 마무리 단계인 일정이 많아 현재 낙품 진행 상태를 중심으로 보여줍니다.',
   };
 }
 

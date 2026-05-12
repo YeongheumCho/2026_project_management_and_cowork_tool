@@ -10,7 +10,12 @@ import {
   type OfficeGroup,
   type TeamGroup,
 } from './AppShell/groupUsersByTeam';
-import { colorForId, softColorForId, textColorForId } from './AppShell/colors';
+import {
+  colorForPosition,
+  softColorForPosition,
+  textColorForPosition,
+} from './AppShell/colors';
+import { compactPosition } from '../lib/display';
 
 type Props = {
   users: UserBrief[];
@@ -422,15 +427,15 @@ function MemberChips({
             type="button"
             onClick={() => onToggleMember(user.id)}
             disabled={disabled}
-            className={`inline-flex items-center gap-1 rounded-full border px-[9px] py-1 text-[11px] ${
+            className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-[9px] py-1 text-[11px] ${
               active
-                ? `${softColorForId(user.id)} ${textColorForId(user.id)} border-transparent`
+                ? `${softColorForPosition(user.position)} ${textColorForPosition(user.position)} border-transparent`
                 : 'border-[#EAEAE4] text-[#888780] hover:bg-[#FAFAFA]'
             } disabled:cursor-not-allowed disabled:opacity-60`}
           >
-            <span className={`h-[6px] w-[6px] rounded-full ${colorForId(user.id)}`} />
+            <span className={`h-[6px] w-[6px] rounded-full ${colorForPosition(user.position)}`} />
             {user.name}
-            {user.position ? ` · ${user.position}` : ''}
+            {compactPosition(user.position) ? ` · ${compactPosition(user.position)}` : ''}
           </button>
         );
       })}

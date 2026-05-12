@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import type { Project, UserBrief } from '../../lib/api';
 import { colorForId, colorForPosition } from './colors';
+import { compactPosition } from '../../lib/display';
 import {
   expandedKeysForMember,
   groupUsersByTeam,
@@ -330,7 +331,7 @@ function MemberList({
               <span className="truncate">{user.name}</span>
               {user.position && (
                 <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">
-                  {user.position}
+                  {compactPosition(user.position)}
                 </span>
               )}
             </button>
@@ -340,7 +341,7 @@ function MemberList({
               <span className="truncate">{user.name}</span>
               {user.position && (
                 <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">
-                  {user.position}
+                  {compactPosition(user.position)}
                 </span>
               )}
             </div>
