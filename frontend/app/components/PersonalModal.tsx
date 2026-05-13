@@ -93,13 +93,13 @@ export default function PersonalModal({
     <Modal open={open} onClose={onClose} size="lg" ariaLabel={subproject.name}>
       <div className="space-y-5">
         <div>
-          <p className="text-[9px] font-bold uppercase tracking-[1px] text-[#888780]">
+          <p className="text-nano font-bold uppercase tracking-[1px] text-[#888780]">
             {TEXT.title}
           </p>
           <h3 className="mt-2 text-[19px] font-bold text-[#1A1A1A]">
             {subproject.name}
           </h3>
-          <p className="mt-2 text-[11px] text-[#888780]">
+          <p className="mt-2 text-micro text-[#888780]">
             {subproject.start_date} - {subproject.end_date}
           </p>
         </div>
@@ -107,15 +107,15 @@ export default function PersonalModal({
         <div
           className={`rounded-[20px] border px-3 py-2 ${accentSurface} ${accentText}`}
         >
-          <p className="text-[11px] font-semibold">
+          <p className="text-micro font-semibold">
             {TEXT.assignee} {assigneeLabel}
           </p>
         </div>
 
         <div className={`rounded-[10px] border p-4 ${accentSurface}`}>
           <div className="flex items-center justify-between">
-            <p className={`text-[11px] font-bold ${accentText}`}>{TEXT.progress}</p>
-            <span className={`text-[13px] font-bold ${accentText}`}>
+            <p className={`text-micro font-bold ${accentText}`}>{TEXT.progress}</p>
+            <span className={`text-body font-bold ${accentText}`}>
               {Math.round(subproject.progress)}%
             </span>
           </div>
@@ -141,10 +141,10 @@ export default function PersonalModal({
           ) : (
             <div className="rounded-xl border border-[#EAEAE4] bg-white p-4">
               <div className="mb-3 flex items-center justify-between border-b border-[#EAEAE4] pb-2 pl-6">
-                <span className="text-[9px] font-bold uppercase tracking-[0.8px] text-[#888780]">
+                <span className="text-nano font-bold uppercase tracking-[0.8px] text-[#888780]">
                   {TEXT.detailTasks}
                 </span>
-                <span className="text-[9px] font-bold uppercase tracking-[0.8px] text-[#888780]">
+                <span className="text-nano font-bold uppercase tracking-[0.8px] text-[#888780]">
                   {TEXT.weight}
                 </span>
               </div>
@@ -161,7 +161,7 @@ export default function PersonalModal({
                         type="button"
                         disabled={!canEdit || busy !== null}
                         onClick={() => void toggle(task)}
-                        className={`flex h-[15px] w-[15px] items-center justify-center rounded-[4px] border text-[9px] ${
+                        className={`flex h-[15px] w-[15px] items-center justify-center rounded-[4px] border text-nano ${
                           task.is_done
                             ? 'border-[#22C55E] bg-[#22C55E] text-white'
                             : isCurrent
@@ -173,7 +173,7 @@ export default function PersonalModal({
                       </button>
 
                       <span
-                        className={`flex-1 text-[12px] ${
+                        className={`flex-1 text-small ${
                           task.is_done
                             ? 'text-[#B4B2A9] line-through'
                             : isCurrent
@@ -186,7 +186,7 @@ export default function PersonalModal({
                       </span>
 
                       <span
-                        className={`min-w-[32px] text-right text-[11px] font-semibold ${
+                        className={`min-w-[32px] text-right text-micro font-semibold ${
                           task.is_done
                             ? 'text-[#22C55E]'
                             : isCurrent
@@ -220,7 +220,7 @@ export default function PersonalModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-[#D3D1C7] px-4 py-2 text-[11px] font-bold text-[#5F5E5A] hover:bg-[#F8F8F5]"
+            className="rounded-lg border border-[#D3D1C7] px-4 py-2 text-micro font-bold text-[#5F5E5A] hover:bg-[#F8F8F5]"
           >
             {TEXT.close}
           </button>

@@ -26,7 +26,7 @@ const PROJECT_TYPE_OPTIONS: ProjectType[] = [
 ];
 
 const controlClass =
-  'mt-1 h-10 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm';
+  'mt-1 h-10 w-full rounded-lg border border-border px-3 py-2 text-sm';
 
 export default function CreateProjectForm({ users, onCreated, onError }: Props) {
   const [name, setName] = useState('');
@@ -76,7 +76,7 @@ export default function CreateProjectForm({ users, onCreated, onError }: Props) 
   return (
     <form
       onSubmit={submit}
-      className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+      className="mb-6 rounded-2xl border border-border bg-white p-4 shadow-sm"
     >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
         <div className="grid content-center gap-3 sm:grid-cols-2 lg:h-[292px]">
@@ -122,10 +122,10 @@ export default function CreateProjectForm({ users, onCreated, onError }: Props) 
           </div>
         </div>
 
-        <div className="flex min-h-[292px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 lg:h-[292px]">
+        <div className="flex min-h-[292px] flex-col overflow-hidden rounded-2xl border border-border bg-surface-muted p-3 lg:h-[292px]">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-medium text-slate-700">프로젝트 참여 인원</p>
-            <span className="text-xs text-slate-500">
+            <p className="text-xs font-medium text-text">프로젝트 참여 인원</p>
+            <span className="text-xs text-text-subtle">
               {participantIds.length}/{users.length}명
             </span>
           </div>
@@ -154,7 +154,7 @@ function Field({
 }) {
   return (
     <label className={span ? 'block sm:col-span-2' : 'block'}>
-      <span className="mb-1 block text-xs font-medium text-slate-600">
+      <span className="mb-1 block text-xs font-medium text-text-muted">
         {label}
       </span>
       {children}

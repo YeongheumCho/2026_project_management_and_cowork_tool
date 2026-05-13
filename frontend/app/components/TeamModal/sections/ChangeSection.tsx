@@ -14,8 +14,8 @@ type Props = {
  */
 export default function ChangeSection({ f, set }: Props) {
   return (
-    <section className="rounded-xl border border-slate-200 p-4">
-      <h4 className="mb-3 text-sm font-semibold text-slate-700">
+    <section className="rounded-xl border border-border p-4">
+      <h4 className="mb-3 text-sm font-semibold text-text">
         변경점 검증 상세
       </h4>
       <div className="grid gap-3 sm:grid-cols-3">

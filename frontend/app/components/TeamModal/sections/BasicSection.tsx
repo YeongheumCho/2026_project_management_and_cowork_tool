@@ -62,8 +62,8 @@ export default function BasicSection({
   }, [mode, projectId]);
 
   return (
-    <section className="rounded-xl border border-slate-200 p-4">
-      <h4 className="mb-3 text-sm font-semibold text-slate-700">기본 정보</h4>
+    <section className="rounded-xl border border-border p-4">
+      <h4 className="mb-3 text-sm font-semibold text-text">기본 정보</h4>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="프로젝트" required>
           <select
@@ -103,7 +103,7 @@ export default function BasicSection({
               : '프로젝트 참여 인원이 아직 없으면 전체 조직에서 선택합니다.'
           }
         >
-          <div className="max-h-[280px] overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 pr-2">
+          <div className="max-h-[280px] overflow-y-auto rounded-xl border border-border bg-surface-muted p-3 pr-2">
             <OrganizationMemberPicker
               users={availableUsers}
               selectedIds={f.assigneeIds}
@@ -173,7 +173,7 @@ export default function BasicSection({
             <button
               type="button"
               disabled
-              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-400"
+              className="rounded-lg border border-border px-3 py-2 text-xs font-bold text-text-faint"
             >
               적용 중
             </button>

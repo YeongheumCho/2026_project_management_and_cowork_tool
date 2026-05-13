@@ -297,7 +297,7 @@ function TeamGroupItem({
         count={team.members.length}
         expanded={expanded}
         onClick={onToggle}
-        className="text-[10px]"
+        className="text-tiny"
       />
       {expanded && (
         <div className="mt-0.5 pl-4">
@@ -334,7 +334,7 @@ function HierarchyButton({
       className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left font-semibold text-[#5F5E5A] transition hover:bg-[#FAFAFA] ${className}`}
     >
       <span
-        className={`inline-block text-[9px] text-[#888780] transition-transform ${
+        className={`inline-block text-nano text-[#888780] transition-transform ${
           expanded ? 'rotate-90' : ''
         }`}
         aria-hidden
@@ -342,7 +342,7 @@ function HierarchyButton({
         ▶
       </span>
       <span className="flex-1 truncate">{label}</span>
-      <span className="shrink-0 text-[10px] font-medium text-[#B4B2A9]">{count}</span>
+      <span className="shrink-0 text-tiny font-medium text-[#B4B2A9]">{count}</span>
     </button>
   );
 }
@@ -371,7 +371,7 @@ function MemberList({
               <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForPosition(user.position)}`} />
               <span className="truncate">{user.name}</span>
               {user.position && (
-                <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">
+                <span className="ml-auto shrink-0 text-tiny text-[#B4B2A9]">
                   {compactPosition(user.position)}
                 </span>
               )}
@@ -381,7 +381,7 @@ function MemberList({
               <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForPosition(user.position)}`} />
               <span className="truncate">{user.name}</span>
               {user.position && (
-                <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">
+                <span className="ml-auto shrink-0 text-tiny text-[#B4B2A9]">
                   {compactPosition(user.position)}
                 </span>
               )}
@@ -416,7 +416,7 @@ function ProjectItem({
     <div>
       <button type="button" onClick={onToggle} className={itemClass(selected || expanded)}>
         <span
-          className={`inline-block text-[9px] text-[#888780] transition-transform ${
+          className={`inline-block text-nano text-[#888780] transition-transform ${
             expanded ? 'rotate-90' : ''
           }`}
           aria-hidden
@@ -425,7 +425,7 @@ function ProjectItem({
         </span>
         <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(project.id)}`} />
         <span className="truncate">{project.name}</span>
-        <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">
+        <span className="ml-auto shrink-0 text-tiny text-[#B4B2A9]">
           {subprojects.length}
         </span>
       </button>
@@ -447,7 +447,7 @@ function SidebarSubprojectList({
   emptyText: string;
 }) {
   if (subprojects.length === 0) {
-    return <p className="ml-7 mt-0.5 text-[10px] text-[#B4B2A9]">{emptyText}</p>;
+    return <p className="ml-7 mt-0.5 text-tiny text-[#B4B2A9]">{emptyText}</p>;
   }
 
   return (
@@ -456,11 +456,11 @@ function SidebarSubprojectList({
         <li key={subproject.id}>
           <Link
             href={`/projects/${subproject.project_id}`}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium text-[#66645C] hover:bg-[#FAFAFA]"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-micro font-medium text-[#66645C] hover:bg-[#FAFAFA]"
           >
             <span className={`h-[6px] w-[6px] shrink-0 rounded-full ${statusDotClass(subproject.status)}`} />
             <span className="truncate">{subproject.name}</span>
-            <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">
+            <span className="ml-auto shrink-0 text-tiny text-[#B4B2A9]">
               {Math.round(subproject.progress)}%
             </span>
           </Link>
@@ -481,7 +481,7 @@ function Section({
 }) {
   return (
     <div className={className}>
-      <p className="mb-1 px-2 text-[9px] font-bold uppercase tracking-[1px] text-[#888780]">
+      <p className="mb-1 px-2 text-nano font-bold uppercase tracking-[1px] text-[#888780]">
         {title}
       </p>
       {children}
@@ -490,11 +490,11 @@ function Section({
 }
 
 function EmptyHint({ text }: { text: string }) {
-  return <p className="px-2 text-[11px] text-[#B4B2A9]">{text}</p>;
+  return <p className="px-2 text-micro text-[#B4B2A9]">{text}</p>;
 }
 
 function itemClass(active: boolean) {
-  return `flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] transition ${
+  return `flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-small transition ${
     active
       ? 'bg-[#F1EFE8] font-semibold text-[#1A1A1A]'
       : 'font-medium text-[#5F5E5A] hover:bg-[#FAFAFA]'

@@ -23,8 +23,8 @@ export default function CustomFieldsSection({
   const sorted = [...schema.fields].sort((a, b) => a.order - b.order);
 
   return (
-    <section className="rounded-xl border border-slate-200 p-4">
-      <h4 className="mb-3 text-sm font-semibold text-slate-700">
+    <section className="rounded-xl border border-border p-4">
+      <h4 className="mb-3 text-sm font-semibold text-text">
         {schema.section_label}
       </h4>
       <div className="grid gap-3 sm:grid-cols-3">
@@ -117,7 +117,7 @@ function FieldInput({
               disabled={disabled}
               className="h-4 w-4 accent-[#534AB7]"
             />
-            <span className="text-sm text-slate-700">{field.label}</span>
+            <span className="text-sm text-text">{field.label}</span>
           </label>
         </Field>
       );

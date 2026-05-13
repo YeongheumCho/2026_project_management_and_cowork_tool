@@ -54,10 +54,10 @@ export default function ProjectListRow({
       />
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-semibold text-[#1A1A1A]">
+        <p className="truncate text-body font-semibold text-[#1A1A1A]">
           {project.name}
         </p>
-        <p className="mt-0.5 truncate text-[11px] text-[#888780]">{summary}</p>
+        <p className="mt-0.5 truncate text-micro text-[#888780]">{summary}</p>
       </div>
 
       <div className="hidden w-[90px] shrink-0 md:block">
@@ -67,7 +67,7 @@ export default function ProjectListRow({
             style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
           />
         </div>
-        <div className="mt-[3px] text-right text-[10px] text-[#888780]">
+        <div className="mt-[3px] text-right text-tiny text-[#888780]">
           {Math.round(progress)}%
         </div>
       </div>
@@ -85,7 +85,7 @@ export default function ProjectListRow({
         ))}
       </div>
 
-      <span className="rounded-[10px] bg-[#E6F1FB] px-[9px] py-[3px] text-[10px] font-bold uppercase tracking-[0.5px] text-[#185FA5]">
+      <span className="rounded-[10px] bg-[#E6F1FB] px-[9px] py-[3px] text-tiny font-bold uppercase tracking-[0.5px] text-[#185FA5]">
         {progress >= 100 ? '완료' : '진행중'}
       </span>
     </>

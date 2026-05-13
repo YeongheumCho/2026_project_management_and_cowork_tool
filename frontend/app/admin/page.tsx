@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AppShell from '../components/AppShell';
 import { useMe } from '../lib/useMe';
 import AdminOrgScopeTree from './components/AdminOrgScopeTree';
@@ -12,6 +12,7 @@ import WorkHistoryManager from './components/WorkHistoryManager';
 import { useAdminUsers } from './hooks/useAdminUsers';
 
 type AdminTab = 'users' | 'projects' | 'templates' | 'work-history';
+type DateRange = { from: string; to: string };
 
 const TABS: { id: AdminTab; label: string }[] = [
   { id: 'users', label: '사용자 권한 관리' },
@@ -25,6 +26,8 @@ export default function AdminPage() {
   const isAdmin = me?.role === 'admin';
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
   const [selectedOrgUserIds, setSelectedOrgUserIds] = useState<Set<number> | null>(null);
+  const [workRange, setWorkRange] = useState<DateRange>({ from: '', to: '' });
+  const [workScopeInitialized, setWorkScopeInitialized] = useState(false);
 
   const {
     users,
@@ -39,8 +42,20 @@ export default function AdminPage() {
     handlePasswordReset,
   } = useAdminUsers(isAdmin);
 
+  useEffect(() => {
+    if (!isAdmin || workScopeInitialized || users.length === 0) return;
+    const adminTeam = me?.team?.trim();
+    if (adminTeam) {
+      const teamIds = users
+        .filter((user) => user.team?.trim() === adminTeam)
+        .map((user) => user.id);
+      setSelectedOrgUserIds(teamIds.length > 0 ? new Set(teamIds) : null);
+    }
+    setWorkScopeInitialized(true);
+  }, [isAdmin, me?.team, users, workScopeInitialized]);
+
   if (meLoading || !me) {
-    return <main className="p-8 text-slate-900">불러오는 중...</main>;
+    return <main className="p-8 text-text">불러오는 중...</main>;
   }
 
   if (!isAdmin) {
@@ -54,16 +69,16 @@ export default function AdminPage() {
   }
 
   if (loading) {
-    return <main className="p-8 text-slate-900">불러오는 중...</main>;
+    return <main className="p-8 text-text">불러오는 중...</main>;
   }
 
   return (
     <AppShell me={me}>
       <div className="mb-6">
-        <h1 className="text-[20px] font-bold tracking-[-0.3px] text-[#1A1A1A]">
+        <h1 className="text-xl font-bold tracking-[-0.3px] text-[#1A1A1A]">
           관리자 설정
         </h1>
-        <p className="mt-1 text-[12px] text-[#888780]">
+        <p className="mt-1 text-small text-[#888780]">
           사용자 권한과 프로젝트 유형별 필드 구성을 관리합니다.
         </p>
       </div>
@@ -74,7 +89,7 @@ export default function AdminPage() {
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 rounded-xl px-4 py-2.5 text-[13px] font-semibold transition ${
+            className={`flex-1 rounded-xl px-4 py-2.5 text-body font-semibold transition ${
               activeTab === tab.id
                 ? 'bg-white text-[#534AB7] shadow-sm'
                 : 'text-[#888780] hover:text-[#1A1A1A]'
@@ -115,14 +130,58 @@ export default function AdminPage() {
             selectedIds={selectedOrgUserIds}
             onSelect={setSelectedOrgUserIds}
           />
+          <section className="rounded-2xl border border-[#EAEAE4] bg-white p-4">
+            <div className="mb-3">
+              <h3 className="text-md font-bold text-[#1A1A1A]">조회 기간</h3>
+              <p className="mt-1 text-small text-[#888780]">
+                선택한 담당자의 스톱워치 시간 현황과 업무 이력 현황에 함께 적용됩니다.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
+              <label className="block text-small font-semibold text-[#888780]">
+                시작일
+                <input
+                  type="date"
+                  className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-body text-[#1A1A1A]"
+                  value={workRange.from}
+                  onChange={(event) =>
+                    setWorkRange((prev) => ({ ...prev, from: event.target.value }))
+                  }
+                />
+              </label>
+              <label className="block text-small font-semibold text-[#888780]">
+                종료일
+                <input
+                  type="date"
+                  className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-body text-[#1A1A1A]"
+                  value={workRange.to}
+                  onChange={(event) =>
+                    setWorkRange((prev) => ({ ...prev, to: event.target.value }))
+                  }
+                />
+              </label>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={() => setWorkRange({ from: '', to: '' })}
+                  className="w-full rounded-lg border border-[#EAEAE4] px-4 py-2 text-body font-semibold text-[#534AB7] transition hover:bg-[#FAFAFA] md:w-auto"
+                >
+                  기간 초기화
+                </button>
+              </div>
+            </div>
+          </section>
           <StopwatchSummaryManager
             enabled={isAdmin}
             selectedUserIds={selectedOrgUserIds}
+            dateRange={workRange}
           />
           <WorkHistoryManager
             enabled={isAdmin}
             users={users}
             selectedUserIds={selectedOrgUserIds}
+            dateRange={workRange}
+            onDateRangeChange={setWorkRange}
           />
         </div>
       )}

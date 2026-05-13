@@ -16,7 +16,7 @@
 """
 import json
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -827,6 +827,8 @@ def update_subtask(
 def list_project_execution_history(
     project_id: Optional[int] = Query(default=None),
     user_id: Optional[int] = Query(default=None),
+    start_date: Optional[date] = Query(default=None),
+    end_date: Optional[date] = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -850,6 +852,10 @@ def list_project_execution_history(
         stmt = stmt.where(ProjectExecutionHistory.project_id == project_id)
     if user_id is not None and current_user.role == "admin":
         stmt = stmt.where(ProjectExecutionHistory.user_id == user_id)
+    if start_date is not None:
+        stmt = stmt.where(ProjectExecutionHistory.ended_on >= start_date)
+    if end_date is not None:
+        stmt = stmt.where(ProjectExecutionHistory.ended_on <= end_date)
 
     rows = db.execute(stmt).all()
     return [_serialize_history_entry(history, user) for history, user in rows]

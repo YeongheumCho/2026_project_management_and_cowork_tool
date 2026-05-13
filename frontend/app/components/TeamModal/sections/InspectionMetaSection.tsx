@@ -26,8 +26,8 @@ export default function InspectionMetaSection({
   isOfficial,
 }: Props) {
   return (
-    <section className="rounded-xl border border-slate-200 p-4">
-      <h4 className="mb-3 text-sm font-semibold text-slate-700">
+    <section className="rounded-xl border border-border p-4">
+      <h4 className="mb-3 text-sm font-semibold text-text">
         검증 메타 (제어기 / LEVEL / 담당)
       </h4>
       <div className="grid gap-3 sm:grid-cols-3">

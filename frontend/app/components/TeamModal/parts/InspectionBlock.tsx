@@ -36,8 +36,8 @@ export default function InspectionBlock({
     (Number(setup) || 0) + (Number(aud) || 0) + (Number(extra) || 0);
 
   return (
-    <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-      <p className="mb-2 text-xs font-semibold text-slate-600">{title}</p>
+    <div className="rounded-lg border border-border-subtle bg-surface-muted p-3">
+      <p className="mb-2 text-xs font-semibold text-text-muted">{title}</p>
       <Field label="ê²ì¦ ìí">
         <select
           value={status}
@@ -83,7 +83,7 @@ export default function InspectionBlock({
           />
         </div>
       </div>
-      <p className="mt-2 text-right text-micro text-slate-500">
+      <p className="mt-2 text-right text-micro text-text-subtle">
         ì´ ìì {total}ë¶
       </p>
     </div>

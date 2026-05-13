@@ -32,17 +32,17 @@ export default function ProjectList({
 
   return (
     <section className="mt-6">
-      <h2 className="mb-3 text-lg font-semibold text-slate-900">프로젝트 목록</h2>
+      <h2 className="mb-3 text-lg font-semibold text-text">프로젝트 목록</h2>
 
       <div className="space-y-2">
         {loading && (
-          <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
+          <p className="rounded-2xl border border-border bg-white p-8 text-center text-sm text-text-faint">
             불러오는 중...
           </p>
         )}
 
         {!loading && projects.length === 0 && (
-          <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
+          <p className="rounded-2xl border border-border bg-white p-8 text-center text-sm text-text-faint">
             아직 프로젝트가 없습니다.
           </p>
         )}

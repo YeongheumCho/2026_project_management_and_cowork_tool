@@ -65,10 +65,10 @@ export default function ProjectDeletionManager({ enabled }: Props) {
     <section className="rounded-2xl border border-[#EAEAE4] bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-[15px] font-bold text-[#1A1A1A]">
+          <h3 className="text-heading font-bold text-[#1A1A1A]">
             프로젝트 삭제 관리
           </h3>
-          <p className="mt-1 text-[12px] text-[#888780]">
+          <p className="mt-1 text-small text-[#888780]">
             개별 프로젝트 삭제를 한곳에서 처리합니다.
           </p>
         </div>
@@ -97,10 +97,10 @@ export default function ProjectDeletionManager({ enabled }: Props) {
                 className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-[13px] font-semibold text-[#1A1A1A]">
+                  <p className="truncate text-body font-semibold text-[#1A1A1A]">
                     {project.name}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-[#888780]">
+                  <p className="mt-0.5 text-micro text-[#888780]">
                     하위 {project.subproject_count}건 · 참여 {project.participants.length}명 · 진행률 {Math.round(project.progress_percent)}%
                   </p>
                 </div>
@@ -108,7 +108,7 @@ export default function ProjectDeletionManager({ enabled }: Props) {
                   type="button"
                   onClick={() => void deleteProject(project)}
                   disabled={deletingId === project.id}
-                  className="rounded-lg border border-[#F4C9C9] px-3 py-1.5 text-[11px] font-bold text-[#A32D2D] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg border border-[#F4C9C9] px-3 py-1.5 text-micro font-bold text-[#A32D2D] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {deletingId === project.id ? '삭제 중...' : '삭제'}
                 </button>

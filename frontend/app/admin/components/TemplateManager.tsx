@@ -309,7 +309,7 @@ export default function TemplateManager() {
             >
               {schema.section_label}
               {schema.fields.length ? (
-                <span className="ml-1.5 rounded-full bg-white/30 px-1.5 py-0.5 text-[10px]">
+                <span className="ml-1.5 rounded-full bg-white/30 px-1.5 py-0.5 text-tiny">
                   {schema.fields.length}
                 </span>
               ) : null}
@@ -573,10 +573,10 @@ function TemplatePreview({
   return (
     <aside className="rounded-2xl border border-[#EAEAE4] bg-[#FCFCFA] p-4 xl:sticky xl:top-4 xl:self-start">
       <div className="mb-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#888780]">
+        <p className="text-micro font-bold uppercase tracking-[0.08em] text-[#888780]">
           미리보기
         </p>
-        <h4 className="mt-1 text-[15px] font-bold text-[#1A1A1A]">
+        <h4 className="mt-1 text-heading font-bold text-[#1A1A1A]">
           {templateName || '템플릿 이름'}
         </h4>
       </div>
@@ -610,9 +610,9 @@ function PreviewField({ field }: { field: FieldDefinition }) {
       ) : field.field_type === 'textarea' ? (
         <textarea className="input min-h-[72px] w-full" disabled />
       ) : field.field_type === 'checkbox' ? (
-        <div className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3">
+        <div className="flex h-10 items-center gap-2 rounded-lg border border-border bg-white px-3">
           <input type="checkbox" disabled className="h-4 w-4" />
-          <span className="text-sm text-slate-500">체크</span>
+          <span className="text-sm text-text-subtle">체크</span>
         </div>
       ) : (
         <input

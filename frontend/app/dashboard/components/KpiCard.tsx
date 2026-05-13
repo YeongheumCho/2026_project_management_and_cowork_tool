@@ -25,13 +25,13 @@ export default function KpiCard({
 }: Props) {
   return (
     <div className="rounded-xl border border-[#EAEAE4] bg-white px-[18px] py-4 shadow-sm">
-      <p className="text-[9px] font-bold uppercase tracking-[0.8px] text-[#888780]">
+      <p className="text-nano font-bold uppercase tracking-[0.8px] text-[#888780]">
         {label}
       </p>
       <p className={`mt-2 text-[26px] font-bold leading-none ${TONE[tone]}`}>
         {loading ? '--' : value}
       </p>
-      {hint && <p className="mt-[5px] text-[10px] text-[#888780]">{hint}</p>}
+      {hint && <p className="mt-[5px] text-tiny text-[#888780]">{hint}</p>}
     </div>
   );
 }

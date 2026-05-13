@@ -99,7 +99,7 @@ export default function DashboardPage() {
   };
 
   if (meLoading || !me) {
-    return <main className="p-8 text-slate-900">불러오는 중...</main>;
+    return <main className="p-8 text-text">불러오는 중...</main>;
   }
 
   return (

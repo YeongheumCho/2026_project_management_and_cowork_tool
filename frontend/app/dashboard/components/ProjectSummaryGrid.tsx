@@ -35,27 +35,27 @@ export default function ProjectSummaryGrid({
     <section className="mt-6">
       <div className="mb-3 flex items-end justify-between">
         <div>
-          <h2 className="text-[15px] font-bold text-[#1A1A1A]">
+          <h2 className="text-heading font-bold text-[#1A1A1A]">
             등록된 프로젝트
           </h2>
-          <p className="mt-0.5 text-[11px] text-[#888780]">
+          <p className="mt-0.5 text-micro text-[#888780]">
             카드를 클릭하면 프로젝트별 상세로 이동합니다.
           </p>
         </div>
         <Link
           href="/projects"
-          className="text-[11px] font-semibold text-[#534AB7] hover:underline"
+          className="text-micro font-semibold text-[#534AB7] hover:underline"
         >
           전체 보기 →
         </Link>
       </div>
 
       {loading ? (
-        <p className="rounded-2xl border border-[#EAEAE4] bg-white p-8 text-center text-[12px] text-[#888780]">
+        <p className="rounded-2xl border border-[#EAEAE4] bg-white p-8 text-center text-small text-[#888780]">
           불러오는 중...
         </p>
       ) : projects.length === 0 ? (
-        <p className="rounded-2xl border border-[#EAEAE4] bg-white p-8 text-center text-[12px] text-[#888780]">
+        <p className="rounded-2xl border border-[#EAEAE4] bg-white p-8 text-center text-small text-[#888780]">
           등록된 프로젝트가 없습니다.
         </p>
       ) : (
@@ -90,17 +90,17 @@ export default function ProjectSummaryGrid({
                     className={`mt-1 h-[9px] w-[9px] shrink-0 rounded-full ${colorForId(project.id)}`}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold text-[#1A1A1A] group-hover:text-[#534AB7]">
+                    <p className="truncate text-body font-semibold text-[#1A1A1A] group-hover:text-[#534AB7]">
                       {project.name}
                     </p>
-                    <p className="mt-0.5 text-[10px] text-[#888780]">
+                    <p className="mt-0.5 text-tiny text-[#888780]">
                       {typeLabel}
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-1">
-                  <div className="flex items-center justify-between text-[10px] text-[#888780]">
+                  <div className="flex items-center justify-between text-tiny text-[#888780]">
                     <span>진행률</span>
                     <span className="font-semibold text-[#1A1A1A]">
                       {avgProgress}%
@@ -109,7 +109,7 @@ export default function ProjectSummaryGrid({
                   <ProgressBar value={avgProgress} className="mt-1 h-1.5" />
                 </div>
 
-                <div className="mt-auto flex items-center gap-3 pt-2 text-[10px] text-[#888780]">
+                <div className="mt-auto flex items-center gap-3 pt-2 text-tiny text-[#888780]">
                   <span className="inline-flex items-center gap-1">
                     <span className="font-semibold text-[#1A1A1A]">
                       {subprojectCount}
