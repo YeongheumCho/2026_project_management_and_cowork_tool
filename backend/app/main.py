@@ -53,6 +53,13 @@ def _ensure_additive_schema_updates() -> None:
                 "ALTER TABLE project_execution_history "
                 "ADD COLUMN manual_override BOOLEAN NOT NULL DEFAULT FALSE"
             )
+        if engine.dialect.name == "postgresql":
+            statements.extend(
+                [
+                    "ALTER TABLE project_execution_history ALTER COLUMN project_id DROP NOT NULL",
+                    "ALTER TABLE project_execution_history ALTER COLUMN subproject_id DROP NOT NULL",
+                ]
+            )
 
     if not statements:
         statements = []
@@ -109,4 +116,3 @@ app.include_router(workflow_router)
 @app.get("/")
 def root():
     return {"message": "Backend is running"}
-

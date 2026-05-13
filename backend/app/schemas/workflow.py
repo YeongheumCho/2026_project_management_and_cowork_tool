@@ -45,6 +45,22 @@ class WorkLogComplete(BaseModel):
     archived_ids: list[int] = []
 
 
+class WorkLogUserSummary(BaseModel):
+    user_id: int
+    user_name: str
+    center: str | None = None
+    office: str | None = None
+    team: str | None = None
+    total_seconds: int
+    running_seconds: int
+    paused_seconds: int
+    completed_seconds: int
+    log_count: int
+    running_count: int
+    last_task_name: str | None = None
+    last_logged_at: datetime | None = None
+
+
 class RecommendationRequest(BaseModel):
     project_name: str = Field(min_length=1, max_length=200)
     project_type: str = Field(min_length=1, max_length=50)

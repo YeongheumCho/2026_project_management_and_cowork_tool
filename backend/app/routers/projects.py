@@ -42,6 +42,7 @@ from app.models.user import User
 from app.models.workflow import WORKLOG_RUNNING, ProjectExecutionHistory, WorkLog
 from app.schemas.progress_log import ProgressLogCreate, ProgressLogResponse
 from app.schemas.project import (
+    ProjectHistoryCreate,
     ProjectHistoryEntry,
     ProjectHistoryMemberSummary,
     ProjectHistorySummary,
@@ -271,45 +272,65 @@ def _sync_subproject_execution_history(
     # 관리자가 수동 편집한 행은 자동 동기화 대상에서 제외 — 보존만 한다.
     auto_rows = [row for row in existing_rows if not row.manual_override]
 
-    if subproject.status != STATUS_COMPLETED or subproject.assignee_id is None:
+    assignee_ids = sorted(_subproject_assignee_ids(subproject))
+    if subproject.status != STATUS_COMPLETED or not assignee_ids:
         for row in auto_rows:
             db.delete(row)
         return
 
-    worked_minutes = _estimate_worked_minutes(db, subproject.id, subproject.assignee_id)
-    if worked_minutes <= 0:
-        worked_minutes = (
-            subproject.total_minutes
-            or subproject.avg_expected_minutes
-            or max(1, (subproject.end_date - subproject.start_date).days + 1) * 60
-        )
-
-    history = next(
-        (row for row in auto_rows if row.user_id == subproject.assignee_id),
-        None,
+    fallback_minutes = (
+        subproject.total_minutes
+        or subproject.avg_expected_minutes
+        or max(1, (subproject.end_date - subproject.start_date).days + 1) * 60
     )
+    auto_by_user = {row.user_id: row for row in auto_rows}
     for row in auto_rows:
-        if history is not None and row.id == history.id:
-            continue
-        db.delete(row)
+        if row.user_id not in assignee_ids:
+            db.delete(row)
 
-    if history is None:
-        history = ProjectExecutionHistory(
-            user_id=subproject.assignee_id,
-            project_id=project.id,
-            subproject_id=subproject.id,
-        )
-        db.add(history)
+    for assignee_id in assignee_ids:
+        history = auto_by_user.get(assignee_id)
+        if history is None:
+            history = ProjectExecutionHistory(
+                user_id=assignee_id,
+                project_id=project.id,
+                subproject_id=subproject.id,
+            )
+            db.add(history)
 
-    history.project_name = project.name
-    history.subproject_name = subproject.name
-    history.project_type = project.project_type
-    history.role_in_project = "assignee"
-    history.started_on = subproject.start_date
-    history.ended_on = subproject.completed_on or subproject.end_date
-    history.worked_minutes = worked_minutes
-    history.completion_rate = float(subproject.progress)
-    history.keyword_text = _build_history_keywords(project, subproject)
+        worked_minutes = _estimate_worked_minutes(db, subproject.id, assignee_id)
+        if worked_minutes <= 0:
+            worked_minutes = fallback_minutes
+
+        history.project_name = project.name
+        history.subproject_name = subproject.name
+        history.project_type = project.project_type
+        history.role_in_project = "assignee"
+        history.started_on = subproject.start_date
+        history.ended_on = subproject.completed_on or subproject.end_date
+        history.worked_minutes = worked_minutes
+        history.completion_rate = float(subproject.progress)
+        history.keyword_text = _build_history_keywords(project, subproject)
+
+
+def _serialize_history_entry(history: ProjectExecutionHistory, user: User | None) -> ProjectHistoryEntry:
+    return ProjectHistoryEntry(
+        id=history.id,
+        user_id=history.user_id,
+        user_name=user.name if user else "",
+        project_id=history.project_id,
+        project_name=history.project_name,
+        subproject_id=history.subproject_id,
+        subproject_name=history.subproject_name,
+        project_type=history.project_type,
+        role_in_project=history.role_in_project,
+        started_on=history.started_on,
+        ended_on=history.ended_on,
+        worked_minutes=history.worked_minutes,
+        completion_rate=float(history.completion_rate),
+        recorded_at=history.recorded_at,
+        manual_override=bool(history.manual_override),
+    )
 
 
 def _apply_kefico_fields(sp: SubProject, payload) -> None:
@@ -831,26 +852,68 @@ def list_project_execution_history(
         stmt = stmt.where(ProjectExecutionHistory.user_id == user_id)
 
     rows = db.execute(stmt).all()
-    return [
-        ProjectHistoryEntry(
-            id=history.id,
-            user_id=history.user_id,
-            user_name=user.name,
-            project_id=history.project_id,
-            project_name=history.project_name,
-            subproject_id=history.subproject_id,
-            subproject_name=history.subproject_name,
-            project_type=history.project_type,
-            role_in_project=history.role_in_project,
-            started_on=history.started_on,
-            ended_on=history.ended_on,
-            worked_minutes=history.worked_minutes,
-            completion_rate=float(history.completion_rate),
-            recorded_at=history.recorded_at,
-            manual_override=bool(history.manual_override),
+    return [_serialize_history_entry(history, user) for history, user in rows]
+
+
+@router.post(
+    "/projects/history",
+    response_model=ProjectHistoryEntry,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_project_execution_history(
+    payload: ProjectHistoryCreate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    user = db.get(User, payload.user_id)
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다.",
         )
-        for history, user in rows
-    ]
+
+    subproject: SubProject | None = None
+    project: Project | None = None
+    if payload.subproject_id is not None:
+        subproject = _load_subproject(db, payload.subproject_id)
+        project = db.get(Project, subproject.project_id)
+    elif payload.project_id is not None:
+        project = db.get(Project, payload.project_id)
+    if payload.project_id is not None and not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="프로젝트를 찾을 수 없습니다.",
+        )
+
+    project_name = (payload.project_name or (project.name if project else None) or "").strip()
+    if not project_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="프로젝트명을 입력해주세요.",
+        )
+
+    history = ProjectExecutionHistory(
+        user_id=user.id,
+        project_id=project.id if project else None,
+        subproject_id=subproject.id if subproject else None,
+        project_name=project_name,
+        subproject_name=payload.subproject_name.strip(),
+        project_type=project.project_type if project else payload.project_type,
+        role_in_project="assignee",
+        started_on=payload.started_on or (subproject.start_date if subproject else None),
+        ended_on=payload.ended_on
+        or (subproject.completed_on if subproject else None)
+        or (subproject.end_date if subproject else None),
+        worked_minutes=payload.worked_minutes,
+        completion_rate=payload.completion_rate,
+        keyword_text=payload.keyword_text
+        or (_build_history_keywords(project, subproject) if subproject else project_name),
+        manual_override=True,
+    )
+    db.add(history)
+    db.commit()
+    db.refresh(history)
+    return _serialize_history_entry(history, user)
 
 
 @router.patch(
@@ -912,23 +975,7 @@ def update_project_execution_history(
     db.commit()
     db.refresh(history)
     user = db.get(User, history.user_id)
-    return ProjectHistoryEntry(
-        id=history.id,
-        user_id=history.user_id,
-        user_name=user.name if user else "",
-        project_id=history.project_id,
-        project_name=history.project_name,
-        subproject_id=history.subproject_id,
-        subproject_name=history.subproject_name,
-        project_type=history.project_type,
-        role_in_project=history.role_in_project,
-        started_on=history.started_on,
-        ended_on=history.ended_on,
-        worked_minutes=history.worked_minutes,
-        completion_rate=float(history.completion_rate),
-        recorded_at=history.recorded_at,
-        manual_override=bool(history.manual_override),
-    )
+    return _serialize_history_entry(history, user)
 
 
 @router.delete(
@@ -970,6 +1017,8 @@ def list_project_execution_history_summary(
 
     grouped: dict[int, dict[int, dict[str, object]]] = defaultdict(dict)
     for history, user in rows:
+        if history.project_id is None:
+            continue
         if current_user.role != "admin":
             if history.project_id not in visible_project_ids or history.user_id != current_user.id:
                 continue

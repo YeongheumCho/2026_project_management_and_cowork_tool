@@ -36,9 +36,9 @@ export type ProjectHistoryEntry = {
   id: number;
   user_id: number;
   user_name: string;
-  project_id: number;
+  project_id: number | null;
   project_name: string;
-  subproject_id: number;
+  subproject_id: number | null;
   subproject_name: string;
   project_type: string;
   role_in_project: string;

@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { ReactNode } from 'react';
-import type { Me, Project, UserBrief } from '../../lib/api';
+import type { Me, Project, SubProject, UserBrief } from '../../lib/api';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { useSidebarData } from './useSidebarData';
@@ -17,6 +17,7 @@ type Props = {
   onProjectSelect?: (projectId: number) => void;
   onMemberSelect?: (memberId: number) => void;
   sidebarProjects?: Project[];
+  sidebarSubprojects?: SubProject[];
   sidebarUsers?: UserBrief[];
 };
 
@@ -46,10 +47,11 @@ export default function AppShell({
   onProjectSelect,
   onMemberSelect,
   sidebarProjects,
+  sidebarSubprojects,
   sidebarUsers,
 }: Props) {
   const router = useRouter();
-  const { projects, users } = useSidebarData();
+  const { projects, subprojects, users } = useSidebarData();
 
   const handleLogout = () => {
     window.localStorage.removeItem('access_token');
@@ -62,6 +64,7 @@ export default function AppShell({
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           projects={sidebarProjects ?? projects}
+          subprojects={sidebarSubprojects ?? subprojects}
           users={sidebarUsers ?? users}
           myTeam={me.team}
           selectedProjectId={selectedProjectId}
