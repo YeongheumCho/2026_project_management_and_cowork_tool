@@ -79,7 +79,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-[#F8F8F5] px-6 py-12 text-[#1A1A1A]">
       <div className="mx-auto max-w-md rounded-[28px] border border-[#EAEAE4] bg-white p-8 shadow-sm">
         <div className="mb-8">
-          <p className="text-[10px] font-bold uppercase tracking-[1px] text-[#888780]">
+          <p className="text-tiny font-bold uppercase tracking-[1px] text-[#888780]">
             WorkFlow AI
           </p>
           <h1 className="mt-2 text-3xl font-bold">로그인</h1>

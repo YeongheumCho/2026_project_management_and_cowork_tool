@@ -49,7 +49,7 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-6 border-b-[1.5px] border-[#534AB7] bg-white px-5">
       <Link href="/dashboard" className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-[#534AB7] text-[13px] font-bold text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-[#534AB7] text-body font-bold text-white">
           W
         </span>
         <span className="text-base font-bold tracking-[-0.3px] text-[#1A1A1A]">
@@ -103,7 +103,7 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             title={`${me.name} (${me.idnum})`}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#534AB7] text-[11px] font-bold text-white hover:bg-[#433A9A]"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#534AB7] text-micro font-bold text-white hover:bg-[#433A9A]"
           >
             {initial}
           </button>

@@ -53,7 +53,7 @@ export default function DatePicker({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className={`flex w-full items-center justify-between rounded-lg border px-[10px] py-[7px] text-[12px] ${
+        className={`flex w-full items-center justify-between rounded-lg border px-[10px] py-[7px] text-small ${
           open
             ? 'border-[#534AB7] bg-white'
             : 'border-[#D3D1C7] bg-[#FAFAFA]'
@@ -62,7 +62,7 @@ export default function DatePicker({
         <span className={selectedValue ? 'text-[#1A1A1A]' : 'text-[#B4B2A9]'}>
           {selectedValue || placeholder}
         </span>
-        <span className="text-[13px] text-[#888780]">▾</span>
+        <span className="text-body text-[#888780]">▾</span>
       </button>
 
       {open && (
@@ -71,17 +71,17 @@ export default function DatePicker({
             <button
               type="button"
               onClick={() => setCursor((current) => addMonths(current, -1))}
-              className="text-[16px] text-[#888780]"
+              className="text-base text-[#888780]"
             >
               ‹
             </button>
-            <p className="text-[13px] font-bold text-[#1A1A1A]">
+            <p className="text-body font-bold text-[#1A1A1A]">
               {formatMonth(cursor.getFullYear(), cursor.getMonth())}
             </p>
             <button
               type="button"
               onClick={() => setCursor((current) => addMonths(current, 1))}
-              className="text-[16px] text-[#888780]"
+              className="text-base text-[#888780]"
             >
               ›
             </button>
@@ -91,7 +91,7 @@ export default function DatePicker({
             {weekdayLabels.map((label) => (
               <div
                 key={label}
-                className="py-1 text-[9px] font-bold text-[#888780]"
+                className="py-1 text-nano font-bold text-[#888780]"
               >
                 {label}
               </div>
@@ -115,7 +115,7 @@ export default function DatePicker({
                     onChange(iso);
                     setOpen(false);
                   }}
-                  className={`rounded-md py-[5px] text-center text-[12px] transition ${
+                  className={`rounded-md py-[5px] text-center text-small transition ${
                     selected
                       ? 'bg-[#534AB7] font-bold text-white'
                       : disabled

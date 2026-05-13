@@ -451,26 +451,26 @@ export default function WorkHistoryManager({
       <section className="rounded-2xl border border-border bg-white p-4">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-[14px] font-bold text-text">
+            <h3 className="text-md font-bold text-text">
               업무 이력 추가
             </h3>
-            <p className="mt-1 text-[12px] text-text-subtle">
+            <p className="mt-1 text-small text-text-subtle">
               담당자별 수행 업무와 기간, 소요 시간을 직접 기록합니다.
             </p>
           </div>
           {createError && (
-            <p className="text-[12px] font-semibold text-verify-fail-fg">
+            <p className="text-small font-semibold text-verify-fail-fg">
               {createError}
             </p>
           )}
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <div>
-            <label className="block text-[12px] font-semibold text-text-subtle">
+            <label className="block text-small font-semibold text-text-subtle">
               담당자
             </label>
             <select
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
               value={createDraft.user_id}
               onChange={(e) =>
                 updateCreateDraft(
@@ -488,11 +488,11 @@ export default function WorkHistoryManager({
             </select>
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-text-subtle">
+            <label className="block text-small font-semibold text-text-subtle">
               프로젝트
             </label>
             <select
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
               value={createDraft.project_id}
               onChange={(e) =>
                 updateCreateDraft(
@@ -510,12 +510,12 @@ export default function WorkHistoryManager({
             </select>
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-text-subtle">
+            <label className="block text-small font-semibold text-text-subtle">
               프로젝트명
             </label>
             <input
               type="text"
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
               value={createDraft.project_name}
               onChange={(e) =>
                 setCreateDraft((prev) => ({
@@ -530,11 +530,11 @@ export default function WorkHistoryManager({
             />
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-text-subtle">
+            <label className="block text-small font-semibold text-text-subtle">
               하위 프로젝트
             </label>
             <select
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
               value={createDraft.subproject_id}
               onChange={(e) =>
                 updateCreateDraft(
@@ -552,12 +552,12 @@ export default function WorkHistoryManager({
             </select>
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-text-subtle">
+            <label className="block text-small font-semibold text-text-subtle">
               업무명
             </label>
             <input
               type="text"
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
               value={createDraft.subproject_name}
               onChange={(e) =>
                 setCreateDraft((prev) => ({ ...prev, subproject_name: e.target.value }))
@@ -566,12 +566,12 @@ export default function WorkHistoryManager({
             />
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-text-subtle">
+            <label className="block text-small font-semibold text-text-subtle">
               시작일
             </label>
             <input
               type="date"
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
               value={createDraft.started_on}
               onChange={(e) =>
                 setCreateDraft((prev) => ({ ...prev, started_on: e.target.value }))
@@ -579,12 +579,12 @@ export default function WorkHistoryManager({
             />
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-text-subtle">
+            <label className="block text-small font-semibold text-text-subtle">
               종료일
             </label>
             <input
               type="date"
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
               value={createDraft.ended_on}
               onChange={(e) =>
                 setCreateDraft((prev) => ({ ...prev, ended_on: e.target.value }))
@@ -592,13 +592,13 @@ export default function WorkHistoryManager({
             />
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-text-subtle">
+            <label className="block text-small font-semibold text-text-subtle">
               소요 시간 (분)
             </label>
             <input
               type="number"
               min={0}
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
               value={createDraft.worked_minutes}
               onChange={(e) =>
                 setCreateDraft((prev) => ({ ...prev, worked_minutes: e.target.value }))
@@ -606,12 +606,12 @@ export default function WorkHistoryManager({
             />
           </div>
           <div className="md:col-span-2 xl:col-span-4">
-            <label className="block text-[12px] font-semibold text-text-subtle">
+            <label className="block text-small font-semibold text-text-subtle">
               비고/메모
             </label>
             <input
               type="text"
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
               value={createDraft.keyword_text}
               onChange={(e) =>
                 setCreateDraft((prev) => ({ ...prev, keyword_text: e.target.value }))
@@ -624,7 +624,7 @@ export default function WorkHistoryManager({
               type="button"
               onClick={() => void createManualHistory()}
               disabled={creating}
-              className="w-full rounded-lg bg-brand px-3 py-2 text-[13px] font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50"
+              className="w-full rounded-lg bg-brand px-3 py-2 text-body font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50"
             >
               {creating ? '추가 중...' : '이력 추가'}
             </button>
@@ -635,11 +635,11 @@ export default function WorkHistoryManager({
       <section className="rounded-2xl border border-border bg-white p-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           <div>
-            <label className="block text-[12px] font-semibold text-text-subtle">
+            <label className="block text-small font-semibold text-text-subtle">
               프로젝트 필터
             </label>
             <select
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
               value={projectId}
               onChange={(e) =>
                 setProjectId(e.target.value === '' ? '' : Number(e.target.value))
@@ -654,12 +654,12 @@ export default function WorkHistoryManager({
             </select>
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-text-subtle">
+            <label className="block text-small font-semibold text-text-subtle">
               완료일 시작
             </label>
             <input
               type="date"
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
               value={dateRange.from}
               onChange={(e) =>
                 onDateRangeChange?.({ ...dateRange, from: e.target.value })
@@ -667,12 +667,12 @@ export default function WorkHistoryManager({
             />
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-text-subtle">
+            <label className="block text-small font-semibold text-text-subtle">
               완료일 종료
             </label>
             <input
               type="date"
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
               value={dateRange.to}
               onChange={(e) =>
                 onDateRangeChange?.({ ...dateRange, to: e.target.value })
@@ -680,7 +680,7 @@ export default function WorkHistoryManager({
             />
           </div>
           <div className="flex items-end">
-            <label className="flex w-full items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text">
+            <label className="flex w-full items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-body text-text">
               <input
                 type="checkbox"
                 checked={showSampleRows}
@@ -693,7 +693,7 @@ export default function WorkHistoryManager({
             <button
               type="button"
               onClick={exportRows}
-              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] font-semibold text-text transition hover:border-brand hover:text-brand"
+              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-body font-semibold text-text transition hover:border-brand hover:text-brand"
             >
               엑셀로 내보내기
             </button>
@@ -701,12 +701,12 @@ export default function WorkHistoryManager({
         </div>
       </section>
 
-      <div className="flex items-center justify-between text-[12px] text-text-subtle">
+      <div className="flex items-center justify-between text-small text-text-subtle">
         <span>
           총 <strong className="text-text">{displayRows.length}</strong>건 · 누적 소요{' '}
           <strong className="text-text">{formatMinutes(displayTotalMinutes)}</strong>
           {showSampleRows && (
-            <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold text-brand">
+            <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-tiny font-semibold text-brand">
               샘플 미리보기
             </span>
           )}
@@ -716,8 +716,8 @@ export default function WorkHistoryManager({
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border bg-white">
-        <table className="w-full text-[13px]">
-          <thead className="bg-surface-muted text-left text-[12px] text-text-subtle">
+        <table className="w-full text-body">
+          <thead className="bg-surface-muted text-left text-small text-text-subtle">
             <tr>
               <th className="px-4 py-3 font-semibold">담당자</th>
               <th className="px-4 py-3 font-semibold">프로젝트</th>
@@ -732,7 +732,7 @@ export default function WorkHistoryManager({
           <tbody>
             {displayRows.length === 0 && !loading && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-[12px] text-text-subtle">
+                <td colSpan={8} className="px-4 py-8 text-center text-small text-text-subtle">
                   표시할 업무 이력이 없습니다.
                 </td>
               </tr>
@@ -745,7 +745,7 @@ export default function WorkHistoryManager({
                   <div className="flex items-center gap-2">
                     <span>{row.subproject_name}</span>
                     {row.manual_override && (
-                      <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold text-brand">
+                      <span className="rounded-full bg-brand-soft px-2 py-0.5 text-tiny font-semibold text-brand">
                         수동
                       </span>
                     )}
@@ -759,13 +759,13 @@ export default function WorkHistoryManager({
                 <td className="px-4 py-3">{formatMinutes(row.worked_minutes)}</td>
                 <td className="px-4 py-3 text-right">
                   {row.id < 0 ? (
-                    <span className="text-[12px] text-text-subtle">샘플</span>
+                    <span className="text-small text-text-subtle">샘플</span>
                   ) : (
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
                         onClick={() => openEdit(row)}
-                        className="rounded-lg border border-border px-2.5 py-1 text-[12px] font-semibold text-text transition hover:border-brand hover:text-brand"
+                        className="rounded-lg border border-border px-2.5 py-1 text-small font-semibold text-text transition hover:border-brand hover:text-brand"
                       >
                         편집
                       </button>
@@ -773,7 +773,7 @@ export default function WorkHistoryManager({
                         type="button"
                         onClick={() => void deleteRow(row)}
                         disabled={deletingId === row.id}
-                        className="rounded-lg border border-verify-fail-bg px-2.5 py-1 text-[12px] font-semibold text-verify-fail-fg transition hover:bg-verify-fail-bg disabled:opacity-50"
+                        className="rounded-lg border border-verify-fail-bg px-2.5 py-1 text-small font-semibold text-verify-fail-fg transition hover:bg-verify-fail-bg disabled:opacity-50"
                       >
                         {deletingId === row.id ? '삭제 중...' : '삭제'}
                       </button>
@@ -786,9 +786,9 @@ export default function WorkHistoryManager({
         </table>
       </div>
 
-      <p className="text-[12px] text-text-subtle">
+      <p className="text-small text-text-subtle">
         업무 이력은 소프로젝트 완료 시 자동으로 기록됩니다. 관리자가 편집한 행은{' '}
-        <span className="mx-1 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold text-brand">
+        <span className="mx-1 rounded-full bg-brand-soft px-2 py-0.5 text-tiny font-semibold text-brand">
           수동
         </span>
         뱃지가 붙으며 이후 자동 동기화로 덮어쓰이지 않습니다.
@@ -797,19 +797,19 @@ export default function WorkHistoryManager({
       {editingRow && draft && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-[15px] font-bold text-text">업무 이력 편집</h3>
-            <p className="mt-1 text-[12px] text-text-subtle">
+            <h3 className="text-heading font-bold text-text">업무 이력 편집</h3>
+            <p className="mt-1 text-small text-text-subtle">
               {editingRow.user_name} · {editingRow.project_name}
             </p>
 
             <div className="mt-4 space-y-3">
               <div>
-                <label className="block text-[12px] font-semibold text-text-subtle">
+                <label className="block text-small font-semibold text-text-subtle">
                   업무 이름
                 </label>
                 <input
                   type="text"
-                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
                   value={draft.subproject_name}
                   onChange={(e) =>
                     setDraft((d) => (d ? { ...d, subproject_name: e.target.value } : d))
@@ -818,12 +818,12 @@ export default function WorkHistoryManager({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[12px] font-semibold text-text-subtle">
+                  <label className="block text-small font-semibold text-text-subtle">
                     시작일
                   </label>
                   <input
                     type="date"
-                    className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+                    className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
                     value={draft.started_on}
                     onChange={(e) =>
                       setDraft((d) => (d ? { ...d, started_on: e.target.value } : d))
@@ -831,12 +831,12 @@ export default function WorkHistoryManager({
                   />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-semibold text-text-subtle">
+                  <label className="block text-small font-semibold text-text-subtle">
                     종료일
                   </label>
                   <input
                     type="date"
-                    className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+                    className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
                     value={draft.ended_on}
                     onChange={(e) =>
                       setDraft((d) => (d ? { ...d, ended_on: e.target.value } : d))
@@ -845,13 +845,13 @@ export default function WorkHistoryManager({
                 </div>
               </div>
               <div>
-                <label className="block text-[12px] font-semibold text-text-subtle">
+                <label className="block text-small font-semibold text-text-subtle">
                   소요 시간 (분)
                 </label>
                 <input
                   type="number"
                   min={0}
-                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
                   value={draft.worked_minutes}
                   onChange={(e) =>
                     setDraft((d) => (d ? { ...d, worked_minutes: e.target.value } : d))
@@ -859,13 +859,13 @@ export default function WorkHistoryManager({
                 />
               </div>
               <div>
-                <label className="block text-[12px] font-semibold text-text-subtle">
+                <label className="block text-small font-semibold text-text-subtle">
                   비고/메모{' '}
                   <span className="text-text-faint">(선택, 입력 시 keyword_text 갱신)</span>
                 </label>
                 <textarea
                   rows={3}
-                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
                   value={draft.keyword_text}
                   onChange={(e) =>
                     setDraft((d) => (d ? { ...d, keyword_text: e.target.value } : d))
@@ -875,7 +875,7 @@ export default function WorkHistoryManager({
             </div>
 
             {editError && (
-              <p className="mt-3 text-[12px] text-verify-fail-fg">{editError}</p>
+              <p className="mt-3 text-small text-verify-fail-fg">{editError}</p>
             )}
 
             <div className="mt-5 flex justify-end gap-2">
@@ -883,7 +883,7 @@ export default function WorkHistoryManager({
                 type="button"
                 onClick={closeEdit}
                 disabled={saving}
-                className="rounded-lg border border-border px-3 py-2 text-[13px] font-semibold text-text transition hover:border-text-subtle disabled:opacity-50"
+                className="rounded-lg border border-border px-3 py-2 text-body font-semibold text-text transition hover:border-text-subtle disabled:opacity-50"
               >
                 취소
               </button>
@@ -891,7 +891,7 @@ export default function WorkHistoryManager({
                 type="button"
                 onClick={() => void saveEdit()}
                 disabled={saving}
-                className="rounded-lg bg-brand px-3 py-2 text-[13px] font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50"
+                className="rounded-lg bg-brand px-3 py-2 text-body font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50"
               >
                 {saving ? '저장 중...' : '저장'}
               </button>

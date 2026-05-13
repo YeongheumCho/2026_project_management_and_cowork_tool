@@ -53,27 +53,27 @@ export default function SubProjectListItem({ sp, onClick }: Props) {
 
           <div className="min-w-[220px] flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[14px] font-semibold text-[#1D1D1B]">{sp.name}</p>
+              <p className="text-md font-semibold text-[#1D1D1B]">{sp.name}</p>
               <span
-                className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
+                className={`rounded-full px-2.5 py-1 text-tiny font-bold uppercase tracking-[0.08em] ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
               >
                 {SUBPROJECT_STATUS_LABEL[sp.status]}
               </span>
               {sp.upload_done && (
-                <span className="rounded-full border border-[#D8F0DE] bg-[#EEF9F1] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#287A43]">
+                <span className="rounded-full border border-[#D8F0DE] bg-[#EEF9F1] px-2.5 py-1 text-tiny font-bold uppercase tracking-[0.08em] text-[#287A43]">
                   {TEXT.uploadDone}
                 </span>
               )}
             </div>
 
             {metaBits.length > 0 && (
-              <p className="mt-1 text-[11px] text-[#7A786F]">
+              <p className="mt-1 text-micro text-[#7A786F]">
                 {metaBits.join(TEXT.separator)}
               </p>
             )}
 
             {(first || inReview) && (
-              <p className="mt-1 text-[11px] text-[#5F5E5A]">
+              <p className="mt-1 text-micro text-[#5F5E5A]">
                 {TEXT.firstVerify}: {first ?? '-'}
                 {TEXT.separator}
                 {TEXT.inReview}: {inReview ?? '-'}
@@ -82,16 +82,16 @@ export default function SubProjectListItem({ sp, onClick }: Props) {
           </div>
 
           <div className="min-w-[150px] text-right">
-            <p className="text-[11px] text-[#7A786F]">
+            <p className="text-micro text-[#7A786F]">
               {sp.start_date} - {sp.end_date}
             </p>
-            <p className="mt-1 text-[11px] font-semibold text-[#5F5E5A]">
+            <p className="mt-1 text-micro font-semibold text-[#5F5E5A]">
               {assigneeLabel}
             </p>
           </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between text-[11px] text-[#7A786F]">
+        <div className="mt-4 flex items-center justify-between text-micro text-[#7A786F]">
           <span>{TEXT.progress}</span>
           <span className="font-semibold text-[#1D1D1B]">
             {sp.progress.toFixed(0)}%

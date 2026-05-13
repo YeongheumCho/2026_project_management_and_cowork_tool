@@ -223,10 +223,10 @@ export default function TeamCalendarPage() {
       )}
 
       <div className="mb-6">
-        <h1 className="text-[20px] font-bold tracking-[-0.3px] text-[#1A1A1A]">
+        <h1 className="text-xl font-bold tracking-[-0.3px] text-[#1A1A1A]">
           팀 캘린더
         </h1>
-        <p className="mt-1 text-[12px] text-[#888780]">
+        <p className="mt-1 text-small text-[#888780]">
           전체 일정과 담당자별 프로젝트 진행 현황을 한 화면에서 확인할 수 있습니다.
         </p>
       </div>
@@ -250,7 +250,7 @@ export default function TeamCalendarPage() {
               <button
                 type="button"
                 onClick={() => openCreateProject()}
-                className="rounded-lg border border-[#AFA9EC] bg-[#EEEDFE] px-3 py-1.5 text-[11px] font-bold text-[#534AB7]"
+                className="rounded-lg border border-[#AFA9EC] bg-[#EEEDFE] px-3 py-1.5 text-micro font-bold text-[#534AB7]"
               >
                 + 프로젝트 추가
               </button>
@@ -276,7 +276,7 @@ export default function TeamCalendarPage() {
               filterSlot={
                 <div className="flex flex-col items-start gap-1.5">
                   {/* ?댁뒋6: ?대떦???덉씠釉?蹂쇰뱶 */}
-                  <span className="text-[10px] font-bold text-[#1A1A1A]">담당자</span>
+                  <span className="text-tiny font-bold text-[#1A1A1A]">담당자</span>
                   <TeamMemberFilter
                     users={users}
                     selectedId={selectedMemberId ?? null}
@@ -364,8 +364,8 @@ function SelectedMemberProjectBoard({
   if (!member) {
     return (
       <section className="rounded-2xl border border-dashed border-[#D8D4C8] bg-[#FCFBF8] p-5">
-        <h2 className="text-[15px] font-bold text-[#1A1A1A]">담당자 프로젝트 보기</h2>
-        <p className="mt-2 text-[12px] leading-6 text-[#6F6D66]">
+        <h2 className="text-heading font-bold text-[#1A1A1A]">담당자 프로젝트 보기</h2>
+        <p className="mt-2 text-small leading-6 text-[#6F6D66]">
           드롭다운에서 담당자를 선택하면 해당 담당자의 프로젝트 흐름과 진행 이력을 볼 수 있습니다.
         </p>
       </section>
@@ -378,20 +378,20 @@ function SelectedMemberProjectBoard({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`inline-flex max-w-full items-center truncate whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold ${softColorForPosition(member.position)} ${textColorForPosition(member.position)}`}
+              className={`inline-flex max-w-full items-center truncate whitespace-nowrap rounded-full px-2.5 py-1 text-tiny font-bold ${softColorForPosition(member.position)} ${textColorForPosition(member.position)}`}
             >
               {member.name}
             </span>
             {member.position && (
-              <span className="whitespace-nowrap rounded-full border border-[#EAEAE4] px-2.5 py-1 text-[10px] font-semibold text-[#66645C]">
+              <span className="whitespace-nowrap rounded-full border border-[#EAEAE4] px-2.5 py-1 text-tiny font-semibold text-[#66645C]">
                 {compactPosition(member.position)}
               </span>
             )}
-            <span className="rounded-full border border-[#EAEAE4] px-2.5 py-1 text-[10px] font-semibold text-[#66645C]">
+            <span className="rounded-full border border-[#EAEAE4] px-2.5 py-1 text-tiny font-semibold text-[#66645C]">
               {viewStyle.label}
             </span>
           </div>
-          <h2 className="mt-3 text-[15px] font-bold text-[#1A1A1A]">
+          <h2 className="mt-3 text-heading font-bold text-[#1A1A1A]">
             {member.name} 담당 프로젝트 보기
           </h2>
         </div>
@@ -408,10 +408,10 @@ function SelectedMemberProjectBoard({
       <div className="mt-4 space-y-3">
         {groups.length === 0 && (
           <div className="rounded-2xl border border-dashed border-[#D8D4C8] bg-[#FCFBF8] px-4 py-6 text-center">
-            <p className="text-[13px] font-semibold text-[#1A1A1A]">
+            <p className="text-body font-semibold text-[#1A1A1A]">
               아직 배정된 프로젝트 이력이 없습니다
             </p>
-            <p className="mt-1 text-[11px] text-[#888780]">
+            <p className="mt-1 text-micro text-[#888780]">
               이 담당자에게 일정이 배정되면 여기에서 프로젝트별 진행 카드를 확인할 수 있습니다.
             </p>
           </div>
@@ -426,7 +426,7 @@ function SelectedMemberProjectBoard({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`h-2.5 w-2.5 rounded-full ${colorForId(group.project.id)}`} />
-                  <h3 className="min-w-0 truncate text-[14px] font-bold text-[#1A1A1A]">
+                  <h3 className="min-w-0 truncate text-md font-bold text-[#1A1A1A]">
                     {group.project.name}
                   </h3>
                   <StatusChip
@@ -435,13 +435,13 @@ function SelectedMemberProjectBoard({
                     plannedCount={group.plannedCount}
                   />
                 </div>
-                <p className="mt-1 truncate text-[11px] text-[#888780]">
+                <p className="mt-1 truncate text-micro text-[#888780]">
                   {group.startDate} ~ {group.endDate} | 진행 중인 일정 {group.subprojects.length}건
                 </p>
               </div>
 
               <div className="w-full max-w-[240px]">
-                <div className="mb-1 flex items-center justify-between text-[11px] text-[#66645C]">
+                <div className="mb-1 flex items-center justify-between text-micro text-[#66645C]">
                   <span>프로젝트 진행률</span>
                   <span>{Math.round(group.progress)}%</span>
                 </div>
@@ -460,24 +460,24 @@ function SelectedMemberProjectBoard({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${softColorForId(group.project.id)} ${textColorForId(group.project.id)}`}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-tiny font-bold ${softColorForId(group.project.id)} ${textColorForId(group.project.id)}`}
                       >
                         {statusLabel(subproject.status)}
                       </span>
-                      <span className="truncate text-[13px] font-semibold text-[#1A1A1A]">
+                      <span className="truncate text-body font-semibold text-[#1A1A1A]">
                         {subproject.name}
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] text-[#888780]">
+                    <p className="mt-1 text-micro text-[#888780]">
                       {subproject.start_date} to {subproject.end_date}
                     </p>
-                    <p className="mt-1 truncate text-[11px] text-[#66645C]">
+                    <p className="mt-1 truncate text-micro text-[#66645C]">
                       {buildSubprojectNarrative(member, subproject)}
                     </p>
                   </div>
 
                   <div className="w-[78px] shrink-0">
-                    <div className="text-right text-[11px] font-semibold text-[#1A1A1A]">
+                    <div className="text-right text-micro font-semibold text-[#1A1A1A]">
                       {Math.round(subproject.progress)}%
                     </div>
                     <ProgressBar value={subproject.progress} className="mt-2 h-1.5" />
@@ -496,10 +496,10 @@ function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     /* ?댁뒋1: flex-col justify-between?쇰줈 ?덉씠釉?媛믪씠 ??긽 媛숈? ?꾩튂??怨좎젙 */
     <div className="flex min-w-0 flex-col justify-between rounded-xl border border-[#EAEAE4] bg-[#FAFAF7] px-3 py-2">
-      <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.04em] text-[#888780]">
+      <div className="whitespace-nowrap text-tiny font-semibold uppercase tracking-[0.04em] text-[#888780]">
         {label}
       </div>
-      <div className="mt-1 whitespace-nowrap text-[13px] font-bold text-[#1A1A1A]">{value}</div>
+      <div className="mt-1 whitespace-nowrap text-body font-bold text-[#1A1A1A]">{value}</div>
     </div>
   );
 }
@@ -525,7 +525,7 @@ function StatusChip({
   }
 
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${classes}`}>
+    <span className={`rounded-full px-2 py-0.5 text-tiny font-bold ${classes}`}>
       {label}
     </span>
   );

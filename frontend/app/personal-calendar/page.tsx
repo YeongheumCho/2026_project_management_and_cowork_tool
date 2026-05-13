@@ -103,8 +103,8 @@ export default function PersonalCalendarPage() {
       {/* 팀원 필터 — 팀 단위로 접이식 */}
       <div className="mb-4 rounded-2xl border border-[#EAEAE4] bg-white p-4 shadow-sm">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-[13px] font-semibold text-[#1A1A1A]">담당자 선택</h2>
-          <span className="text-[11px] text-[#888780]">
+          <h2 className="text-body font-semibold text-[#1A1A1A]">담당자 선택</h2>
+          <span className="text-micro text-[#888780]">
             {users.length}명 중 1명
           </span>
         </div>

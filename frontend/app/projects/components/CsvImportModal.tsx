@@ -247,21 +247,21 @@ export default function CsvImportModal({
     <Modal open={open} onClose={handleClose} size="lg">
       <div className="space-y-4">
         <div>
-          <h2 className="text-[15px] font-bold tracking-[-0.2px] text-[#1A1A1A]">
+          <h2 className="text-heading font-bold tracking-[-0.2px] text-[#1A1A1A]">
             CSV로 검증 기능 일괄 등록
           </h2>
-          <p className="mt-1 text-[11px] text-[#888780]">
+          <p className="mt-1 text-micro text-[#888780]">
             CSV에는 검증할 기능명과 평균 소요 시간만 입력하고, 담당자와 기간은 아래 기본값으로 일괄 적용합니다.
           </p>
         </div>
 
         <div className="grid gap-3 rounded-[14px] border border-[#EAEAE4] bg-[#FAFAF7] p-4 md:grid-cols-[1.4fr_1fr_1fr]">
-          <label className="block text-[11px] font-semibold text-[#5F5E5A]">
+          <label className="block text-micro font-semibold text-[#5F5E5A]">
             기본 담당자
             <select
               value={defaultAssigneeId}
               onChange={(event) => setDefaultAssigneeId(Number(event.target.value))}
-              className="mt-1 h-9 w-full rounded-[10px] border border-[#DDDAD0] bg-white px-3 text-[12px] text-[#1A1A1A] outline-none focus:border-[#534AB7]"
+              className="mt-1 h-9 w-full rounded-[10px] border border-[#DDDAD0] bg-white px-3 text-small text-[#1A1A1A] outline-none focus:border-[#534AB7]"
             >
               {assigneeOptions.length === 0 ? (
                 <option value="">선택 가능한 담당자 없음</option>
@@ -275,31 +275,31 @@ export default function CsvImportModal({
             </select>
           </label>
 
-          <label className="block text-[11px] font-semibold text-[#5F5E5A]">
+          <label className="block text-micro font-semibold text-[#5F5E5A]">
             기본 시작일
             <input
               type="date"
               value={startDate}
               max={MAX_DATE_VALUE}
               onChange={(event) => setStartDate(clampDateYear(event.target.value))}
-              className="mt-1 h-9 w-full rounded-[10px] border border-[#DDDAD0] bg-white px-3 text-[12px] text-[#1A1A1A] outline-none focus:border-[#534AB7]"
+              className="mt-1 h-9 w-full rounded-[10px] border border-[#DDDAD0] bg-white px-3 text-small text-[#1A1A1A] outline-none focus:border-[#534AB7]"
             />
           </label>
 
-          <label className="block text-[11px] font-semibold text-[#5F5E5A]">
+          <label className="block text-micro font-semibold text-[#5F5E5A]">
             기본 종료일
             <input
               type="date"
               value={endDate}
               max={MAX_DATE_VALUE}
               onChange={(event) => setEndDate(clampDateYear(event.target.value))}
-              className="mt-1 h-9 w-full rounded-[10px] border border-[#DDDAD0] bg-white px-3 text-[12px] text-[#1A1A1A] outline-none focus:border-[#534AB7]"
+              className="mt-1 h-9 w-full rounded-[10px] border border-[#DDDAD0] bg-white px-3 text-small text-[#1A1A1A] outline-none focus:border-[#534AB7]"
             />
           </label>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-[12px] border border-[#DDDAD0] bg-white px-4 py-2 text-[12px] font-semibold text-[#1A1A1A] hover:bg-[#FAFAF7]">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-[12px] border border-[#DDDAD0] bg-white px-4 py-2 text-small font-semibold text-[#1A1A1A] hover:bg-[#FAFAF7]">
             <svg
               className="h-4 w-4 text-[#534AB7]"
               fill="none"
@@ -326,25 +326,25 @@ export default function CsvImportModal({
           <button
             type="button"
             onClick={downloadSample}
-            className="text-[11px] font-medium text-[#534AB7] underline underline-offset-2 hover:text-[#473EA7]"
+            className="text-micro font-medium text-[#534AB7] underline underline-offset-2 hover:text-[#473EA7]"
           >
             양식 다운로드
           </button>
 
-          <p className="text-[11px] text-[#888780]">컬럼: 기능명 / 평균소요시간(분)</p>
+          <p className="text-micro text-[#888780]">컬럼: 기능명 / 평균소요시간(분)</p>
         </div>
 
-        {fileError && <p className="text-[12px] text-[#A32D2D]">{fileError}</p>}
+        {fileError && <p className="text-small text-[#A32D2D]">{fileError}</p>}
 
         {hasInvalidDefaults && (
-          <p className="rounded-[12px] bg-[#FFF7E8] px-4 py-2 text-[11px] text-[#9A6400]">
+          <p className="rounded-[12px] bg-[#FFF7E8] px-4 py-2 text-micro text-[#9A6400]">
             기본 담당자와 시작일, 종료일을 확인해야 일괄 등록할 수 있습니다.
           </p>
         )}
 
         {rows.length > 0 && !results && (
           <>
-            <div className="rounded-[14px] border border-[#EAEAE4] bg-[#FAFAF7] px-4 py-2.5 text-[11px] text-[#5F5E5A]">
+            <div className="rounded-[14px] border border-[#EAEAE4] bg-[#FAFAF7] px-4 py-2.5 text-micro text-[#5F5E5A]">
               총 <strong>{rows.length}</strong>행 파싱 ·{' '}
               <span className="text-[#0F6E56]">유효 {validRows.length}건</span>
               {invalidRows.length > 0 && (
@@ -353,7 +353,7 @@ export default function CsvImportModal({
             </div>
 
             <div className="max-h-[280px] overflow-auto rounded-[14px] border border-[#EAEAE4]">
-              <table className="w-full text-left text-[11px]">
+              <table className="w-full text-left text-micro">
                 <thead className="sticky top-0 bg-[#F4F4F0]">
                   <tr>
                     <th className="px-3 py-2 font-semibold text-[#5F5E5A]">#</th>
@@ -398,7 +398,7 @@ export default function CsvImportModal({
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="rounded-[12px] border border-[#DDDAD0] px-4 py-2 text-[12px] font-semibold text-[#5F5E5A] hover:bg-[#F4F4F0]"
+                  className="rounded-[12px] border border-[#DDDAD0] px-4 py-2 text-small font-semibold text-[#5F5E5A] hover:bg-[#F4F4F0]"
                 >
                   취소
                 </button>
@@ -406,7 +406,7 @@ export default function CsvImportModal({
                   type="button"
                   onClick={() => void handleImport()}
                   disabled={!canImport}
-                  className="rounded-[12px] bg-[#534AB7] px-5 py-2 text-[12px] font-bold text-white shadow-[0_4px_12px_rgba(83,74,183,0.24)] hover:bg-[#473EA7] disabled:opacity-50"
+                  className="rounded-[12px] bg-[#534AB7] px-5 py-2 text-small font-bold text-white shadow-[0_4px_12px_rgba(83,74,183,0.24)] hover:bg-[#473EA7] disabled:opacity-50"
                 >
                   {importing ? '등록 중...' : `${validRows.length}건 일괄 등록`}
                 </button>
@@ -417,7 +417,7 @@ export default function CsvImportModal({
 
         {results && (
           <>
-            <div className="rounded-[14px] border border-[#EAEAE4] bg-[#FAFAF7] px-4 py-2.5 text-[11px] text-[#5F5E5A]">
+            <div className="rounded-[14px] border border-[#EAEAE4] bg-[#FAFAF7] px-4 py-2.5 text-micro text-[#5F5E5A]">
               등록 완료:{' '}
               <span className="text-[#0F6E56]">
                 {results.filter((row) => row.status === 'ok').length}건
@@ -433,7 +433,7 @@ export default function CsvImportModal({
             </div>
 
             <div className="max-h-[280px] overflow-auto rounded-[14px] border border-[#EAEAE4]">
-              <table className="w-full text-left text-[11px]">
+              <table className="w-full text-left text-micro">
                 <thead className="sticky top-0 bg-[#F4F4F0]">
                   <tr>
                     <th className="px-3 py-2 font-semibold text-[#5F5E5A]">#</th>
@@ -469,7 +469,7 @@ export default function CsvImportModal({
               <button
                 type="button"
                 onClick={handleClose}
-                className="rounded-[12px] bg-[#534AB7] px-5 py-2 text-[12px] font-bold text-white hover:bg-[#473EA7]"
+                className="rounded-[12px] bg-[#534AB7] px-5 py-2 text-small font-bold text-white hover:bg-[#473EA7]"
               >
                 닫기
               </button>
@@ -478,7 +478,7 @@ export default function CsvImportModal({
         )}
 
         {rows.length === 0 && !fileError && (
-          <p className="rounded-[14px] border border-dashed border-[#D7D4CA] px-5 py-8 text-center text-[12px] text-[#8B897F]">
+          <p className="rounded-[14px] border border-dashed border-[#D7D4CA] px-5 py-8 text-center text-small text-[#8B897F]">
             CSV 파일을 선택하면 검증 기능 목록을 미리볼 수 있습니다.
           </p>
         )}

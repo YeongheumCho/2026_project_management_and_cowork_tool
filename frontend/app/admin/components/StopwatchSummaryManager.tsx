@@ -134,14 +134,14 @@ export default function StopwatchSummaryManager({
     <section className="rounded-2xl border border-[#EAEAE4] bg-white p-4">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-[14px] font-bold text-[#1A1A1A]">
+          <h3 className="text-md font-bold text-[#1A1A1A]">
             스톱워치 시간 현황
           </h3>
-          <p className="mt-1 text-[12px] text-[#888780]">
+          <p className="mt-1 text-small text-[#888780]">
             선택한 담당자와 조회 기간에 맞춰 스톱워치 누적 시간을 확인합니다.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 text-[12px]">
+        <div className="flex flex-wrap gap-2 text-small">
           <span className="rounded-lg bg-[#F1EEFB] px-3 py-2 font-semibold text-[#534AB7]">
             누적 {formatSeconds(totalSeconds)}
           </span>
@@ -159,19 +159,19 @@ export default function StopwatchSummaryManager({
       </div>
 
       {error && (
-        <p className="mb-3 rounded-lg bg-[#FFF4F4] px-3 py-2 text-[12px] text-[#A32D2D]">
+        <p className="mb-3 rounded-lg bg-[#FFF4F4] px-3 py-2 text-small text-[#A32D2D]">
           {error}
         </p>
       )}
       {loading && (
-        <p className="rounded-xl bg-[#FAFAFA] px-4 py-5 text-center text-[12px] text-[#888780]">
+        <p className="rounded-xl bg-[#FAFAFA] px-4 py-5 text-center text-small text-[#888780]">
           스톱워치 기록을 불러오는 중입니다.
         </p>
       )}
       {!loading && (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-[13px]">
-            <thead className="bg-[#FAFAFA] text-[12px] text-[#888780]">
+          <table className="w-full text-left text-body">
+            <thead className="bg-[#FAFAFA] text-small text-[#888780]">
               <tr>
                 <th className="px-4 py-3 font-semibold">담당자</th>
                 <th className="px-4 py-3 font-semibold">소속</th>
@@ -204,7 +204,7 @@ export default function StopwatchSummaryManager({
               ))}
               {activeRows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-[12px] text-[#888780]">
+                  <td colSpan={8} className="px-4 py-8 text-center text-small text-[#888780]">
                     스톱워치 기록이 없습니다.
                   </td>
                 </tr>

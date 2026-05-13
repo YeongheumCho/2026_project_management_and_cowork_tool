@@ -189,7 +189,7 @@ export default function TimerWidget({ candidates, projects }: Props) {
                     </div>
                     {activeLog && (
                       <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[activeLog.status]}`}
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-tiny font-semibold ${STATUS_BADGE[activeLog.status]}`}
                       >
                         {STATUS_LABEL[activeLog.status]}
                       </span>

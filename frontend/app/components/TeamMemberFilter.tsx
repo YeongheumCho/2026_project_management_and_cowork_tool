@@ -85,7 +85,7 @@ export default function TeamMemberFilter({
         <button
           type="button"
           onClick={() => onSelect(null)}
-          className={`rounded-full border px-[9px] py-1 text-[11px] ${
+          className={`rounded-full border px-[9px] py-1 text-micro ${
             selectedId === null
               ? 'border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]'
               : 'border-[#EAEAE4] text-[#888780]'
@@ -277,14 +277,14 @@ function GroupButton({
       type="button"
       onClick={onClick}
       aria-expanded={isOpen}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-[9px] py-1 text-[11px] ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-[9px] py-1 text-micro ${
         isActive
           ? 'border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]'
           : 'border-[#EAEAE4] text-[#888780] hover:bg-[#FAFAFA]'
       }`}
     >
       <span
-        className={`inline-block text-[9px] transition-transform ${
+        className={`inline-block text-nano transition-transform ${
           isOpen ? 'rotate-90' : ''
         }`}
         aria-hidden
@@ -292,7 +292,7 @@ function GroupButton({
         ▶
       </span>
       <span>{label}</span>
-      <span className="text-[10px] opacity-70">{count}</span>
+      <span className="text-tiny opacity-70">{count}</span>
     </button>
   );
 }
@@ -315,7 +315,7 @@ function MemberChips({
             key={user.id}
             type="button"
             onClick={() => onSelect(user.id)}
-            className={`inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full border px-[9px] py-1 text-[11px] ${
+            className={`inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full border px-[9px] py-1 text-micro ${
               active
                 ? `${softColorForPosition(user.position)} ${textColorForPosition(user.position)} border-transparent`
                 : 'border-[#EAEAE4] text-[#888780] hover:bg-[#FAFAFA]'

@@ -76,11 +76,11 @@ export default function ProjectCard({
               <h3 className="text-[17px] font-semibold tracking-[-0.02em] text-[#1D1D1B]">
                 {project.name}
               </h3>
-              <span className="rounded-full border border-[#E5E2FF] bg-[#F5F3FF] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#534AB7]">
+              <span className="rounded-full border border-[#E5E2FF] bg-[#F5F3FF] px-2.5 py-1 text-tiny font-bold uppercase tracking-[0.08em] text-[#534AB7]">
                 {typeLabel}
               </span>
               <span
-                className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                className={`rounded-full px-2.5 py-1 text-tiny font-bold ${
                   isCompleted
                     ? 'bg-[#E1F5EE] text-[#0F6E56]'
                     : 'bg-[#E6F1FB] text-[#185FA5]'
@@ -90,7 +90,7 @@ export default function ProjectCard({
               </span>
             </div>
 
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[#7A786F]">
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-micro text-[#7A786F]">
               <span>생성일 {new Date(project.created_at).toLocaleDateString('ko-KR')}</span>
               <span>하위 프로젝트 {total}건</span>
               <span>완료 {done}건</span>
@@ -101,13 +101,13 @@ export default function ProjectCard({
           </div>
 
           <div className="min-w-[180px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-[#5F5E5A]">
+            <div className="flex items-center justify-between text-micro font-semibold text-[#5F5E5A]">
               <span>완료 항목</span>
               <span className={isCompleted ? 'text-[#0F6E56]' : 'text-[#185FA5]'}>
                 {done}/{total}
               </span>
             </div>
-            <div className="mt-2 flex items-center justify-between text-[12px] font-bold text-[#1D1D1B]">
+            <div className="mt-2 flex items-center justify-between text-small font-bold text-[#1D1D1B]">
               <span>{isCompleted ? '프로젝트 완료' : '진행 중 프로젝트'}</span>
               <span>{Math.round(progress)}%</span>
             </div>
@@ -119,7 +119,7 @@ export default function ProjectCard({
           </div>
 
           <div className="min-w-[240px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-[#5F5E5A]">
+            <div className="flex items-center justify-between text-micro font-semibold text-[#5F5E5A]">
               <span>투입 시간</span>
               <span className="text-[#1D1D1B]">
                 {formatDuration(timeSummary.total_seconds)}
@@ -127,14 +127,14 @@ export default function ProjectCard({
             </div>
             <div className="mt-2 space-y-1.5">
               {topMembers.length === 0 ? (
-                <p className="text-[11px] text-[#8B897F]">
+                <p className="text-micro text-[#8B897F]">
                   아직 기록된 작업 시간이 없습니다.
                 </p>
               ) : (
                 topMembers.map((member) => (
                   <div
                     key={member.user_id}
-                    className="flex items-center justify-between gap-3 text-[11px] text-[#5F5E5A]"
+                    className="flex items-center justify-between gap-3 text-micro text-[#5F5E5A]"
                   >
                     <span className="truncate">{member.user_name}</span>
                     <span className="shrink-0 font-semibold text-[#1D1D1B]">
@@ -147,7 +147,7 @@ export default function ProjectCard({
           </div>
 
           <div className="min-w-[240px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-[#5F5E5A]">
+            <div className="flex items-center justify-between text-micro font-semibold text-[#5F5E5A]">
               <span>수행 이력</span>
               <span className="text-[#1D1D1B]">
                 {historySummary.total_completed_count}건
@@ -155,18 +155,18 @@ export default function ProjectCard({
             </div>
             <div className="mt-2 space-y-1.5">
               {topHistoryMembers.length === 0 ? (
-                <p className="text-[11px] text-[#8B897F]">
+                <p className="text-micro text-[#8B897F]">
                   아직 누적된 완료 이력이 없습니다.
                 </p>
               ) : (
                 topHistoryMembers.map((member) => (
                   <div
                     key={member.user_id}
-                    className="flex items-center justify-between gap-3 text-[11px] text-[#5F5E5A]"
+                    className="flex items-center justify-between gap-3 text-micro text-[#5F5E5A]"
                   >
                     <div className="min-w-0">
                       <p className="truncate">{member.user_name}</p>
-                      <p className="text-[10px] text-[#8B897F]">
+                      <p className="text-tiny text-[#8B897F]">
                         완료 {member.completed_count}건
                       </p>
                     </div>
@@ -184,28 +184,28 @@ export default function ProjectCard({
               <button
                 type="button"
                 onClick={() => onEditProject(project)}
-                className="rounded-[14px] border border-[#D8D3FF] bg-white px-4 py-2 text-[11px] font-bold text-[#534AB7] transition hover:bg-[#F5F3FF]"
+                className="rounded-[14px] border border-[#D8D3FF] bg-white px-4 py-2 text-micro font-bold text-[#534AB7] transition hover:bg-[#F5F3FF]"
               >
                 프로젝트 수정
               </button>
               <button
                 type="button"
                 onClick={() => onDeleteProject(project)}
-                className="rounded-[14px] border border-[#F4C9C9] bg-white px-4 py-2 text-[11px] font-bold text-[#A32D2D] transition hover:bg-[#FFF4F4]"
+                className="rounded-[14px] border border-[#F4C9C9] bg-white px-4 py-2 text-micro font-bold text-[#A32D2D] transition hover:bg-[#FFF4F4]"
               >
                 프로젝트 삭제
               </button>
               <button
                 type="button"
                 onClick={() => onCsvImport(project.id)}
-                className="rounded-[14px] border border-[#D8D3FF] bg-white px-4 py-2 text-[11px] font-bold text-[#534AB7] transition hover:bg-[#F5F3FF]"
+                className="rounded-[14px] border border-[#D8D3FF] bg-white px-4 py-2 text-micro font-bold text-[#534AB7] transition hover:bg-[#F5F3FF]"
               >
                 CSV 일괄 등록
               </button>
               <button
                 type="button"
                 onClick={() => onAddSub(project.id)}
-                className="rounded-[14px] bg-[#534AB7] px-4 py-2 text-[11px] font-bold text-white shadow-[0_8px_20px_rgba(83,74,183,0.24)] transition hover:bg-[#473EA7]"
+                className="rounded-[14px] bg-[#534AB7] px-4 py-2 text-micro font-bold text-white shadow-[0_8px_20px_rgba(83,74,183,0.24)] transition hover:bg-[#473EA7]"
               >
                 + 하위 프로젝트 추가
               </button>

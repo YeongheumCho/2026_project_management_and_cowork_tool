@@ -289,7 +289,7 @@ export default function TasksPage() {
             </div>
 
             {startDate && endDate && (
-              <div className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2 text-[12px] font-semibold text-[#1D4ED8]">
+              <div className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2 text-small font-semibold text-[#1D4ED8]">
                 일정 {startDate} ~ {endDate}
               </div>
             )}
@@ -340,7 +340,7 @@ export default function TasksPage() {
               {recommendation && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span
-                    className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
+                    className={`rounded-full px-3 py-1 text-micro font-semibold ${
                       recommendation.claude_used
                         ? 'bg-[#EEEDFE] text-[#534AB7]'
                         : 'bg-[#FFF4F4] text-[#A32D2D]'
@@ -349,7 +349,7 @@ export default function TasksPage() {
                     {recommendation.claude_used ? 'Claude API 사용됨' : 'Claude API 미사용'}
                   </span>
                   {recommendation.claude_error && (
-                    <span className="text-[11px] text-[#A32D2D]">
+                    <span className="text-micro text-[#A32D2D]">
                       사유: {recommendation.claude_error}
                     </span>
                   )}
@@ -401,7 +401,7 @@ export default function TasksPage() {
                     <div>
                       <div className="mb-2 flex flex-wrap items-center gap-2">
                         <div
-                          className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-2 text-[9px] font-bold ${
+                          className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-2 text-nano font-bold ${
                             candidate.rank === 1
                               ? 'bg-[#534AB7] text-white'
                               : 'bg-[#EEEDFE] text-[#534AB7]'
@@ -410,17 +410,17 @@ export default function TasksPage() {
                           {candidate.rank}
                         </div>
                         {candidate.recommendation_source === 'claude' ? (
-                          <span className="rounded-full border border-[#D8D3FF] bg-[#F5F3FF] px-2.5 py-1 text-[10px] font-bold text-[#534AB7]">
+                          <span className="rounded-full border border-[#D8D3FF] bg-[#F5F3FF] px-2.5 py-1 text-tiny font-bold text-[#534AB7]">
                             Claude 추천
                           </span>
                         ) : (
-                          <span className="rounded-full border border-[#F1D5D5] bg-[#FFF7F7] px-2.5 py-1 text-[10px] font-bold text-[#A32D2D]">
+                          <span className="rounded-full border border-[#F1D5D5] bg-[#FFF7F7] px-2.5 py-1 text-tiny font-bold text-[#A32D2D]">
                             규칙 기반
                           </span>
                         )}
                       </div>
-                      <h3 className="text-[13px] font-bold text-[#1A1A1A]">{candidate.name}</h3>
-                      <p className="mt-1 text-[10px] text-[#888780]">
+                      <h3 className="text-body font-bold text-[#1A1A1A]">{candidate.name}</h3>
+                      <p className="mt-1 text-tiny text-[#888780]">
                         {candidate.position ? `${candidate.position} · ` : ''}
                         {candidate.role === 'admin' ? '관리자' : '구성원'} · 유사 업무{' '}
                         {candidate.keyword_experience_count}건 · 수행 이력{' '}
@@ -444,13 +444,13 @@ export default function TasksPage() {
                   <div className="mt-4 rounded-2xl bg-[#FAFAFA] p-4">
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-sm font-semibold text-[#1A1A1A]">추천 이유</p>
-                      <span className="text-[11px] text-[#888780]">
+                      <span className="text-micro text-[#888780]">
                         {candidate.recommendation_source === 'claude'
                           ? 'AI가 생성한 추천 이유'
                           : '규칙 기반 추천 이유'}
                       </span>
                     </div>
-                    <ul className="mt-2 space-y-2 text-[11px] text-[#5F5E5A]">
+                    <ul className="mt-2 space-y-2 text-micro text-[#5F5E5A]">
                       {candidate.reasons.map((reason, index) => (
                         <li
                           key={`${candidate.user_id}-${index}`}

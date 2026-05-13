@@ -47,7 +47,7 @@ export default function OrgChartView({
 
   if (users.length === 0) {
     return (
-      <p className="py-8 text-center text-[12px] text-[#888780]">
+      <p className="py-8 text-center text-small text-[#888780]">
         등록된 사용자가 없습니다.
       </p>
     );
@@ -107,9 +107,9 @@ function CenterNode({ center, expanded, onToggle, canEdit, savingId, deletingId,
         className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-[#FAFAFA]"
       >
         <span className="flex items-center gap-2">
-          <span className="text-[12px] text-[#888780]">{isOpen ? '▾' : '▸'}</span>
-          <span className="text-[14px] font-bold text-[#1A1A1A]">{center.label}</span>
-          <span className="text-[11px] text-[#888780]">총 {totalMembers}명</span>
+          <span className="text-small text-[#888780]">{isOpen ? '▾' : '▸'}</span>
+          <span className="text-md font-bold text-[#1A1A1A]">{center.label}</span>
+          <span className="text-micro text-[#888780]">총 {totalMembers}명</span>
         </span>
       </button>
       {isOpen && (
@@ -152,9 +152,9 @@ function OfficeNode({ office, expanded, onToggle, canEdit, savingId, deletingId,
         className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-[#FAFAFA]"
       >
         <span className="flex items-center gap-2">
-          <span className="text-[11px] text-[#888780]">{isOpen ? '▾' : '▸'}</span>
-          <span className="text-[13px] font-semibold text-[#1A1A1A]">{office.label}</span>
-          <span className="text-[11px] text-[#888780]">총 {totalMembers}명</span>
+          <span className="text-micro text-[#888780]">{isOpen ? '▾' : '▸'}</span>
+          <span className="text-body font-semibold text-[#1A1A1A]">{office.label}</span>
+          <span className="text-micro text-[#888780]">총 {totalMembers}명</span>
         </span>
       </button>
       {isOpen && (
@@ -196,9 +196,9 @@ function TeamNode({ team, expanded, onToggle, canEdit, savingId, deletingId, onR
         className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-white"
       >
         <span className="flex items-center gap-2">
-          <span className="text-[11px] text-[#888780]">{isOpen ? '▾' : '▸'}</span>
-          <span className="text-[12px] font-semibold text-[#1A1A1A]">{team.label}</span>
-          <span className="text-[11px] text-[#888780]">총 {team.members.length}명</span>
+          <span className="text-micro text-[#888780]">{isOpen ? '▾' : '▸'}</span>
+          <span className="text-small font-semibold text-[#1A1A1A]">{team.label}</span>
+          <span className="text-micro text-[#888780]">총 {team.members.length}명</span>
         </span>
       </button>
       {isOpen && (
@@ -225,7 +225,7 @@ type MembersBlockProps = {
 function MembersBlock({ members, canEdit, savingId, deletingId, onRoleChange, onRoleSave, onDelete, onOpenHistory, onPasswordReset }: MembersBlockProps) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-[12px]">
+      <table className="w-full text-left text-small">
         <tbody>
           {members.map((member) => (
             <UserRoleRow

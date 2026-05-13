@@ -136,7 +136,7 @@ export default function OrganizationMemberPicker({
             type="button"
             onClick={selectAll}
             disabled={disabled || selectedIds.length === users.length}
-            className="rounded-full border border-[#D8D3FF] bg-[#F5F3FF] px-3 py-1 text-[11px] font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-[#D8D3FF] bg-[#F5F3FF] px-3 py-1 text-micro font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-50"
           >
             전체 선택
           </button>
@@ -144,11 +144,11 @@ export default function OrganizationMemberPicker({
             type="button"
             onClick={clearAll}
             disabled={disabled || selectedIds.length === 0}
-            className="rounded-full border border-[#EAEAE4] bg-white px-3 py-1 text-[11px] font-bold text-[#66645C] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-[#EAEAE4] bg-white px-3 py-1 text-micro font-bold text-[#66645C] disabled:cursor-not-allowed disabled:opacity-50"
           >
             전체 해제
           </button>
-          <span className="text-[11px] text-[#888780]">
+          <span className="text-micro text-[#888780]">
             {selectedIds.length}/{users.length}명 선택
           </span>
         </div>
@@ -374,7 +374,7 @@ function TeamPickerGroup({
             type="button"
             onClick={() => onToggleMembers(teamMemberIds)}
             disabled={disabled || teamMemberIds.length === 0}
-            className="rounded-full border border-[#D8D3FF] px-[9px] py-1 text-[11px] font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-[#D8D3FF] px-[9px] py-1 text-micro font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {allSelected ? '팀 해제' : '팀 선택'}
           </button>
@@ -418,7 +418,7 @@ function GroupSelectButton({
       type="button"
       onClick={() => onToggleMembers(uniqueIds)}
       disabled={disabled || uniqueIds.length === 0}
-      className="rounded-full border border-[#D8D3FF] px-[9px] py-1 text-[11px] font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-50"
+      className="rounded-full border border-[#D8D3FF] px-[9px] py-1 text-micro font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-50"
     >
       {allSelected ? `${label} 해제` : label}
     </button>
@@ -446,14 +446,14 @@ function GroupButton({
       onClick={onClick}
       aria-expanded={isOpen}
       disabled={disabled}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-[9px] py-1 text-[11px] ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-[9px] py-1 text-micro ${
         isActive
           ? 'border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]'
           : 'border-[#EAEAE4] text-[#888780] hover:bg-[#FAFAFA]'
       } disabled:cursor-not-allowed disabled:opacity-60`}
     >
       <span
-        className={`inline-block text-[9px] transition-transform ${
+        className={`inline-block text-nano transition-transform ${
           isOpen ? 'rotate-90' : ''
         }`}
         aria-hidden
@@ -461,7 +461,7 @@ function GroupButton({
         ▸
       </span>
       <span>{label}</span>
-      <span className="text-[10px] opacity-70">{count}</span>
+      <span className="text-tiny opacity-70">{count}</span>
     </button>
   );
 }
@@ -487,7 +487,7 @@ function MemberChips({
             type="button"
             onClick={() => onToggleMember(user.id)}
             disabled={disabled}
-            className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-[9px] py-1 text-[11px] ${
+            className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-[9px] py-1 text-micro ${
               active
                 ? `${softColorForPosition(user.position)} ${textColorForPosition(user.position)} border-transparent`
                 : 'border-[#EAEAE4] text-[#888780] hover:bg-[#FAFAFA]'

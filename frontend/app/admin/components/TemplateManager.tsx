@@ -309,7 +309,7 @@ export default function TemplateManager() {
             >
               {schema.section_label}
               {schema.fields.length ? (
-                <span className="ml-1.5 rounded-full bg-white/30 px-1.5 py-0.5 text-[10px]">
+                <span className="ml-1.5 rounded-full bg-white/30 px-1.5 py-0.5 text-tiny">
                   {schema.fields.length}
                 </span>
               ) : null}
@@ -573,10 +573,10 @@ function TemplatePreview({
   return (
     <aside className="rounded-2xl border border-[#EAEAE4] bg-[#FCFCFA] p-4 xl:sticky xl:top-4 xl:self-start">
       <div className="mb-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#888780]">
+        <p className="text-micro font-bold uppercase tracking-[0.08em] text-[#888780]">
           미리보기
         </p>
-        <h4 className="mt-1 text-[15px] font-bold text-[#1A1A1A]">
+        <h4 className="mt-1 text-heading font-bold text-[#1A1A1A]">
           {templateName || '템플릿 이름'}
         </h4>
       </div>

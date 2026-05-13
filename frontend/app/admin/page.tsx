@@ -75,10 +75,10 @@ export default function AdminPage() {
   return (
     <AppShell me={me}>
       <div className="mb-6">
-        <h1 className="text-[20px] font-bold tracking-[-0.3px] text-[#1A1A1A]">
+        <h1 className="text-xl font-bold tracking-[-0.3px] text-[#1A1A1A]">
           관리자 설정
         </h1>
-        <p className="mt-1 text-[12px] text-[#888780]">
+        <p className="mt-1 text-small text-[#888780]">
           사용자 권한과 프로젝트 유형별 필드 구성을 관리합니다.
         </p>
       </div>
@@ -89,7 +89,7 @@ export default function AdminPage() {
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 rounded-xl px-4 py-2.5 text-[13px] font-semibold transition ${
+            className={`flex-1 rounded-xl px-4 py-2.5 text-body font-semibold transition ${
               activeTab === tab.id
                 ? 'bg-white text-[#534AB7] shadow-sm'
                 : 'text-[#888780] hover:text-[#1A1A1A]'
@@ -132,28 +132,28 @@ export default function AdminPage() {
           />
           <section className="rounded-2xl border border-[#EAEAE4] bg-white p-4">
             <div className="mb-3">
-              <h3 className="text-[14px] font-bold text-[#1A1A1A]">조회 기간</h3>
-              <p className="mt-1 text-[12px] text-[#888780]">
+              <h3 className="text-md font-bold text-[#1A1A1A]">조회 기간</h3>
+              <p className="mt-1 text-small text-[#888780]">
                 선택한 담당자의 스톱워치 시간 현황과 업무 이력 현황에 함께 적용됩니다.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
-              <label className="block text-[12px] font-semibold text-[#888780]">
+              <label className="block text-small font-semibold text-[#888780]">
                 시작일
                 <input
                   type="date"
-                  className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+                  className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-body text-[#1A1A1A]"
                   value={workRange.from}
                   onChange={(event) =>
                     setWorkRange((prev) => ({ ...prev, from: event.target.value }))
                   }
                 />
               </label>
-              <label className="block text-[12px] font-semibold text-[#888780]">
+              <label className="block text-small font-semibold text-[#888780]">
                 종료일
                 <input
                   type="date"
-                  className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+                  className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-body text-[#1A1A1A]"
                   value={workRange.to}
                   onChange={(event) =>
                     setWorkRange((prev) => ({ ...prev, to: event.target.value }))
@@ -164,7 +164,7 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setWorkRange({ from: '', to: '' })}
-                  className="w-full rounded-lg border border-[#EAEAE4] px-4 py-2 text-[13px] font-semibold text-[#534AB7] transition hover:bg-[#FAFAFA] md:w-auto"
+                  className="w-full rounded-lg border border-[#EAEAE4] px-4 py-2 text-body font-semibold text-[#534AB7] transition hover:bg-[#FAFAFA] md:w-auto"
                 >
                   기간 초기화
                 </button>

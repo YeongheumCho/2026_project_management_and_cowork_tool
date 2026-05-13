@@ -164,10 +164,10 @@ export default function MonthCalendar({
       <div className="border-b border-[#EAEAE4] px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-[13px] font-semibold text-[#1A1A1A]">{title}</h3>
+            <h3 className="text-body font-semibold text-[#1A1A1A]">{title}</h3>
             {tag && (
               <span
-                className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                className="rounded-full px-2 py-0.5 text-tiny font-bold"
                 style={{ backgroundColor: `${tagColor}20`, color: tagColor }}
               >
                 {tag}
@@ -175,13 +175,13 @@ export default function MonthCalendar({
             )}
           </div>
           <div className="flex items-center gap-3">
-            <button type="button" onClick={onPrevMonth} className="text-[16px] text-[#888780]" aria-label="이전 달">
+            <button type="button" onClick={onPrevMonth} className="text-base text-[#888780]" aria-label="이전 달">
               {'‹'}
             </button>
-            <span className="min-w-[76px] text-center text-[11px] font-semibold text-[#1A1A1A]">
+            <span className="min-w-[76px] text-center text-micro font-semibold text-[#1A1A1A]">
               {formatMonth(year, month)}
             </span>
-            <button type="button" onClick={onNextMonth} className="text-[16px] text-[#888780]" aria-label="다음 달">
+            <button type="button" onClick={onNextMonth} className="text-base text-[#888780]" aria-label="다음 달">
               {'›'}
             </button>
             {rightAction}
@@ -193,7 +193,7 @@ export default function MonthCalendar({
       <div className="p-3">
         <div className="mb-1 grid grid-cols-7 gap-1 text-center">
           {WEEKDAYS.map((w) => (
-            <div key={w} className="py-1 text-[9px] font-bold text-[#888780]">{w}</div>
+            <div key={w} className="py-1 text-nano font-bold text-[#888780]">{w}</div>
           ))}
         </div>
 
@@ -224,7 +224,7 @@ export default function MonthCalendar({
                           isToday ? 'bg-[#EEEDFE] text-[#1A1A1A]' : inMonth ? 'text-[#1A1A1A] hover:bg-[#F1EFE8]' : 'text-[#B4B2A9] hover:bg-[#F8F8F5]',
                         ].join(' ')}
                       >
-                        <span className={`text-[10px] ${isToday ? 'inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[#534AB7] font-bold text-white' : ''}`}>{day.getDate()}</span>
+                        <span className={`text-tiny ${isToday ? 'inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[#534AB7] font-bold text-white' : ''}`}>{day.getDate()}</span>
                       </button>
                     );
                   })}
@@ -284,7 +284,7 @@ export default function MonthCalendar({
                     isToday ? 'bg-[#EEEDFE] text-[#1A1A1A]' : inMonth ? 'text-[#1A1A1A] hover:bg-[#F1EFE8]' : 'text-[#B4B2A9] hover:bg-[#F8F8F5]',
                   ].join(' ')}
                 >
-                  <div className={`text-[10px] ${isToday ? 'inline-flex h-[18px] w-[18px] items-center justify-center self-start rounded-full bg-[#534AB7] font-bold text-white' : ''}`}>{day.getDate()}</div>
+                  <div className={`text-tiny ${isToday ? 'inline-flex h-[18px] w-[18px] items-center justify-center self-start rounded-full bg-[#534AB7] font-bold text-white' : ''}`}>{day.getDate()}</div>
                   <div className="mt-0.5 flex flex-col gap-[2px]">
                     {visibleItems.map((item) => {
                       const barColor = projectColor(item.project_id);
@@ -363,8 +363,8 @@ const DayPopover = forwardRef<
   >
     <div className="flex items-center justify-between border-b border-[#F1EFE8] px-4 py-3">
       <div>
-        <p className="text-[12px] font-bold text-[#1A1A1A]">{iso}</p>
-        <p className="text-[10px] text-[#888780]">{'소프로젝트'} {items.length}{'건'}</p>
+        <p className="text-small font-bold text-[#1A1A1A]">{iso}</p>
+        <p className="text-tiny text-[#888780]">{'소프로젝트'} {items.length}{'건'}</p>
       </div>
       <button type="button" onClick={onClose} className="rounded-full p-1 text-[#888780] hover:bg-[#F1EFE8] hover:text-[#1A1A1A]" aria-label="닫기">
         {'✕'}
@@ -383,12 +383,12 @@ const DayPopover = forwardRef<
           >
             <span className="mt-[3px] h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: barColor }} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-semibold text-[#1A1A1A]">{item.name}</p>
-              <p className="mt-0.5 text-[10px] text-[#888780]">{item.start_date} ~ {item.end_date}</p>
+              <p className="truncate text-small font-semibold text-[#1A1A1A]">{item.name}</p>
+              <p className="mt-0.5 text-tiny text-[#888780]">{item.start_date} ~ {item.end_date}</p>
               <div className="mt-1 flex items-center gap-1.5">
-                <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${st.cls}`}>{st.label}</span>
-                <span className="text-[9px] text-[#888780]">{assigneeNames(item)}</span>
-                <span className="ml-auto text-[10px] font-semibold text-[#1A1A1A]">{Math.round(item.progress)}%</span>
+                <span className={`rounded-full px-1.5 py-0.5 text-nano font-bold ${st.cls}`}>{st.label}</span>
+                <span className="text-nano text-[#888780]">{assigneeNames(item)}</span>
+                <span className="ml-auto text-tiny font-semibold text-[#1A1A1A]">{Math.round(item.progress)}%</span>
               </div>
             </div>
           </button>
@@ -400,7 +400,7 @@ const DayPopover = forwardRef<
         <button
           type="button"
           onClick={() => onSelectDate(iso)}
-          className="w-full rounded-lg border border-dashed border-[#AFA9EC] py-1.5 text-[11px] font-bold text-[#534AB7] transition hover:bg-[#EEEDFE]"
+          className="w-full rounded-lg border border-dashed border-[#AFA9EC] py-1.5 text-micro font-bold text-[#534AB7] transition hover:bg-[#EEEDFE]"
         >
           {'+ 이 날에 일정 추가'}
         </button>
