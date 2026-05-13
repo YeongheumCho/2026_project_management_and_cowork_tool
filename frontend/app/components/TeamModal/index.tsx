@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   apiFetch,
+  DEFAULT_PROJECT_FIELD_SCHEMAS,
   defaultFieldSchema,
   effectiveFieldSchema,
   type FieldDefinition,
@@ -10,7 +11,6 @@ import {
   type Project,
   type ProjectFieldSchema,
   type SubProject,
-  type Template,
   type UserBrief,
 } from '../../lib/api';
 import Modal from '../Modal';
@@ -68,6 +68,10 @@ const SYSTEM_FIELD_MAP: Record<string, keyof FormState> = {
   etc_note: 'etcNote',
 };
 
+const DEFAULT_TEMPLATE_KEYS = Object.keys(DEFAULT_PROJECT_FIELD_SCHEMAS);
+const FIELD_SCHEMA_NAME_KEY = '__field_schema_name';
+const LEGACY_FIELD_SCHEMA_TYPE_KEY = '__field_schema_type';
+
 type Props = {
   open: boolean;
   mode: 'create' | 'edit';
@@ -96,20 +100,25 @@ export default function TeamModal({
   const [f, setF] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [fieldSchema, setFieldSchema] = useState<ProjectFieldSchema | null>(null);
+  const [fieldSchemas, setFieldSchemas] = useState<Record<string, ProjectFieldSchema>>({});
+  const [selectedFieldSchemaType, setSelectedFieldSchemaType] =
+    useState('general');
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === f.projectId),
     [projects, f.projectId],
   );
   const projectType = selectedProject?.project_type ?? 'general';
+  const fieldSchemaType = selectedFieldSchemaType;
   const effectiveSchema = useMemo(
-    () =>
-      fieldSchema
-        ? effectiveFieldSchema(fieldSchema)
-        : defaultFieldSchema(projectType),
-    [fieldSchema, projectType],
+    () => effectiveFieldSchema(
+      fieldSchemas[fieldSchemaType] ?? defaultFieldSchema(fieldSchemaType),
+    ),
+    [fieldSchemaType, fieldSchemas],
+  );
+  const fieldSchemaOptions = useMemo(
+    () => orderedFieldSchemas(fieldSchemas),
+    [fieldSchemas],
   );
   const projectParticipants = useMemo(
     () => selectedProject?.participants ?? [],
@@ -125,13 +134,6 @@ export default function TeamModal({
     () => new Set(projectParticipants.map((user) => user.name)),
     [projectParticipants],
   );
-  const filteredTemplates = useMemo(() => {
-    if (!selectedProject) return [];
-    return templates.filter(
-      (template) => template.project_type === selectedProject.project_type,
-    );
-  }, [selectedProject, templates]);
-
   const fieldValues = useMemo(() => getFieldValues(f), [f]);
   const requiredFieldMissing = effectiveSchema.fields.some(
     (field) => field.required && !fieldValues[field.key]?.trim(),
@@ -158,22 +160,51 @@ export default function TeamModal({
   }, [open, mode, initial, defaultDate, projects, lockedProjectId]);
 
   useEffect(() => {
-    if (!open || mode !== 'create') return;
-    apiFetch<Template[]>('/templates')
-      .then(setTemplates)
-      .catch(() => setTemplates([]));
-  }, [open, mode]);
+    if (!open) return;
+    apiFetch<ProjectFieldSchema[]>('/field-schemas')
+      .then((saved) => {
+        const next = Object.fromEntries(
+          DEFAULT_TEMPLATE_KEYS.map((type) => [type, defaultFieldSchema(type)]),
+        ) as Record<string, ProjectFieldSchema>;
+        for (const schema of saved) {
+          next[schema.project_type] = schema;
+        }
+        setFieldSchemas(next);
+      })
+      .catch(() => {
+        setFieldSchemas(
+          Object.fromEntries(
+            DEFAULT_TEMPLATE_KEYS.map((type) => [type, defaultFieldSchema(type)]),
+          ) as Record<string, ProjectFieldSchema>,
+        );
+      });
+  }, [open]);
 
   useEffect(() => {
-    if (!open || !selectedProject) {
-      setFieldSchema(null);
-      return;
-    }
-    const nextProjectType = selectedProject.project_type;
-    apiFetch<ProjectFieldSchema>(`/field-schemas/${nextProjectType}`)
-      .then(setFieldSchema)
-      .catch(() => setFieldSchema(defaultFieldSchema(nextProjectType)));
-  }, [open, selectedProject]);
+    if (!open || mode !== 'create') return;
+    setSelectedFieldSchemaType(projectType);
+    const templateName = templateNameForType(projectType, fieldSchemas);
+    setF((prev) => ({
+      ...prev,
+      customFields: {
+        ...withoutFieldSchemaMeta(prev.customFields),
+        [FIELD_SCHEMA_NAME_KEY]: templateName,
+      },
+    }));
+  }, [fieldSchemas, mode, open, projectType]);
+
+  useEffect(() => {
+    if (!open || mode !== 'edit' || !initial) return;
+    const inferredType = inferFieldSchemaType(initial, fieldSchemas, projectType);
+    setSelectedFieldSchemaType(inferredType);
+    setF((prev) => ({
+      ...prev,
+      customFields: {
+        ...withoutFieldSchemaMeta(prev.customFields),
+        [FIELD_SCHEMA_NAME_KEY]: templateNameForType(inferredType, fieldSchemas),
+      },
+    }));
+  }, [fieldSchemas, initial, mode, open, projectType]);
 
   useEffect(() => {
     if (f.assigneeIds.length === 0) return;
@@ -218,15 +249,16 @@ export default function TeamModal({
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setF((prev) => ({ ...prev, [key]: value }));
 
-  function applyTemplate(fields: Record<string, unknown>) {
-    setF((prev) => {
-      const next: FormState = { ...prev, customFields: { ...prev.customFields } };
-      for (const [key, value] of Object.entries(fields)) {
-        setFieldOnDraft(next, key, value == null ? '' : String(value));
-      }
-      return next;
-    });
-  }
+  const handleFieldSchemaTypeChange = (nextType: string) => {
+    setSelectedFieldSchemaType(nextType);
+    setF((prev) => ({
+      ...prev,
+      customFields: {
+        ...withoutFieldSchemaMeta(prev.customFields),
+        [FIELD_SCHEMA_NAME_KEY]: templateNameForType(nextType, fieldSchemas),
+      },
+    }));
+  };
 
   function updateDynamicField(key: string, value: string) {
     setF((prev) => {
@@ -338,8 +370,10 @@ export default function TeamModal({
           mode={mode}
           lockedProjectId={lockedProjectId}
           isEtc={projectType === 'etc_task'}
-          templates={filteredTemplates}
-          onApplyTemplate={applyTemplate}
+          fieldSchema={effectiveSchema}
+          fieldSchemaOptions={fieldSchemaOptions}
+          selectedFieldSchemaType={selectedFieldSchemaType}
+          onFieldSchemaTypeChange={handleFieldSchemaTypeChange}
         />
 
         <CustomFieldsSection
@@ -408,6 +442,99 @@ function getFieldValues(f: FormState): Record<string, string> {
     etc_days: f.etcDays,
     etc_note: f.etcNote,
   };
+}
+
+function inferFieldSchemaType(
+  subproject: SubProject,
+  fieldSchemas: Record<string, ProjectFieldSchema>,
+  fallbackType: string,
+) {
+  const savedName = subproject.custom_fields?.[FIELD_SCHEMA_NAME_KEY];
+  if (typeof savedName === 'string' && savedName) {
+    const typeByName = typeForTemplateName(savedName, fieldSchemas);
+    if (typeByName) return typeByName;
+  }
+
+  const legacySavedType = subproject.custom_fields?.[LEGACY_FIELD_SCHEMA_TYPE_KEY];
+  if (typeof legacySavedType === 'string' && legacySavedType) {
+    return legacySavedType;
+  }
+
+  const fieldValues = getFieldValues(fromSubProject(subproject));
+  const populatedKeys = new Set(
+    Object.entries(fieldValues)
+      .filter(([key, value]) =>
+        key !== FIELD_SCHEMA_NAME_KEY &&
+        key !== LEGACY_FIELD_SCHEMA_TYPE_KEY &&
+        value.trim() !== '',
+      )
+      .map(([key]) => key),
+  );
+  if (populatedKeys.size === 0) return fallbackType;
+
+  let bestType = fallbackType;
+  let bestScore = 0;
+  for (const type of schemaKeys(fieldSchemas)) {
+    const schema = effectiveFieldSchema(
+      fieldSchemas[type] ?? defaultFieldSchema(type),
+    );
+    const score = schema.fields.reduce(
+      (sum, field) => sum + (populatedKeys.has(field.key) ? 1 : 0),
+      0,
+    );
+    if (score > bestScore) {
+      bestType = type;
+      bestScore = score;
+    }
+  }
+  return bestType;
+}
+
+function templateNameForType(
+  projectType: string,
+  fieldSchemas: Record<string, ProjectFieldSchema>,
+) {
+  return (
+    fieldSchemas[projectType]?.section_label ||
+    defaultFieldSchema(projectType).section_label
+  );
+}
+
+function typeForTemplateName(
+  templateName: string,
+  fieldSchemas: Record<string, ProjectFieldSchema>,
+) {
+  const matched = schemaKeys(fieldSchemas).find(
+    (type) => templateNameForType(type, fieldSchemas) === templateName,
+  );
+  return matched ?? null;
+}
+
+function schemaKeys(fieldSchemas: Record<string, ProjectFieldSchema>) {
+  return Object.keys(fieldSchemas).length > 0
+    ? Object.keys(fieldSchemas)
+    : DEFAULT_TEMPLATE_KEYS;
+}
+
+function withoutFieldSchemaMeta(fields: Record<string, string>) {
+  const next = { ...fields };
+  delete next[FIELD_SCHEMA_NAME_KEY];
+  delete next[LEGACY_FIELD_SCHEMA_TYPE_KEY];
+  return next;
+}
+
+function orderedFieldSchemas(fieldSchemas: Record<string, ProjectFieldSchema>) {
+  const keys = [
+    ...DEFAULT_TEMPLATE_KEYS,
+    ...Object.keys(fieldSchemas)
+      .filter((key) => !DEFAULT_TEMPLATE_KEYS.includes(key))
+      .sort((left, right) =>
+        templateNameForType(left, fieldSchemas).localeCompare(
+          templateNameForType(right, fieldSchemas),
+        ),
+      ),
+  ];
+  return keys.map((key) => fieldSchemas[key] ?? defaultFieldSchema(key));
 }
 
 function setFieldOnDraft(draft: FormState, key: string, value: string) {

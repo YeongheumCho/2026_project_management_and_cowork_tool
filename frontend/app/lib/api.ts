@@ -412,7 +412,7 @@ export const DEFAULT_PROJECT_FIELD_SCHEMAS: Record<string, ProjectFieldSchema> =
   official_inspection: {
     id: 0,
     project_type: 'official_inspection',
-    section_label: '검증 정보',
+    section_label: '공식 검증 정보',
     fields: inspectionFields,
     created_by: null,
     updated_at: '',

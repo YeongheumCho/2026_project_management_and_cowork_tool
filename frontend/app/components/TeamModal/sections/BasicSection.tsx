@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   PROJECT_TYPE_LABEL,
   type Project,
-  type Template,
+  type ProjectFieldSchema,
   type UserBrief,
 } from '../../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../../lib/dateInput';
@@ -21,8 +21,10 @@ type Props = {
   mode: 'create' | 'edit';
   lockedProjectId?: number;
   isEtc: boolean;
-  templates: Template[];
-  onApplyTemplate: (fields: Record<string, unknown>) => void;
+  fieldSchema: ProjectFieldSchema;
+  fieldSchemaOptions: ProjectFieldSchema[];
+  selectedFieldSchemaType: string;
+  onFieldSchemaTypeChange: (projectType: string) => void;
 };
 
 export default function BasicSection({
@@ -34,10 +36,11 @@ export default function BasicSection({
   mode,
   lockedProjectId,
   isEtc,
-  templates,
-  onApplyTemplate,
+  fieldSchema,
+  fieldSchemaOptions,
+  selectedFieldSchemaType,
+  onFieldSchemaTypeChange,
 }: Props) {
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number | ''>('');
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === f.projectId),
     [projects, f.projectId],
@@ -48,15 +51,15 @@ export default function BasicSection({
     }
     return selectedProject.participants;
   }, [selectedProject, users]);
+  const configuredFieldCount = fieldSchema.fields.length;
 
-  // When the selected project changes, sync dates with the new parent project
   const { projectId } = f;
   useEffect(() => {
-    if (!selectedProject) return;
+    if (!selectedProject || mode === 'edit') return;
     set('startDate', selectedProject.start_date ?? '');
     set('endDate', selectedProject.end_date ?? '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [mode, projectId]);
 
   return (
     <section className="rounded-xl border border-slate-200 p-4">
@@ -97,7 +100,7 @@ export default function BasicSection({
           helper={
             selectedProject?.participants.length
               ? '이 프로젝트에 참여 중인 인원만 선택할 수 있습니다.'
-              : '프로젝트 참여 인원이 아직 없으면 전체 조직에서 선택됩니다.'
+              : '프로젝트 참여 인원이 아직 없으면 전체 조직에서 선택합니다.'
           }
         >
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -145,47 +148,37 @@ export default function BasicSection({
           )}
         </Field>
 
-        {mode === 'create' && templates.length > 0 && (
-          <Field
-            label="입력 템플릿"
-            span={2}
-            helper="템플릿을 선택하면 하드코딩 필드와 자유 형식 필드 값이 함께 채워집니다."
-          >
-            <div className="flex gap-2">
-              <select
-                value={selectedTemplateId}
-                onChange={(e) =>
-                  setSelectedTemplateId(
-                    e.target.value === '' ? '' : Number(e.target.value),
-                  )
-                }
-                disabled={!isAdmin}
-                className="input flex-1"
-              >
-                <option value="">템플릿 선택...</option>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
-                    {template.is_default ? ' (기본)' : ''}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                disabled={!isAdmin || selectedTemplateId === ''}
-                onClick={() => {
-                  const template = templates.find(
-                    (item) => item.id === selectedTemplateId,
-                  );
-                  if (template) onApplyTemplate(template.fields);
-                }}
-                className="shrink-0 rounded-lg bg-[#534AB7] px-3 py-2 text-xs font-bold text-white disabled:opacity-40 hover:bg-[#433A9A]"
-              >
-                불러오기
-              </button>
-            </div>
-          </Field>
-        )}
+        <Field
+          label="템플릿"
+          span={2}
+          helper={
+            configuredFieldCount > 0
+              ? '선택한 템플릿 이름이 하위 프로젝트에 저장되고, 해당 필드 구성이 아래 입력 영역에 적용됩니다.'
+              : '선택한 템플릿에 적용할 필드가 없습니다.'
+          }
+        >
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <select
+              value={selectedFieldSchemaType}
+              onChange={(event) => onFieldSchemaTypeChange(event.target.value)}
+              disabled={!isAdmin}
+              className="input"
+            >
+              {fieldSchemaOptions.map((schema) => (
+                <option key={schema.project_type} value={schema.project_type}>
+                  {schema.section_label} · {schema.fields.length}개 필드
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled
+              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-400"
+            >
+              적용 중
+            </button>
+          </div>
+        </Field>
       </div>
     </section>
   );
