@@ -72,6 +72,16 @@
   --color-border: var(--color-border);
   --color-border-subtle: var(--color-border-subtle);
   --color-border-strong: var(--color-border-strong);
+  --color-verify-pass-fg: var(--color-verify-pass-fg);
+  --color-verify-pass-bg: var(--color-verify-pass-bg);
+  --color-verify-fail-fg: var(--color-verify-fail-fg);
+  --color-verify-fail-bg: var(--color-verify-fail-bg);
+  --color-verify-warn-fg: var(--color-verify-warn-fg);
+  --color-verify-warn-bg: var(--color-verify-warn-bg);
+  --color-verify-info-fg: var(--color-verify-info-fg);
+  --color-verify-info-bg: var(--color-verify-info-bg);
+  --color-verify-idle-fg: var(--color-verify-idle-fg);
+  --color-verify-idle-bg: var(--color-verify-idle-bg);
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }

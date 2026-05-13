@@ -440,7 +440,7 @@ export default function WorkHistoryManager({
 
   if (!enabled) {
     return (
-      <div className="rounded-2xl border border-[#F4D6D6] bg-[#FFF7F7] p-6 text-sm text-[#A32D2D]">
+      <div className="rounded-2xl border border-verify-fail-bg bg-verify-fail-bg p-6 text-sm text-verify-fail-fg">
         관리자만 사용할 수 있습니다.
       </div>
     );
@@ -448,29 +448,29 @@ export default function WorkHistoryManager({
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-[#EAEAE4] bg-white p-4">
+      <section className="rounded-2xl border border-border bg-white p-4">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-[14px] font-bold text-[#1A1A1A]">
+            <h3 className="text-[14px] font-bold text-text">
               업무 이력 추가
             </h3>
-            <p className="mt-1 text-[12px] text-[#888780]">
+            <p className="mt-1 text-[12px] text-text-subtle">
               담당자별 수행 업무와 기간, 소요 시간을 직접 기록합니다.
             </p>
           </div>
           {createError && (
-            <p className="text-[12px] font-semibold text-[#A32D2D]">
+            <p className="text-[12px] font-semibold text-verify-fail-fg">
               {createError}
             </p>
           )}
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
           <div>
-            <label className="block text-[12px] font-semibold text-[#888780]">
+            <label className="block text-[12px] font-semibold text-text-subtle">
               담당자
             </label>
             <select
-              className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
               value={createDraft.user_id}
               onChange={(e) =>
                 updateCreateDraft(
@@ -488,11 +488,11 @@ export default function WorkHistoryManager({
             </select>
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-[#888780]">
+            <label className="block text-[12px] font-semibold text-text-subtle">
               프로젝트
             </label>
             <select
-              className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
               value={createDraft.project_id}
               onChange={(e) =>
                 updateCreateDraft(
@@ -510,12 +510,12 @@ export default function WorkHistoryManager({
             </select>
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-[#888780]">
+            <label className="block text-[12px] font-semibold text-text-subtle">
               프로젝트명
             </label>
             <input
               type="text"
-              className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
               value={createDraft.project_name}
               onChange={(e) =>
                 setCreateDraft((prev) => ({
@@ -530,11 +530,11 @@ export default function WorkHistoryManager({
             />
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-[#888780]">
+            <label className="block text-[12px] font-semibold text-text-subtle">
               하위 프로젝트
             </label>
             <select
-              className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
               value={createDraft.subproject_id}
               onChange={(e) =>
                 updateCreateDraft(
@@ -543,7 +543,7 @@ export default function WorkHistoryManager({
                 )
               }
             >
-              <option value="">선택</option>
+              <option value="">선택 안 함</option>
               {createSubprojectOptions.map((sp) => (
                 <option key={sp.id} value={sp.id}>
                   {sp.name}
@@ -552,77 +552,79 @@ export default function WorkHistoryManager({
             </select>
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-[#888780]">
-              하위 프로젝트명
+            <label className="block text-[12px] font-semibold text-text-subtle">
+              업무명
             </label>
             <input
               type="text"
-              className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
               value={createDraft.subproject_name}
               onChange={(e) =>
-                updateCreateDraft('subproject_name', e.target.value)
+                setCreateDraft((prev) => ({ ...prev, subproject_name: e.target.value }))
               }
+              placeholder="예: 환경 구성"
             />
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-[#888780]">
+            <label className="block text-[12px] font-semibold text-text-subtle">
               시작일
             </label>
             <input
               type="date"
-              className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
               value={createDraft.started_on}
               onChange={(e) =>
-                updateCreateDraft('started_on', e.target.value)
+                setCreateDraft((prev) => ({ ...prev, started_on: e.target.value }))
               }
             />
           </div>
           <div>
-            <label className="block text-[12px] font-semibold text-[#888780]">
+            <label className="block text-[12px] font-semibold text-text-subtle">
               종료일
             </label>
             <input
               type="date"
-              className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
               value={createDraft.ended_on}
-              onChange={(e) => updateCreateDraft('ended_on', e.target.value)}
+              onChange={(e) =>
+                setCreateDraft((prev) => ({ ...prev, ended_on: e.target.value }))
+              }
             />
           </div>
-        </div>
-        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[160px_1fr_auto]">
           <div>
-            <label className="block text-[12px] font-semibold text-[#888780]">
-              소요 시간(분)
+            <label className="block text-[12px] font-semibold text-text-subtle">
+              소요 시간 (분)
             </label>
             <input
               type="number"
               min={0}
-              className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
               value={createDraft.worked_minutes}
               onChange={(e) =>
-                updateCreateDraft('worked_minutes', e.target.value)
+                setCreateDraft((prev) => ({ ...prev, worked_minutes: e.target.value }))
               }
             />
           </div>
-          <div>
-            <label className="block text-[12px] font-semibold text-[#888780]">
-              업무 메모
+          <div className="md:col-span-2 xl:col-span-4">
+            <label className="block text-[12px] font-semibold text-text-subtle">
+              비고/메모
             </label>
             <input
               type="text"
-              className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
               value={createDraft.keyword_text}
               onChange={(e) =>
-                updateCreateDraft('keyword_text', e.target.value)
+                setCreateDraft((prev) => ({ ...prev, keyword_text: e.target.value }))
               }
+              placeholder="선택"
             />
           </div>
-          <div className="flex items-end">
+          <div className="md:col-span-1 xl:col-span-2 flex items-end">
             <button
               type="button"
               onClick={() => void createManualHistory()}
               disabled={creating}
-              className="w-full rounded-lg bg-[#534AB7] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#3F38A0] disabled:opacity-50 md:w-auto"
+              className="w-full rounded-lg bg-brand px-3 py-2 text-[13px] font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50"
             >
               {creating ? '추가 중...' : '이력 추가'}
             </button>
@@ -630,93 +632,92 @@ export default function WorkHistoryManager({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#EAEAE4] bg-white p-4">
-        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+      <section className="rounded-2xl border border-border bg-white p-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           <div>
-            <h3 className="text-[14px] font-bold text-[#1A1A1A]">
-              업무 이력 확인
-            </h3>
-            <p className="mt-1 text-[12px] text-[#888780]">
-              상단에서 선택한 담당자 또는 조직 범위의 업무 이력을 확인합니다.
-            </p>
+            <label className="block text-[12px] font-semibold text-text-subtle">
+              프로젝트 필터
+            </label>
+            <select
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              value={projectId}
+              onChange={(e) =>
+                setProjectId(e.target.value === '' ? '' : Number(e.target.value))
+              }
+            >
+              <option value="">전체</option>
+              {sortedProjects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[12px] font-semibold text-text-subtle">
+              완료일 시작
+            </label>
+            <input
+              type="date"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              value={dateRange.from}
+              onChange={(e) =>
+                onDateRangeChange?.({ ...dateRange, from: e.target.value })
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-[12px] font-semibold text-text-subtle">
+              완료일 종료
+            </label>
+            <input
+              type="date"
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
+              value={dateRange.to}
+              onChange={(e) =>
+                onDateRangeChange?.({ ...dateRange, to: e.target.value })
+              }
+            />
+          </div>
+          <div className="flex items-end">
+            <label className="flex w-full items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text">
+              <input
+                type="checkbox"
+                checked={showSampleRows}
+                onChange={(e) => setShowSampleRows(e.target.checked)}
+              />
+              샘플 행 보기
+            </label>
+          </div>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={exportRows}
+              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] font-semibold text-text transition hover:border-brand hover:text-brand"
+            >
+              엑셀로 내보내기
+            </button>
           </div>
         </div>
+      </section>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <div>
-          <label className="block text-[12px] font-semibold text-[#888780]">
-            프로젝트
-          </label>
-          <select
-            className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
-            value={projectId}
-            onChange={(e) =>
-              setProjectId(e.target.value === '' ? '' : Number(e.target.value))
-            }
-          >
-            <option value="">전체</option>
-            {sortedProjects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[12px] font-semibold text-[#888780]">
-            완료일 시작
-          </label>
-          <input
-            type="date"
-            className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
-            value={dateRange.from}
-            onChange={(e) =>
-              onDateRangeChange?.({ ...dateRange, from: e.target.value })
-            }
-          />
-        </div>
-        <div>
-          <label className="block text-[12px] font-semibold text-[#888780]">
-            완료일 종료
-          </label>
-          <input
-            type="date"
-            className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
-            value={dateRange.to}
-            onChange={(e) => onDateRangeChange?.({ ...dateRange, to: e.target.value })}
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between text-[12px] text-[#888780]">
+      <div className="flex items-center justify-between text-[12px] text-text-subtle">
         <span>
-          총 <strong className="text-[#1A1A1A]">{displayRows.length}</strong>건 ·
-          누적 소요{' '}
-          <strong className="text-[#1A1A1A]">
-            {formatMinutes(displayTotalMinutes)}
-          </strong>
+          총 <strong className="text-text">{displayRows.length}</strong>건 · 누적 소요{' '}
+          <strong className="text-text">{formatMinutes(displayTotalMinutes)}</strong>
+          {showSampleRows && (
+            <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold text-brand">
+              샘플 미리보기
+            </span>
+          )}
         </span>
-        <button
-          type="button"
-          onClick={() => setShowSampleRows((prev) => !prev)}
-          className="rounded-lg border border-[#EAEAE4] px-3 py-1.5 text-[12px] font-semibold text-[#534AB7]"
-        >
-          {showSampleRows ? '실제 이력 보기' : '샘플 이력 보기'}
-        </button>
-        <button
-          type="button"
-          onClick={exportRows}
-          className="rounded-lg border border-[#D8D3F2] px-3 py-1.5 text-[12px] font-semibold text-[#534AB7] hover:bg-[#F7F5FF]"
-        >
-          엑셀 추출
-        </button>
-        {message && <span className="text-[#A32D2D]">{message}</span>}
+        {message && <span className="text-verify-fail-fg">{message}</span>}
         {loading && <span>불러오는 중...</span>}
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-[#EAEAE4] bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-white">
         <table className="w-full text-[13px]">
-          <thead className="bg-[#FAFAFA] text-left text-[12px] text-[#888780]">
+          <thead className="bg-surface-muted text-left text-[12px] text-text-subtle">
             <tr>
               <th className="px-4 py-3 font-semibold">담당자</th>
               <th className="px-4 py-3 font-semibold">프로젝트</th>
@@ -731,56 +732,53 @@ export default function WorkHistoryManager({
           <tbody>
             {displayRows.length === 0 && !loading && (
               <tr>
-                <td
-                  colSpan={8}
-                  className="px-4 py-8 text-center text-[12px] text-[#888780]"
-                >
+                <td colSpan={8} className="px-4 py-8 text-center text-[12px] text-text-subtle">
                   표시할 업무 이력이 없습니다.
                 </td>
               </tr>
             )}
             {displayRows.map((row) => (
-              <tr
-                key={row.id}
-                className="border-t border-[#EAEAE4] text-[#1A1A1A]"
-              >
+              <tr key={row.id} className="border-t border-border text-text">
                 <td className="px-4 py-3">{row.user_name}</td>
                 <td className="px-4 py-3">{row.project_name}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span>{row.subproject_name}</span>
                     {row.manual_override && (
-                      <span className="rounded-full bg-[#F1EEFB] px-2 py-0.5 text-[10px] font-semibold text-[#534AB7]">
+                      <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold text-brand">
                         수동
                       </span>
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-[#534AB7]">
+                <td className="px-4 py-3 text-brand">
                   {PROJECT_TYPE_LABEL[row.project_type] ?? row.project_type}
                 </td>
                 <td className="px-4 py-3">{formatDate(row.started_on)}</td>
                 <td className="px-4 py-3">{formatDate(row.ended_on)}</td>
                 <td className="px-4 py-3">{formatMinutes(row.worked_minutes)}</td>
                 <td className="px-4 py-3 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(row)}
-                      disabled={row.id < 0}
-                      className="rounded-lg border border-[#EAEAE4] px-2.5 py-1 text-[12px] font-semibold text-[#1A1A1A] transition hover:border-[#534AB7] hover:text-[#534AB7]"
-                    >
-                      편집
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void deleteRow(row)}
-                      disabled={deletingId === row.id || row.id < 0}
-                      className="rounded-lg border border-[#F4D6D6] px-2.5 py-1 text-[12px] font-semibold text-[#A32D2D] transition hover:bg-[#FFF7F7] disabled:opacity-50"
-                    >
-                      {deletingId === row.id ? '삭제 중...' : '삭제'}
-                    </button>
-                  </div>
+                  {row.id < 0 ? (
+                    <span className="text-[12px] text-text-subtle">샘플</span>
+                  ) : (
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(row)}
+                        className="rounded-lg border border-border px-2.5 py-1 text-[12px] font-semibold text-text transition hover:border-brand hover:text-brand"
+                      >
+                        편집
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void deleteRow(row)}
+                        disabled={deletingId === row.id}
+                        className="rounded-lg border border-verify-fail-bg px-2.5 py-1 text-[12px] font-semibold text-verify-fail-fg transition hover:bg-verify-fail-bg disabled:opacity-50"
+                      >
+                        {deletingId === row.id ? '삭제 중...' : '삭제'}
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -788,112 +786,96 @@ export default function WorkHistoryManager({
         </table>
       </div>
 
-      <p className="text-[12px] text-[#888780]">
-        업무 이력은 소프로젝트 완료 시 자동으로 기록됩니다. 관리자가 편집한 행은
-        <span className="mx-1 rounded-full bg-[#F1EEFB] px-2 py-0.5 text-[10px] font-semibold text-[#534AB7]">
+      <p className="text-[12px] text-text-subtle">
+        업무 이력은 소프로젝트 완료 시 자동으로 기록됩니다. 관리자가 편집한 행은{' '}
+        <span className="mx-1 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold text-brand">
           수동
         </span>
         뱃지가 붙으며 이후 자동 동기화로 덮어쓰이지 않습니다.
       </p>
 
-      </section>
-
       {editingRow && draft && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-[15px] font-bold text-[#1A1A1A]">
-              업무 이력 편집
-            </h3>
-            <p className="mt-1 text-[12px] text-[#888780]">
+            <h3 className="text-[15px] font-bold text-text">업무 이력 편집</h3>
+            <p className="mt-1 text-[12px] text-text-subtle">
               {editingRow.user_name} · {editingRow.project_name}
             </p>
 
             <div className="mt-4 space-y-3">
               <div>
-                <label className="block text-[12px] font-semibold text-[#888780]">
-                  하위 프로젝트명
+                <label className="block text-[12px] font-semibold text-text-subtle">
+                  업무 이름
                 </label>
                 <input
                   type="text"
-                  className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
                   value={draft.subproject_name}
                   onChange={(e) =>
-                    setDraft((d) =>
-                      d ? { ...d, subproject_name: e.target.value } : d,
-                    )
+                    setDraft((d) => (d ? { ...d, subproject_name: e.target.value } : d))
                   }
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[12px] font-semibold text-[#888780]">
+                  <label className="block text-[12px] font-semibold text-text-subtle">
                     시작일
                   </label>
                   <input
                     type="date"
-                    className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+                    className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
                     value={draft.started_on}
                     onChange={(e) =>
-                      setDraft((d) =>
-                        d ? { ...d, started_on: e.target.value } : d,
-                      )
+                      setDraft((d) => (d ? { ...d, started_on: e.target.value } : d))
                     }
                   />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-semibold text-[#888780]">
+                  <label className="block text-[12px] font-semibold text-text-subtle">
                     종료일
                   </label>
                   <input
                     type="date"
-                    className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+                    className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
                     value={draft.ended_on}
                     onChange={(e) =>
-                      setDraft((d) =>
-                        d ? { ...d, ended_on: e.target.value } : d,
-                      )
+                      setDraft((d) => (d ? { ...d, ended_on: e.target.value } : d))
                     }
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-[12px] font-semibold text-[#888780]">
+                <label className="block text-[12px] font-semibold text-text-subtle">
                   소요 시간 (분)
                 </label>
                 <input
                   type="number"
                   min={0}
-                  className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
                   value={draft.worked_minutes}
                   onChange={(e) =>
-                    setDraft((d) =>
-                      d ? { ...d, worked_minutes: e.target.value } : d,
-                    )
+                    setDraft((d) => (d ? { ...d, worked_minutes: e.target.value } : d))
                   }
                 />
               </div>
               <div>
-                <label className="block text-[12px] font-semibold text-[#888780]">
+                <label className="block text-[12px] font-semibold text-text-subtle">
                   비고/메모{' '}
-                  <span className="text-[#BBB]">
-                    (선택, 입력 시 keyword_text 갱신)
-                  </span>
+                  <span className="text-text-faint">(선택, 입력 시 keyword_text 갱신)</span>
                 </label>
                 <textarea
                   rows={3}
-                  className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
+                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-text"
                   value={draft.keyword_text}
                   onChange={(e) =>
-                    setDraft((d) =>
-                      d ? { ...d, keyword_text: e.target.value } : d,
-                    )
+                    setDraft((d) => (d ? { ...d, keyword_text: e.target.value } : d))
                   }
                 />
               </div>
             </div>
 
             {editError && (
-              <p className="mt-3 text-[12px] text-[#A32D2D]">{editError}</p>
+              <p className="mt-3 text-[12px] text-verify-fail-fg">{editError}</p>
             )}
 
             <div className="mt-5 flex justify-end gap-2">
@@ -901,7 +883,7 @@ export default function WorkHistoryManager({
                 type="button"
                 onClick={closeEdit}
                 disabled={saving}
-                className="rounded-lg border border-[#EAEAE4] px-3 py-2 text-[13px] font-semibold text-[#1A1A1A] transition hover:border-[#888780] disabled:opacity-50"
+                className="rounded-lg border border-border px-3 py-2 text-[13px] font-semibold text-text transition hover:border-text-subtle disabled:opacity-50"
               >
                 취소
               </button>
@@ -909,7 +891,7 @@ export default function WorkHistoryManager({
                 type="button"
                 onClick={() => void saveEdit()}
                 disabled={saving}
-                className="rounded-lg bg-[#534AB7] px-3 py-2 text-[13px] font-semibold text-white transition hover:bg-[#3F38A0] disabled:opacity-50"
+                className="rounded-lg bg-brand px-3 py-2 text-[13px] font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50"
               >
                 {saving ? '저장 중...' : '저장'}
               </button>

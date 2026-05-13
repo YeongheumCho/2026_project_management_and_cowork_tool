@@ -221,10 +221,10 @@ export default function MonthCalendar({
                         className={[
                           'relative flex flex-col rounded-[5px] px-1 pt-1 text-left transition',
                           isPopoverOpen ? 'ring-2 ring-[#534AB7] ring-offset-1' : '',
-                          isToday ? 'bg-[#534AB7] text-white' : inMonth ? 'text-[#1A1A1A] hover:bg-[#F1EFE8]' : 'text-[#B4B2A9] hover:bg-[#F8F8F5]',
+                          isToday ? 'bg-[#EEEDFE] text-[#1A1A1A]' : inMonth ? 'text-[#1A1A1A] hover:bg-[#F1EFE8]' : 'text-[#B4B2A9] hover:bg-[#F8F8F5]',
                         ].join(' ')}
                       >
-                        <span className={`text-[10px] ${isToday ? 'font-bold' : ''}`}>{day.getDate()}</span>
+                        <span className={`text-[10px] ${isToday ? 'inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[#534AB7] font-bold text-white' : ''}`}>{day.getDate()}</span>
                       </button>
                     );
                   })}
@@ -281,10 +281,10 @@ export default function MonthCalendar({
                   className={[
                     'relative flex flex-col rounded-[5px] px-1 py-1 text-left align-top transition',
                     isPopoverOpen ? 'ring-2 ring-[#534AB7] ring-offset-1' : '',
-                    isToday ? 'bg-[#534AB7] text-white' : inMonth ? 'text-[#1A1A1A] hover:bg-[#F1EFE8]' : 'text-[#B4B2A9] hover:bg-[#F8F8F5]',
+                    isToday ? 'bg-[#EEEDFE] text-[#1A1A1A]' : inMonth ? 'text-[#1A1A1A] hover:bg-[#F1EFE8]' : 'text-[#B4B2A9] hover:bg-[#F8F8F5]',
                   ].join(' ')}
                 >
-                  <div className={`text-[10px] ${isToday ? 'font-bold' : ''}`}>{day.getDate()}</div>
+                  <div className={`text-[10px] ${isToday ? 'inline-flex h-[18px] w-[18px] items-center justify-center self-start rounded-full bg-[#534AB7] font-bold text-white' : ''}`}>{day.getDate()}</div>
                   <div className="mt-0.5 flex flex-col gap-[2px]">
                     {visibleItems.map((item) => {
                       const barColor = projectColor(item.project_id);
@@ -304,9 +304,9 @@ export default function MonthCalendar({
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); openDayPopover(iso, itemsToday, e.currentTarget); }}
-                        className={`flex h-[13px] items-center rounded-[3px] px-[4px] transition ${isToday ? 'hover:bg-white/20' : 'hover:bg-[#EAEAE4]'}`}
+                        className={`flex h-[13px] items-center rounded-[3px] px-[4px] transition hover:bg-[#EAEAE4]`}
                       >
-                        <span className={`text-[7px] font-bold leading-none ${isToday ? 'text-white/80' : 'text-[#534AB7]'}`}>
+                        <span className={`text-[7px] font-bold leading-none text-[#534AB7]`}>
                           +{hiddenCount}{'개 더'}
                         </span>
                       </button>
