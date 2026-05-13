@@ -136,6 +136,11 @@ class ProjectExecutionHistory(Base):
     worked_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     completion_rate: Mapped[float] = mapped_column(Numeric(5, 2), default=100, nullable=False)
     keyword_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 관리자가 수동으로 편집한 행. True 면 SubProject 변경에 의한 자동 동기화가
+    # 이 행을 덮어쓰거나 삭제하지 않는다.
+    manual_override: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

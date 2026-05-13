@@ -45,6 +45,7 @@ from app.schemas.project import (
     ProjectHistoryEntry,
     ProjectHistoryMemberSummary,
     ProjectHistorySummary,
+    ProjectHistoryUpdate,
     ProjectMemberTimeSummary,
     ProjectCreate,
     ProjectResponse,
@@ -267,8 +268,11 @@ def _sync_subproject_execution_history(
         )
     ).all()
 
+    # 관리자가 수동 편집한 행은 자동 동기화 대상에서 제외 — 보존만 한다.
+    auto_rows = [row for row in existing_rows if not row.manual_override]
+
     if subproject.status != STATUS_COMPLETED or subproject.assignee_id is None:
-        for row in existing_rows:
+        for row in auto_rows:
             db.delete(row)
         return
 
@@ -281,10 +285,10 @@ def _sync_subproject_execution_history(
         )
 
     history = next(
-        (row for row in existing_rows if row.user_id == subproject.assignee_id),
+        (row for row in auto_rows if row.user_id == subproject.assignee_id),
         None,
     )
-    for row in existing_rows:
+    for row in auto_rows:
         if history is not None and row.id == history.id:
             continue
         db.delete(row)
@@ -843,9 +847,111 @@ def list_project_execution_history(
             worked_minutes=history.worked_minutes,
             completion_rate=float(history.completion_rate),
             recorded_at=history.recorded_at,
+            manual_override=bool(history.manual_override),
         )
         for history, user in rows
     ]
+
+
+@router.patch(
+    "/projects/history/{history_id}",
+    response_model=ProjectHistoryEntry,
+)
+def update_project_execution_history(
+    history_id: int,
+    payload: ProjectHistoryUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """관리자: 업무 이력 행 수동 편집. 편집 시 manual_override=True 로 표시되어
+    이후 SubProject 변경에 의한 자동 동기화가 이 행을 덮어쓰지 않는다.
+    """
+    history = db.get(ProjectExecutionHistory, history_id)
+    if not history:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="업무 이력을 찾을 수 없습니다.",
+        )
+
+    data = payload.model_dump(exclude_unset=True)
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="수정할 필드가 없습니다.",
+        )
+
+    if "started_on" in data and "ended_on" in data:
+        if data["started_on"] and data["ended_on"] and data["started_on"] > data["ended_on"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="시작일이 종료일보다 늦을 수 없습니다.",
+            )
+    elif "started_on" in data and history.ended_on:
+        if data["started_on"] and data["started_on"] > history.ended_on:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="시작일이 종료일보다 늦을 수 없습니다.",
+            )
+    elif "ended_on" in data and history.started_on:
+        if data["ended_on"] and history.started_on > data["ended_on"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="시작일이 종료일보다 늦을 수 없습니다.",
+            )
+
+    if "worked_minutes" in data and data["worked_minutes"] is not None and data["worked_minutes"] < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="소요 시간은 음수일 수 없습니다.",
+        )
+
+    for field, value in data.items():
+        setattr(history, field, value)
+    history.manual_override = True
+
+    db.commit()
+    db.refresh(history)
+    user = db.get(User, history.user_id)
+    return ProjectHistoryEntry(
+        id=history.id,
+        user_id=history.user_id,
+        user_name=user.name if user else "",
+        project_id=history.project_id,
+        project_name=history.project_name,
+        subproject_id=history.subproject_id,
+        subproject_name=history.subproject_name,
+        project_type=history.project_type,
+        role_in_project=history.role_in_project,
+        started_on=history.started_on,
+        ended_on=history.ended_on,
+        worked_minutes=history.worked_minutes,
+        completion_rate=float(history.completion_rate),
+        recorded_at=history.recorded_at,
+        manual_override=bool(history.manual_override),
+    )
+
+
+@router.delete(
+    "/projects/history/{history_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_project_execution_history(
+    history_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """관리자: 업무 이력 삭제. SubProject가 완료 상태로 재동기화되면 새 자동 행이
+    생성될 수 있으나, 수동 편집된 행은 다시 만들어지지 않는다.
+    """
+    history = db.get(ProjectExecutionHistory, history_id)
+    if not history:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="업무 이력을 찾을 수 없습니다.",
+        )
+    db.delete(history)
+    db.commit()
+    return None
 
 
 @router.get("/projects/history-summary", response_model=list[ProjectHistorySummary])

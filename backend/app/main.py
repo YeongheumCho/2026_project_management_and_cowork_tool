@@ -41,6 +41,19 @@ def _ensure_additive_schema_updates() -> None:
         if "end_date" not in project_columns:
             statements.append("ALTER TABLE projects ADD COLUMN end_date DATE")
 
+    if "project_execution_history" in table_names:
+        history_columns = {
+            column["name"]
+            for column in inspector.get_columns("project_execution_history")
+        }
+        if "manual_override" not in history_columns:
+            # Postgres/SQLite 모두에서 동작하는 형태(FALSE 키워드는 양쪽 지원).
+            # Postgres는 아래에서 'IF NOT EXISTS'로 치환된다.
+            statements.append(
+                "ALTER TABLE project_execution_history "
+                "ADD COLUMN manual_override BOOLEAN NOT NULL DEFAULT FALSE"
+            )
+
     if not statements:
         statements = []
 
