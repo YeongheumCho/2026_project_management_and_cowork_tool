@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import AppShell from '../components/AppShell';
 import { useMe } from '../lib/useMe';
+import AdminOrgScopeTree from './components/AdminOrgScopeTree';
 import ProjectDeletionManager from './components/ProjectDeletionManager';
+import StopwatchSummaryManager from './components/StopwatchSummaryManager';
 import TemplateManager from './components/TemplateManager';
 import UserTable from './components/UserTable';
 import WorkHistoryManager from './components/WorkHistoryManager';
@@ -22,6 +24,7 @@ export default function AdminPage() {
   const { me, loading: meLoading } = useMe();
   const isAdmin = me?.role === 'admin';
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
+  const [selectedOrgUserIds, setSelectedOrgUserIds] = useState<Set<number> | null>(null);
 
   const {
     users,
@@ -106,10 +109,22 @@ export default function AdminPage() {
       )}
 
       {activeTab === 'work-history' && (
-        <WorkHistoryManager
-          enabled={isAdmin}
-          users={users.map((u) => ({ id: u.id, name: u.name }))}
-        />
+        <div className="space-y-4">
+          <AdminOrgScopeTree
+            users={users}
+            selectedIds={selectedOrgUserIds}
+            onSelect={setSelectedOrgUserIds}
+          />
+          <StopwatchSummaryManager
+            enabled={isAdmin}
+            selectedUserIds={selectedOrgUserIds}
+          />
+          <WorkHistoryManager
+            enabled={isAdmin}
+            users={users}
+            selectedUserIds={selectedOrgUserIds}
+          />
+        </div>
       )}
     </AppShell>
   );

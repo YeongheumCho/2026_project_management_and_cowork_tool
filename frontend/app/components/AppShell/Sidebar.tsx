@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import type { Project, UserBrief } from '../../lib/api';
+import type { Project, SubProject, UserBrief } from '../../lib/api';
 import { colorForId, colorForPosition } from './colors';
 import { compactPosition } from '../../lib/display';
 import {
@@ -16,6 +16,7 @@ import {
 
 type Props = {
   projects: Project[];
+  subprojects: SubProject[];
   users: UserBrief[];
   myTeam?: string | null;
   selectedProjectId?: number | null;
@@ -26,6 +27,7 @@ type Props = {
 
 export default function Sidebar({
   projects,
+  subprojects,
   users,
   myTeam,
   selectedProjectId,
@@ -34,9 +36,36 @@ export default function Sidebar({
   onMemberSelect,
 }: Props) {
   const groups = useMemo(() => groupUsersByTeam(users), [users]);
+  const subprojectsByProject = useMemo(() => {
+    const grouped = new Map<number, SubProject[]>();
+    for (const subproject of subprojects) {
+      const current = grouped.get(subproject.project_id);
+      if (current) current.push(subproject);
+      else grouped.set(subproject.project_id, [subproject]);
+    }
+    for (const rows of grouped.values()) {
+      rows.sort((left, right) => left.start_date.localeCompare(right.start_date));
+    }
+    return grouped;
+  }, [subprojects]);
+  const subprojectsByMember = useMemo(() => {
+    const grouped = new Map<number, SubProject[]>();
+    for (const subproject of subprojects) {
+      for (const memberId of subproject.assignee_ids) {
+        const current = grouped.get(memberId);
+        if (current) current.push(subproject);
+        else grouped.set(memberId, [subproject]);
+      }
+    }
+    for (const rows of grouped.values()) {
+      rows.sort((left, right) => left.end_date.localeCompare(right.end_date));
+    }
+    return grouped;
+  }, [subprojects]);
   const [expanded, setExpanded] = useState<Set<string>>(() =>
     initialExpandedKeys(groups, myTeam),
   );
+  const [expandedProjects, setExpandedProjects] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     setExpanded((current) => {
@@ -72,6 +101,16 @@ export default function Sidebar({
     });
   };
 
+  const toggleProject = (projectId: number) => {
+    setExpandedProjects((current) => {
+      const next = new Set(current);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+    onProjectSelect?.(projectId);
+  };
+
   return (
     <aside className="hidden w-[240px] shrink-0 border-r border-[#EAEAE4] bg-white lg:block">
       <div className="h-full overflow-y-auto px-[10px] py-[14px]">
@@ -82,25 +121,13 @@ export default function Sidebar({
             <ul className="space-y-1">
               {projects.map((project) => (
                 <li key={project.id}>
-                  {onProjectSelect ? (
-                    <button
-                      type="button"
-                      onClick={() => onProjectSelect(project.id)}
-                      className={itemClass(selectedProjectId === project.id)}
-                    >
-                      <span
-                        className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(project.id)}`}
-                      />
-                      <span className="truncate">{project.name}</span>
-                    </button>
-                  ) : (
-                    <Link href={`/projects/${project.id}`} className={itemClass(false)}>
-                      <span
-                        className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(project.id)}`}
-                      />
-                      <span className="truncate">{project.name}</span>
-                    </Link>
-                  )}
+                  <ProjectItem
+                    project={project}
+                    subprojects={subprojectsByProject.get(project.id) ?? []}
+                    expanded={expandedProjects.has(project.id)}
+                    selected={selectedProjectId === project.id}
+                    onToggle={() => toggleProject(project.id)}
+                  />
                 </li>
               ))}
             </ul>
@@ -120,6 +147,7 @@ export default function Sidebar({
                   onToggle={toggleGroup}
                   selectedMemberId={selectedMemberId}
                   onMemberSelect={onMemberSelect}
+                  subprojectsByMember={subprojectsByMember}
                 />
               ))}
             </ul>
@@ -136,12 +164,14 @@ function CenterGroupItem({
   onToggle,
   selectedMemberId,
   onMemberSelect,
+  subprojectsByMember,
 }: {
   center: CenterGroup<UserBrief>;
   expanded: Set<string>;
   onToggle: (key: string) => void;
   selectedMemberId?: number | null;
   onMemberSelect?: (memberId: number) => void;
+  subprojectsByMember: Map<number, SubProject[]>;
 }) {
   const isOpen = expanded.has(center.key);
   const memberCount =
@@ -169,6 +199,7 @@ function CenterGroupItem({
               members={center.members}
               selectedMemberId={selectedMemberId}
               onMemberSelect={onMemberSelect}
+              subprojectsByMember={subprojectsByMember}
             />
           )}
           {center.offices.map((office) => (
@@ -179,6 +210,7 @@ function CenterGroupItem({
               onToggle={onToggle}
               selectedMemberId={selectedMemberId}
               onMemberSelect={onMemberSelect}
+              subprojectsByMember={subprojectsByMember}
             />
           ))}
         </div>
@@ -193,12 +225,14 @@ function OfficeGroupItem({
   onToggle,
   selectedMemberId,
   onMemberSelect,
+  subprojectsByMember,
 }: {
   office: OfficeGroup<UserBrief>;
   expanded: Set<string>;
   onToggle: (key: string) => void;
   selectedMemberId?: number | null;
   onMemberSelect?: (memberId: number) => void;
+  subprojectsByMember: Map<number, SubProject[]>;
 }) {
   const isOpen = expanded.has(office.key);
   const memberCount =
@@ -221,6 +255,7 @@ function OfficeGroupItem({
               members={office.members}
               selectedMemberId={selectedMemberId}
               onMemberSelect={onMemberSelect}
+              subprojectsByMember={subprojectsByMember}
             />
           )}
           {office.teams.map((team) => (
@@ -231,6 +266,7 @@ function OfficeGroupItem({
               onToggle={() => onToggle(team.key)}
               selectedMemberId={selectedMemberId}
               onMemberSelect={onMemberSelect}
+              subprojectsByMember={subprojectsByMember}
             />
           ))}
         </div>
@@ -245,12 +281,14 @@ function TeamGroupItem({
   onToggle,
   selectedMemberId,
   onMemberSelect,
+  subprojectsByMember,
 }: {
   team: TeamGroup<UserBrief>;
   expanded: boolean;
   onToggle: () => void;
   selectedMemberId?: number | null;
   onMemberSelect?: (memberId: number) => void;
+  subprojectsByMember: Map<number, SubProject[]>;
 }) {
   return (
     <div>
@@ -267,6 +305,7 @@ function TeamGroupItem({
             members={team.members}
             selectedMemberId={selectedMemberId}
             onMemberSelect={onMemberSelect}
+            subprojectsByMember={subprojectsByMember}
           />
         </div>
       )}
@@ -312,10 +351,12 @@ function MemberList({
   members,
   selectedMemberId,
   onMemberSelect,
+  subprojectsByMember,
 }: {
   members: UserBrief[];
   selectedMemberId?: number | null;
   onMemberSelect?: (memberId: number) => void;
+  subprojectsByMember: Map<number, SubProject[]>;
 }) {
   return (
     <ul className="space-y-0.5">
@@ -346,6 +387,83 @@ function MemberList({
               )}
             </div>
           )}
+          {selectedMemberId === user.id && (
+            <SidebarSubprojectList
+              subprojects={subprojectsByMember.get(user.id) ?? []}
+              emptyText="담당 하위 프로젝트가 없습니다."
+            />
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ProjectItem({
+  project,
+  subprojects,
+  expanded,
+  selected,
+  onToggle,
+}: {
+  project: Project;
+  subprojects: SubProject[];
+  expanded: boolean;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div>
+      <button type="button" onClick={onToggle} className={itemClass(selected || expanded)}>
+        <span
+          className={`inline-block text-[9px] text-[#888780] transition-transform ${
+            expanded ? 'rotate-90' : ''
+          }`}
+          aria-hidden
+        >
+          ›
+        </span>
+        <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(project.id)}`} />
+        <span className="truncate">{project.name}</span>
+        <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">
+          {subprojects.length}
+        </span>
+      </button>
+      {expanded && (
+        <SidebarSubprojectList
+          subprojects={subprojects}
+          emptyText="하위 프로젝트가 없습니다."
+        />
+      )}
+    </div>
+  );
+}
+
+function SidebarSubprojectList({
+  subprojects,
+  emptyText,
+}: {
+  subprojects: SubProject[];
+  emptyText: string;
+}) {
+  if (subprojects.length === 0) {
+    return <p className="ml-7 mt-0.5 text-[10px] text-[#B4B2A9]">{emptyText}</p>;
+  }
+
+  return (
+    <ul className="ml-7 mt-0.5 max-h-[180px] space-y-0.5 overflow-y-auto pr-1">
+      {subprojects.map((subproject) => (
+        <li key={subproject.id}>
+          <Link
+            href={`/projects/${subproject.project_id}`}
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium text-[#66645C] hover:bg-[#FAFAFA]"
+          >
+            <span className={`h-[6px] w-[6px] shrink-0 rounded-full ${statusDotClass(subproject.status)}`} />
+            <span className="truncate">{subproject.name}</span>
+            <span className="ml-auto shrink-0 text-[10px] text-[#B4B2A9]">
+              {Math.round(subproject.progress)}%
+            </span>
+          </Link>
         </li>
       ))}
     </ul>
@@ -381,4 +499,10 @@ function itemClass(active: boolean) {
       ? 'bg-[#F1EFE8] font-semibold text-[#1A1A1A]'
       : 'font-medium text-[#5F5E5A] hover:bg-[#FAFAFA]'
   }`;
+}
+
+function statusDotClass(status: SubProject['status']) {
+  if (status === 'completed') return 'bg-[#0F6E56]';
+  if (status === 'in_progress') return 'bg-[#185FA5]';
+  return 'bg-[#B4B2A9]';
 }

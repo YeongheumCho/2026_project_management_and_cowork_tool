@@ -121,11 +121,11 @@ class ProjectExecutionHistory(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    project_id: Mapped[int] = mapped_column(
-        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    subproject_id: Mapped[int] = mapped_column(
-        ForeignKey("subprojects.id", ondelete="CASCADE"), nullable=False, index=True
+    subproject_id: Mapped[int | None] = mapped_column(
+        ForeignKey("subprojects.id", ondelete="SET NULL"), nullable=True, index=True
     )
     project_name: Mapped[str] = mapped_column(String(200), nullable=False)
     subproject_name: Mapped[str] = mapped_column(String(200), nullable=False)

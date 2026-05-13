@@ -202,14 +202,31 @@ function CenterPickerGroup({
 
   return (
     <div className="space-y-1">
-      <GroupButton
-        label={center.label}
-        count={count}
-        isOpen={isOpen}
-        isActive={centerContainsSelected(center, selectedIds)}
-        onClick={() => onToggle(center.key)}
-        disabled={disabled}
-      />
+      <div className="flex flex-wrap items-center gap-1.5">
+        <GroupButton
+          label={center.label}
+          count={count}
+          isOpen={isOpen}
+          isActive={centerContainsSelected(center, selectedIds)}
+          onClick={() => onToggle(center.key)}
+          disabled={disabled}
+        />
+        {!singleSelection && (
+          <GroupSelectButton
+            label="조직 선택"
+            memberIds={[
+              ...center.members.map((member) => member.id),
+              ...center.offices.flatMap((office) => [
+                ...office.members.map((member) => member.id),
+                ...office.teams.flatMap((team) => team.members.map((member) => member.id)),
+              ]),
+            ]}
+            selectedIds={selectedIds}
+            onToggleMembers={onToggleMembers}
+            disabled={disabled}
+          />
+        )}
+      </div>
 
       {isOpen && (
         <div className="space-y-1 pl-4">
@@ -266,14 +283,28 @@ function OfficePickerGroup({
 
   return (
     <div className="space-y-1">
-      <GroupButton
-        label={office.label}
-        count={count}
-        isOpen={isOpen}
-        isActive={officeContainsSelected(office, selectedIds)}
-        onClick={() => onToggle(office.key)}
-        disabled={disabled}
-      />
+      <div className="flex flex-wrap items-center gap-1.5">
+        <GroupButton
+          label={office.label}
+          count={count}
+          isOpen={isOpen}
+          isActive={officeContainsSelected(office, selectedIds)}
+          onClick={() => onToggle(office.key)}
+          disabled={disabled}
+        />
+        {!singleSelection && (
+          <GroupSelectButton
+            label="실 선택"
+            memberIds={[
+              ...office.members.map((member) => member.id),
+              ...office.teams.flatMap((team) => team.members.map((member) => member.id)),
+            ]}
+            selectedIds={selectedIds}
+            onToggleMembers={onToggleMembers}
+            disabled={disabled}
+          />
+        )}
+      </div>
 
       {isOpen && (
         <div className="space-y-1 pl-4">
@@ -327,7 +358,6 @@ function TeamPickerGroup({
   const allSelected =
     teamMemberIds.length > 0 &&
     teamMemberIds.every((memberId) => selectedIds.includes(memberId));
-
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -362,6 +392,36 @@ function TeamPickerGroup({
         </div>
       )}
     </div>
+  );
+}
+
+function GroupSelectButton({
+  label,
+  memberIds,
+  selectedIds,
+  onToggleMembers,
+  disabled,
+}: {
+  label: string;
+  memberIds: number[];
+  selectedIds: number[];
+  onToggleMembers: (memberIds: number[]) => void;
+  disabled: boolean;
+}) {
+  const uniqueIds = Array.from(new Set(memberIds));
+  const allSelected =
+    uniqueIds.length > 0 &&
+    uniqueIds.every((memberId) => selectedIds.includes(memberId));
+
+  return (
+    <button
+      type="button"
+      onClick={() => onToggleMembers(uniqueIds)}
+      disabled={disabled || uniqueIds.length === 0}
+      className="rounded-full border border-[#D8D3FF] px-[9px] py-1 text-[11px] font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {allSelected ? `${label} 해제` : label}
+    </button>
   );
 }
 

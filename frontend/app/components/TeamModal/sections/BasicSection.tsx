@@ -103,7 +103,7 @@ export default function BasicSection({
               : '프로젝트 참여 인원이 아직 없으면 전체 조직에서 선택합니다.'
           }
         >
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="max-h-[280px] overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 pr-2">
             <OrganizationMemberPicker
               users={availableUsers}
               selectedIds={f.assigneeIds}

@@ -8,7 +8,6 @@ import CreateProjectModal from '../projects/components/CreateProjectModal';
 import { useWorkflowSelection } from '../lib/workflow-selection';
 import DashboardHeader from './components/DashboardHeader';
 import KpiGrid from './components/KpiGrid';
-import ProjectList from './components/ProjectList';
 import ProjectSummaryGrid from './components/ProjectSummaryGrid';
 import TimerWidget from './components/TimerWidget';
 import { useDashboardData } from './hooks/useDashboardData';
@@ -151,14 +150,6 @@ export default function DashboardPage() {
       <TimerWidget
         candidates={timerCandidates}
         projects={projects}
-      />
-
-      <ProjectList
-        projects={visibleProjects}
-        subprojects={filteredSubprojects}
-        loading={loading}
-        selectedProjectId={selectedProjectId}
-        onSelectProject={handleProjectSelect}
       />
 
       <CreateProjectModal

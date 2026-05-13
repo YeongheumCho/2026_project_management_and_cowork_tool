@@ -166,9 +166,9 @@ export type ProjectHistoryEntry = {
   id: number;
   user_id: number;
   user_name: string;
-  project_id: number;
+  project_id: number | null;
   project_name: string;
-  subproject_id: number;
+  subproject_id: number | null;
   subproject_name: string;
   project_type: string;
   role_in_project: string;
@@ -186,6 +186,36 @@ export type ProjectHistoryUpdate = {
   ended_on?: string | null;
   worked_minutes?: number;
   keyword_text?: string | null;
+};
+
+export type ProjectHistoryCreate = {
+  user_id: number;
+  project_id?: number | null;
+  project_name?: string;
+  project_type?: string;
+  subproject_id?: number | null;
+  subproject_name: string;
+  started_on?: string | null;
+  ended_on?: string | null;
+  worked_minutes: number;
+  completion_rate?: number;
+  keyword_text?: string | null;
+};
+
+export type WorkLogUserSummary = {
+  user_id: number;
+  user_name: string;
+  center?: string | null;
+  office?: string | null;
+  team?: string | null;
+  total_seconds: number;
+  running_seconds: number;
+  paused_seconds: number;
+  completed_seconds: number;
+  log_count: number;
+  running_count: number;
+  last_task_name: string | null;
+  last_logged_at: string | null;
 };
 
 export type ProjectHistoryMemberSummary = {

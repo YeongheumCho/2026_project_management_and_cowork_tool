@@ -123,9 +123,9 @@ class ProjectHistoryEntry(BaseModel):
     id: int
     user_id: int
     user_name: str
-    project_id: int
+    project_id: int | None = None
     project_name: str
-    subproject_id: int
+    subproject_id: int | None = None
     subproject_name: str
     project_type: str
     role_in_project: str
@@ -135,6 +135,32 @@ class ProjectHistoryEntry(BaseModel):
     completion_rate: float
     recorded_at: datetime
     manual_override: bool = False
+
+
+class ProjectHistoryCreate(BaseModel):
+    user_id: int
+    project_id: Optional[int] = None
+    project_name: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    project_type: str = Field(default="manual", min_length=1, max_length=50)
+    subproject_id: Optional[int] = None
+    subproject_name: str = Field(min_length=1, max_length=200)
+    started_on: Optional[date] = None
+    ended_on: Optional[date] = None
+    worked_minutes: int = Field(default=0, ge=0)
+    completion_rate: float = Field(default=100, ge=0, le=100)
+    keyword_text: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _check_dates(self):
+        if self.subproject_id is None and not (self.project_name or "").strip():
+            raise ValueError("프로젝트명을 입력해주세요.")
+        if (
+            self.started_on is not None
+            and self.ended_on is not None
+            and self.started_on > self.ended_on
+        ):
+            raise ValueError("시작일이 종료일보다 늦을 수 없습니다.")
+        return self
 
 
 class ProjectHistoryUpdate(BaseModel):

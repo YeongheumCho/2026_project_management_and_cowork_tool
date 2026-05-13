@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiFetch, type Project, type UserBrief } from '../../lib/api';
+import { apiFetch, type Project, type SubProject, type UserBrief } from '../../lib/api';
 
 type State = {
   projects: Project[];
+  subprojects: SubProject[];
   users: UserBrief[];
   loading: boolean;
 };
@@ -19,6 +20,7 @@ type State = {
  */
 export function useSidebarData(): State {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [subprojects, setSubprojects] = useState<SubProject[]>([]);
   const [users, setUsers] = useState<UserBrief[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,12 +28,14 @@ export function useSidebarData(): State {
     let cancelled = false;
     const load = async () => {
       try {
-        const [ps, us] = await Promise.all([
+        const [ps, sps, us] = await Promise.all([
           apiFetch<Project[]>('/projects'),
+          apiFetch<SubProject[]>('/subprojects'),
           apiFetch<UserBrief[]>('/users'),
         ]);
         if (cancelled) return;
         setProjects(ps);
+        setSubprojects(sps);
         setUsers(us);
       } catch {
         // 사이드바는 부가 정보라 실패 시 조용히 빈 목록으로 둔다.
@@ -45,5 +49,5 @@ export function useSidebarData(): State {
     };
   }, []);
 
-  return { projects, users, loading };
+  return { projects, subprojects, users, loading };
 }

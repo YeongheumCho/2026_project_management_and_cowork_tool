@@ -35,6 +35,7 @@ from app.schemas.workflow import (
     WorkLogComplete,
     WorkLogResponse,
     WorkLogStart,
+    WorkLogUserSummary,
     WorkQueueItem,
 )
 
@@ -317,6 +318,75 @@ def list_work_logs(
         .where(WorkLog.user_id == current_user.id)
         .order_by(WorkLog.created_at.desc(), WorkLog.id.desc())
     ).all()
+
+
+@router.get("/work-logs/admin-summary", response_model=list[WorkLogUserSummary])
+def list_work_log_admin_summary(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    now = _utcnow()
+    users = db.scalars(
+        select(User).where(User.is_active.is_(True)).order_by(User.name.asc())
+    ).all()
+    logs = db.scalars(select(WorkLog).order_by(WorkLog.created_at.desc())).all()
+
+    buckets: dict[int, dict[str, object]] = {
+        user.id: {
+            "user": user,
+            "total_seconds": 0,
+            "running_seconds": 0,
+            "paused_seconds": 0,
+            "completed_seconds": 0,
+            "log_count": 0,
+            "running_count": 0,
+            "last_task_name": None,
+            "last_logged_at": None,
+        }
+        for user in users
+    }
+
+    for log in logs:
+        bucket = buckets.get(log.user_id)
+        if bucket is None:
+            continue
+        elapsed = log.duration_sec
+        if log.status == WORKLOG_RUNNING and log.current_started_at:
+            elapsed += max(0, int((now - log.current_started_at).total_seconds()))
+            bucket["running_seconds"] = int(bucket["running_seconds"]) + elapsed
+            bucket["running_count"] = int(bucket["running_count"]) + 1
+        elif log.status == WORKLOG_PAUSED:
+            bucket["paused_seconds"] = int(bucket["paused_seconds"]) + elapsed
+        elif log.status == WORKLOG_COMPLETED:
+            bucket["completed_seconds"] = int(bucket["completed_seconds"]) + elapsed
+
+        bucket["total_seconds"] = int(bucket["total_seconds"]) + elapsed
+        bucket["log_count"] = int(bucket["log_count"]) + 1
+        last_logged_at = bucket["last_logged_at"]
+        log_time = log.ended_at or log.current_started_at or log.started_at or log.created_at
+        if last_logged_at is None or log_time > last_logged_at:
+            bucket["last_task_name"] = log.task_name
+            bucket["last_logged_at"] = log_time
+
+    return [
+        WorkLogUserSummary(
+            user_id=user.id,
+            user_name=user.name,
+            center=user.center,
+            office=user.office,
+            team=user.team,
+            total_seconds=int(bucket["total_seconds"]),
+            running_seconds=int(bucket["running_seconds"]),
+            paused_seconds=int(bucket["paused_seconds"]),
+            completed_seconds=int(bucket["completed_seconds"]),
+            log_count=int(bucket["log_count"]),
+            running_count=int(bucket["running_count"]),
+            last_task_name=bucket["last_task_name"],
+            last_logged_at=bucket["last_logged_at"],
+        )
+        for user_id, bucket in buckets.items()
+        for user in [bucket["user"]]
+    ]
 
 
 @router.post("/work-logs/start", response_model=WorkLogResponse, status_code=status.HTTP_201_CREATED)
