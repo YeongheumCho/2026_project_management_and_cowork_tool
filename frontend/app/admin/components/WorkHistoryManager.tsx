@@ -24,6 +24,8 @@ type Props = {
   enabled: boolean;
   users: AdminUser[];
   selectedUserIds?: Set<number> | null;
+  dateRange: DateRange;
+  onDateRangeChange?: (range: DateRange) => void;
 };
 
 type DateRange = {
@@ -52,7 +54,6 @@ type CreateDraft = {
   keyword_text: string;
 };
 
-const DEFAULT_RANGE: DateRange = { from: '', to: '' };
 const DEFAULT_CREATE_DRAFT: CreateDraft = {
   user_id: '',
   project_id: '',
@@ -117,10 +118,46 @@ function buildUpdatePayload(
   return payload;
 }
 
+function formatMinutesForExport(min: number): string {
+  if (!Number.isFinite(min) || min <= 0) return '-';
+  const hours = Math.floor(min / 60);
+  const mins = min % 60;
+  if (hours === 0) return `${mins}분`;
+  if (mins === 0) return `${hours}시간`;
+  return `${hours}시간 ${mins}분`;
+}
+
+function escapeHtml(value: string | number | null | undefined): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function downloadExcel(filename: string, headers: string[], rows: Array<Array<string | number>>) {
+  const tableRows = [
+    `<tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('')}</tr>`,
+    ...rows.map(
+      (row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`,
+    ),
+  ].join('');
+  const html = `<!doctype html><html><head><meta charset="utf-8" /></head><body><table>${tableRows}</table></body></html>`;
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function WorkHistoryManager({
   enabled,
   users,
   selectedUserIds = null,
+  dateRange,
+  onDateRangeChange,
 }: Props) {
   const [entries, setEntries] = useState<ProjectHistoryEntry[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -128,7 +165,6 @@ export default function WorkHistoryManager({
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [projectId, setProjectId] = useState<number | ''>('');
-  const [range, setRange] = useState<DateRange>(DEFAULT_RANGE);
   const [createDraft, setCreateDraft] = useState<CreateDraft>(DEFAULT_CREATE_DRAFT);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -146,6 +182,8 @@ export default function WorkHistoryManager({
     try {
       const params = new URLSearchParams();
       if (projectId !== '') params.set('project_id', String(projectId));
+      if (dateRange.from) params.set('start_date', dateRange.from);
+      if (dateRange.to) params.set('end_date', dateRange.to);
       const qs = params.toString();
       const [historyRows, projectRows, subprojectRows] = await Promise.all([
         apiFetch<ProjectHistoryEntry[]>(
@@ -168,7 +206,7 @@ export default function WorkHistoryManager({
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, projectId]);
+  }, [dateRange.from, dateRange.to, enabled, projectId]);
 
   useEffect(() => {
     void load();
@@ -179,18 +217,18 @@ export default function WorkHistoryManager({
     if (selectedUserIds) {
       rows = rows.filter((row) => selectedUserIds.has(row.user_id));
     }
-    if (range.from) {
+    if (dateRange.from) {
       rows = rows.filter(
-        (row) => row.ended_on !== null && row.ended_on >= range.from,
+        (row) => row.ended_on !== null && row.ended_on >= dateRange.from,
       );
     }
-    if (range.to) {
+    if (dateRange.to) {
       rows = rows.filter(
-        (row) => row.ended_on !== null && row.ended_on <= range.to,
+        (row) => row.ended_on !== null && row.ended_on <= dateRange.to,
       );
     }
     return rows;
-  }, [entries, range.from, range.to, selectedUserIds]);
+  }, [dateRange.from, dateRange.to, entries, selectedUserIds]);
 
   const sampleEntries = useMemo<ProjectHistoryEntry[]>(
     () =>
@@ -221,6 +259,23 @@ export default function WorkHistoryManager({
     () => displayRows.reduce((sum, row) => sum + (row.worked_minutes || 0), 0),
     [displayRows],
   );
+
+  const exportRows = () => {
+    downloadExcel(
+      `업무_이력_현황_${dateRange.from || '전체'}_${dateRange.to || '전체'}.xls`,
+      ['담당자', '프로젝트', '하위 프로젝트', '유형', '시작일', '종료일', '소요 시간', '기록 구분'],
+      displayRows.map((row) => [
+        row.user_name,
+        row.project_name,
+        row.subproject_name,
+        PROJECT_TYPE_LABEL[row.project_type] ?? row.project_type,
+        formatDate(row.started_on),
+        formatDate(row.ended_on),
+        formatMinutesForExport(row.worked_minutes),
+        row.manual_override ? '수동' : '자동',
+      ]),
+    );
+  };
 
   const sortedUsers = useMemo(
     () => [...users].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')),
@@ -614,9 +669,9 @@ export default function WorkHistoryManager({
           <input
             type="date"
             className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
-            value={range.from}
+            value={dateRange.from}
             onChange={(e) =>
-              setRange((r) => ({ ...r, from: e.target.value }))
+              onDateRangeChange?.({ ...dateRange, from: e.target.value })
             }
           />
         </div>
@@ -627,8 +682,8 @@ export default function WorkHistoryManager({
           <input
             type="date"
             className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-[13px] text-[#1A1A1A]"
-            value={range.to}
-            onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
+            value={dateRange.to}
+            onChange={(e) => onDateRangeChange?.({ ...dateRange, to: e.target.value })}
           />
         </div>
       </div>
@@ -647,6 +702,13 @@ export default function WorkHistoryManager({
           className="rounded-lg border border-[#EAEAE4] px-3 py-1.5 text-[12px] font-semibold text-[#534AB7]"
         >
           {showSampleRows ? '실제 이력 보기' : '샘플 이력 보기'}
+        </button>
+        <button
+          type="button"
+          onClick={exportRows}
+          className="rounded-lg border border-[#D8D3F2] px-3 py-1.5 text-[12px] font-semibold text-[#534AB7] hover:bg-[#F7F5FF]"
+        >
+          엑셀 추출
         </button>
         {message && <span className="text-[#A32D2D]">{message}</span>}
         {loading && <span>불러오는 중...</span>}

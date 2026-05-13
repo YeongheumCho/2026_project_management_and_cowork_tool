@@ -1,14 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  apiFetch,
-  type WorkLogUserSummary,
-} from '../../lib/api';
+import { apiFetch, type WorkLogUserSummary } from '../../lib/api';
+
+type DateRange = {
+  from: string;
+  to: string;
+};
 
 type Props = {
   enabled: boolean;
   selectedUserIds?: Set<number> | null;
+  dateRange: DateRange;
 };
 
 function formatSeconds(seconds: number): string {
@@ -25,22 +28,57 @@ function formatDateTime(value: string | null): string {
   return value.slice(0, 16).replace('T', ' ');
 }
 
-export default function StopwatchSummaryManager({ enabled, selectedUserIds = null }: Props) {
+function escapeHtml(value: string | number | null | undefined): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function downloadExcel(filename: string, headers: string[], rows: Array<Array<string | number>>) {
+  const tableRows = [
+    `<tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('')}</tr>`,
+    ...rows.map(
+      (row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`,
+    ),
+  ].join('');
+  const html = `<!doctype html><html><head><meta charset="utf-8" /></head><body><table>${tableRows}</table></body></html>`;
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export default function StopwatchSummaryManager({
+  enabled,
+  selectedUserIds = null,
+  dateRange,
+}: Props) {
   const [rows, setRows] = useState<WorkLogUserSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!enabled) return;
+
+    const params = new URLSearchParams();
+    if (dateRange.from) params.set('start_date', dateRange.from);
+    if (dateRange.to) params.set('end_date', dateRange.to);
+    const qs = params.toString();
+
     setLoading(true);
-    apiFetch<WorkLogUserSummary[]>('/work-logs/admin-summary')
+    apiFetch<WorkLogUserSummary[]>(`/work-logs/admin-summary${qs ? `?${qs}` : ''}`)
       .then((next) => {
         setRows(next);
         setError('');
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [enabled]);
+  }, [dateRange.from, dateRange.to, enabled]);
 
   const visibleRows = useMemo(
     () =>
@@ -49,6 +87,7 @@ export default function StopwatchSummaryManager({ enabled, selectedUserIds = nul
         : rows,
     [rows, selectedUserIds],
   );
+
   const activeRows = useMemo(
     () =>
       [...visibleRows].sort(
@@ -59,14 +98,33 @@ export default function StopwatchSummaryManager({ enabled, selectedUserIds = nul
       ),
     [visibleRows],
   );
+
   const totalSeconds = useMemo(
     () => visibleRows.reduce((sum, row) => sum + row.total_seconds, 0),
     [visibleRows],
   );
+
   const runningCount = useMemo(
     () => visibleRows.reduce((sum, row) => sum + row.running_count, 0),
     [visibleRows],
   );
+
+  const exportRows = () => {
+    downloadExcel(
+      `스톱워치_시간_현황_${dateRange.from || '전체'}_${dateRange.to || '전체'}.xls`,
+      ['담당자', '소속', '누적', '진행 중', '일시정지', '완료', '최근 업무', '최근 기록'],
+      activeRows.map((row) => [
+        row.user_name,
+        [row.center, row.office, row.team].filter(Boolean).join(' / ') || '-',
+        formatSeconds(row.total_seconds),
+        formatSeconds(row.running_seconds),
+        formatSeconds(row.paused_seconds),
+        formatSeconds(row.completed_seconds),
+        row.last_task_name ?? '-',
+        formatDateTime(row.last_logged_at),
+      ]),
+    );
+  };
 
   if (!enabled) {
     return null;
@@ -80,16 +138,23 @@ export default function StopwatchSummaryManager({ enabled, selectedUserIds = nul
             스톱워치 시간 현황
           </h3>
           <p className="mt-1 text-[12px] text-[#888780]">
-            구성원별 스톱워치 누적 시간과 현재 진행 중인 기록을 확인합니다.
+            선택한 담당자와 조회 기간에 맞춰 스톱워치 누적 시간을 확인합니다.
           </p>
         </div>
-        <div className="flex gap-2 text-[12px]">
+        <div className="flex flex-wrap gap-2 text-[12px]">
           <span className="rounded-lg bg-[#F1EEFB] px-3 py-2 font-semibold text-[#534AB7]">
             누적 {formatSeconds(totalSeconds)}
           </span>
           <span className="rounded-lg bg-[#EAF8F0] px-3 py-2 font-semibold text-[#1D7A47]">
             진행 중 {runningCount}건
           </span>
+          <button
+            type="button"
+            onClick={exportRows}
+            className="rounded-lg border border-[#D8D3F2] bg-white px-3 py-2 font-semibold text-[#534AB7] transition hover:bg-[#F7F5FF]"
+          >
+            엑셀 추출
+          </button>
         </div>
       </div>
 

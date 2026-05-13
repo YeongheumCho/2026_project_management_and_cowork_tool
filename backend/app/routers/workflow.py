@@ -3,7 +3,7 @@ from datetime import date, datetime, timezone
 from uuid import uuid4
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -322,6 +322,8 @@ def list_work_logs(
 
 @router.get("/work-logs/admin-summary", response_model=list[WorkLogUserSummary])
 def list_work_log_admin_summary(
+    start_date: date | None = Query(default=None),
+    end_date: date | None = Query(default=None),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
@@ -350,6 +352,16 @@ def list_work_log_admin_summary(
         bucket = buckets.get(log.user_id)
         if bucket is None:
             continue
+        log_time = (
+            now
+            if log.status == WORKLOG_RUNNING
+            else log.ended_at or log.current_started_at or log.started_at or log.created_at
+        )
+        log_date = log_time.date()
+        if start_date is not None and log_date < start_date:
+            continue
+        if end_date is not None and log_date > end_date:
+            continue
         elapsed = log.duration_sec
         if log.status == WORKLOG_RUNNING and log.current_started_at:
             elapsed += max(0, int((now - log.current_started_at).total_seconds()))
@@ -363,7 +375,6 @@ def list_work_log_admin_summary(
         bucket["total_seconds"] = int(bucket["total_seconds"]) + elapsed
         bucket["log_count"] = int(bucket["log_count"]) + 1
         last_logged_at = bucket["last_logged_at"]
-        log_time = log.ended_at or log.current_started_at or log.started_at or log.created_at
         if last_logged_at is None or log_time > last_logged_at:
             bucket["last_task_name"] = log.task_name
             bucket["last_logged_at"] = log_time

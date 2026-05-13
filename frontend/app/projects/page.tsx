@@ -174,7 +174,7 @@ export default function ProjectsPage() {
 
       <CsvImportModal
         open={csvModalOpen}
-        projectId={csvProjectId ?? 0}
+        project={projects.find((project) => project.id === csvProjectId) ?? null}
         users={users}
         onClose={() => setCsvModalOpen(false)}
         onImported={reload}
