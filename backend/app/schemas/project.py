@@ -134,6 +134,17 @@ class ProjectHistoryEntry(BaseModel):
     worked_minutes: int
     completion_rate: float
     recorded_at: datetime
+    manual_override: bool = False
+
+
+class ProjectHistoryUpdate(BaseModel):
+    """관리자가 업무 이력 행을 수동 편집할 때 사용. 모든 필드 옵션."""
+
+    subproject_name: Optional[str] = None
+    started_on: Optional[date] = None
+    ended_on: Optional[date] = None
+    worked_minutes: Optional[int] = None
+    keyword_text: Optional[str] = None
 
 
 class ProjectHistoryMemberSummary(BaseModel):

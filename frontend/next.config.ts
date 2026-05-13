@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/ai/:path*",
-        destination: "http://ai-chatbot:8002/api/:path*",
+        destination: "http://ai-chatbot:8002/:path*",
       },
     ];
   },

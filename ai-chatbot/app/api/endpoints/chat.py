@@ -7,8 +7,7 @@ from app.services.llm import llm_service
 router = APIRouter()
 
 
-@router.post("/", response_model=ChatResponse, summary="Claude 메시지 전송")
-async def send_chat(request: ChatRequest) -> ChatResponse:
+async def _send_chat(request: ChatRequest) -> ChatResponse:
     if settings.LLM_PROVIDER.lower() not in {"claude", "anthropic"}:
         raise HTTPException(
             status_code=503,
@@ -37,6 +36,17 @@ async def send_chat(request: ChatRequest) -> ChatResponse:
                 detail="Claude API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.",
             )
         raise HTTPException(status_code=500, detail="AI 응답 생성 중 오류가 발생했습니다.")
+
+
+@router.post("/", response_model=ChatResponse, summary="Claude 메시지 전송")
+async def send_chat(request: ChatRequest) -> ChatResponse:
+    return await _send_chat(request)
+
+
+@router.post("", response_model=ChatResponse, include_in_schema=False)
+async def send_chat_no_slash(request: ChatRequest) -> ChatResponse:
+    # Next.js rewrite 등에서 trailing slash가 누락되어도 동일하게 처리.
+    return await _send_chat(request)
 
 
 @router.get("/health", response_model=HealthResponse, summary="상태 확인")

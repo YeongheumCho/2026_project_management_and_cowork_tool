@@ -177,6 +177,15 @@ export type ProjectHistoryEntry = {
   worked_minutes: number;
   completion_rate: number;
   recorded_at: string;
+  manual_override: boolean;
+};
+
+export type ProjectHistoryUpdate = {
+  subproject_name?: string;
+  started_on?: string | null;
+  ended_on?: string | null;
+  worked_minutes?: number;
+  keyword_text?: string | null;
 };
 
 export type ProjectHistoryMemberSummary = {
