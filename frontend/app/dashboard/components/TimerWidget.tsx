@@ -131,9 +131,9 @@ export default function TimerWidget({ candidates, projects }: Props) {
 
   return (
     <>
-      <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">
+          <h2 className="text-base font-semibold text-text">
             스톱워치 — 오늘 담당 업무
           </h2>
           {runningLogs.length > 0 && (
@@ -150,7 +150,7 @@ export default function TimerWidget({ candidates, projects }: Props) {
         )}
 
         {candidates.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+          <p className="rounded-xl border border-border bg-surface-muted px-4 py-6 text-center text-sm text-text-faint">
             오늘 날짜 범위에 해당하는 담당 하위 프로젝트가 없습니다.
           </p>
         ) : (
@@ -172,17 +172,17 @@ export default function TimerWidget({ candidates, projects }: Props) {
                       ? 'border-emerald-200 bg-emerald-50'
                       : isPaused
                         ? 'border-amber-200 bg-amber-50'
-                        : 'border-slate-200 bg-white'
+                        : 'border-border bg-white'
                   }`}
                 >
                   {/* Header */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-900">
+                      <p className="truncate text-sm font-semibold text-text">
                         {candidate.name}
                       </p>
                       {projName && (
-                        <p className="truncate text-xs text-slate-400">
+                        <p className="truncate text-xs text-text-faint">
                           {projName}
                         </p>
                       )}
@@ -198,11 +198,11 @@ export default function TimerWidget({ candidates, projects }: Props) {
 
                   {/* Elapsed timer */}
                   {activeLog ? (
-                    <p className="mt-2 font-mono text-2xl font-bold tabular-nums tracking-tight text-slate-900">
+                    <p className="mt-2 font-mono text-2xl font-bold tabular-nums tracking-tight text-text">
                       {formatHMS(elapsed)}
                     </p>
                   ) : (
-                    <p className="mt-2 text-xs text-slate-400">
+                    <p className="mt-2 text-xs text-text-faint">
                       진척률 {Math.round(candidate.progress)}%
                     </p>
                   )}
@@ -310,18 +310,18 @@ export default function TimerWidget({ candidates, projects }: Props) {
       >
         <div className="space-y-4">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2 className="text-lg font-semibold text-text">
               이미 진행 중인 작업이 있습니다
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-text-subtle">
               새 작업을 시작하면 기존 작업을 자동으로 일시정지하거나, 동시 진행으로
               유지할 수 있습니다.
             </p>
           </div>
 
-          <div className="space-y-2 rounded-xl bg-slate-50 p-3">
+          <div className="space-y-2 rounded-xl bg-surface-muted p-3">
             {runningLogs.map((log) => (
-              <p key={log.id} className="text-sm text-slate-700">
+              <p key={log.id} className="text-sm text-text">
                 {log.task_name} · {formatHMS(getElapsedSeconds(log, tick))}
               </p>
             ))}
@@ -331,7 +331,7 @@ export default function TimerWidget({ candidates, projects }: Props) {
             <button
               type="button"
               onClick={() => setPendingStart(null)}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-surface-muted"
             >
               취소
             </button>
@@ -378,15 +378,15 @@ function TimerColumn<T>({
   renderItem: (item: T) => ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <section className="rounded-2xl border border-border bg-surface-muted p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-        <span className="text-xs text-slate-400">{items.length}건</span>
+        <h3 className="text-sm font-semibold text-text">{title}</h3>
+        <span className="text-xs text-text-faint">{items.length}건</span>
       </div>
       <div className="space-y-3">
         {items.length === 0 ? (
           emptyText ? (
-            <p className="rounded-xl bg-white px-4 py-5 text-center text-sm text-slate-400">
+            <p className="rounded-xl bg-white px-4 py-5 text-center text-sm text-text-faint">
               {emptyText}
             </p>
           ) : null
@@ -418,11 +418,11 @@ function LogCard({
   const elapsed = getElapsedSeconds(log, now);
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4">
+    <article className="rounded-xl border border-border bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-slate-900">{log.task_name}</p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="text-sm font-semibold text-text">{log.task_name}</p>
+          <p className="mt-1 text-xs text-text-subtle">
             {STATUS_LABEL[log.status]} · {formatHMS(elapsed)}
           </p>
         </div>
@@ -476,7 +476,7 @@ const BUTTON_TONE = {
   emerald: 'bg-emerald-600 text-white hover:bg-emerald-700',
   amber: 'bg-amber-100 text-amber-800 hover:bg-amber-200',
   rose: 'bg-rose-100 text-rose-700 hover:bg-rose-200',
-  slate: 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+  slate: 'bg-surface-subtle text-text hover:bg-slate-200',
 };
 
 const STATUS_LABEL = {
@@ -488,7 +488,7 @@ const STATUS_LABEL = {
 const STATUS_BADGE = {
   running: 'bg-emerald-100 text-emerald-700',
   paused: 'bg-amber-100 text-amber-700',
-  completed: 'bg-slate-200 text-slate-700',
+  completed: 'bg-slate-200 text-text',
 };
 
 function getElapsedSeconds(log: WorkLog, now: number) {

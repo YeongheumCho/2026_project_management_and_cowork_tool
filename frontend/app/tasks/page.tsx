@@ -161,7 +161,7 @@ export default function TasksPage() {
 
   // ── 렌더 ──────────────────────────────────────────────────────────────────
   if (meLoading || !me) {
-    return <main className="p-8 text-slate-900">불러오는 중...</main>;
+    return <main className="p-8 text-text">불러오는 중...</main>;
   }
 
   if (me.role !== 'admin') {
@@ -189,8 +189,8 @@ export default function TasksPage() {
         {/* ── 왼쪽: 입력 폼 ─────────────────────────────────────────── */}
         <section className="rounded-3xl border border-[#EAEAE4] bg-white p-6 shadow-sm">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-900">AI 업무 배정</h1>
-            <p className="mt-2 text-sm text-slate-500">
+            <h1 className="text-2xl font-bold text-text">AI 업무 배정</h1>
+            <p className="mt-2 text-sm text-text-subtle">
               프로젝트 조건을 입력하면 가용성과 적합도를 함께 고려해 상위 3명의 추천 후보를 제안합니다.
             </p>
           </div>
@@ -333,8 +333,8 @@ export default function TasksPage() {
         <section className="rounded-3xl border border-[#EAEAE4] bg-white p-6 shadow-sm">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">추천 결과 TOP 3</h2>
-              <p className="mt-2 text-sm text-slate-500">
+              <h2 className="text-xl font-semibold text-text">추천 결과 TOP 3</h2>
+              <p className="mt-2 text-sm text-text-subtle">
                 센터장, 실장, 팀장은 추천 후보에서 제외되며, Claude가 추천 이유를 보강합니다.
               </p>
               {recommendation && (

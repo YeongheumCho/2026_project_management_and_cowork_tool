@@ -14,8 +14,8 @@ type Props = {
  */
 export default function InspectionStatusSection({ f, set }: Props) {
   return (
-    <section className="rounded-xl border border-slate-200 p-4">
-      <h4 className="mb-3 text-sm font-semibold text-slate-700">
+    <section className="rounded-xl border border-border p-4">
+      <h4 className="mb-3 text-sm font-semibold text-text">
         검증 상태 & 소요 시간
       </h4>
       <div className="grid gap-4 md:grid-cols-2">

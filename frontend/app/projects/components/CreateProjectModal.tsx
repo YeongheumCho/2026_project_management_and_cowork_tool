@@ -104,8 +104,8 @@ export default function CreateProjectModal({
       {/* Modal(flex-col max-h-[90vh])을 부모로 삼아 조직도 영역만 스크롤되도록 한다. */}
       <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-5">
         <div className="flex-shrink-0">
-          <h2 className="text-xl font-semibold text-slate-900">새 프로젝트</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-xl font-semibold text-text">새 프로젝트</h2>
+          <p className="mt-1 text-sm text-text-subtle">
             프로젝트 유형과 참여 인원을 먼저 정해 두면 하위 프로젝트 담당자를 더 정확하게 배정할 수 있습니다.
           </p>
         </div>
@@ -113,7 +113,7 @@ export default function CreateProjectModal({
         <div className="flex-shrink-0">
           <label
             htmlFor="project-name"
-            className="block text-sm font-medium text-slate-700"
+            className="block text-sm font-medium text-text"
           >
             프로젝트 이름
           </label>
@@ -122,14 +122,14 @@ export default function CreateProjectModal({
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="예: 2026년 3차 정기 검증"
-            className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
           />
         </div>
 
         <div className="flex-shrink-0">
           <label
             htmlFor="project-type"
-            className="block text-sm font-medium text-slate-700"
+            className="block text-sm font-medium text-text"
           >
             프로젝트 유형
           </label>
@@ -137,7 +137,7 @@ export default function CreateProjectModal({
             id="project-type"
             value={type}
             onChange={(event) => setType(event.target.value as ProjectType)}
-            className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
           >
             {PROJECT_TYPE_OPTIONS.map((option) => (
               <option key={option} value={option}>
@@ -151,7 +151,7 @@ export default function CreateProjectModal({
           <div>
             <label
               htmlFor="project-start-date"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-text"
             >
               시작일
             </label>
@@ -164,13 +164,13 @@ export default function CreateProjectModal({
                 event.currentTarget.value = clampDateYear(event.currentTarget.value);
               }}
               onChange={(event) => setStartDate(clampDateYear(event.target.value))}
-              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             />
           </div>
           <div>
             <label
               htmlFor="project-end-date"
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-medium text-text"
             >
               종료일
             </label>
@@ -183,24 +183,24 @@ export default function CreateProjectModal({
                 event.currentTarget.value = clampDateYear(event.currentTarget.value);
               }}
               onChange={(event) => setEndDate(clampDateYear(event.target.value))}
-              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             />
           </div>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex flex-shrink-0 items-center justify-between">
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="block text-sm font-medium text-text">
               프로젝트 참여 인원
             </label>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-text-subtle">
               {participantIds.length}명 선택됨
             </span>
           </div>
-          <p className="mt-1 flex-shrink-0 text-xs text-slate-500">
+          <p className="mt-1 flex-shrink-0 text-xs text-text-subtle">
             이후 하위 프로젝트 담당자는 여기서 선택한 인원 안에서만 지정됩니다.
           </p>
-          <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-border bg-surface-muted p-3">
             <OrganizationMemberPicker
               users={users}
               selectedIds={participantIds}
@@ -211,11 +211,11 @@ export default function CreateProjectModal({
           </div>
         </div>
 
-        <div className="flex flex-shrink-0 justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className="flex flex-shrink-0 justify-end gap-2 border-t border-border-subtle pt-4">
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text-muted hover:bg-surface-muted"
           >
             취소
           </button>

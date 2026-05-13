@@ -67,7 +67,7 @@ export default function SettingsPage() {
   }
 
   if (meLoading || !me) {
-    return <main className="p-8 text-slate-900">불러오는 중...</main>;
+    return <main className="p-8 text-text">불러오는 중...</main>;
   }
 
   return (
@@ -83,10 +83,10 @@ export default function SettingsPage() {
         </p>
       )}
 
-      <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mx-auto max-w-3xl rounded-3xl border border-border bg-white p-6 shadow-sm">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">설정</h1>
-          <p className="mt-2 text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-text">설정</h1>
+          <p className="mt-2 text-sm text-text-subtle">
             사용자 정보, 기본 캘린더 뷰, 알림 여부를 관리할 수 있습니다.
           </p>
         </div>
@@ -97,14 +97,14 @@ export default function SettingsPage() {
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                className="w-full rounded-xl border border-border px-3 py-2.5 text-sm"
               />
             </Field>
             <Field label="사번">
               <input
                 value={settings?.idnum ?? me.idnum}
                 disabled
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
+                className="w-full rounded-xl border border-border bg-surface-muted px-3 py-2.5 text-sm text-text-subtle"
               />
             </Field>
           </section>
@@ -115,7 +115,7 @@ export default function SettingsPage() {
                 type="password"
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                className="w-full rounded-xl border border-border px-3 py-2.5 text-sm"
               />
             </Field>
             <Field label="새 비밀번호">
@@ -123,13 +123,13 @@ export default function SettingsPage() {
                 type="password"
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                className="w-full rounded-xl border border-border px-3 py-2.5 text-sm"
               />
             </Field>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-900">
+          <section className="rounded-2xl border border-border bg-surface-muted p-4">
+            <p className="text-sm font-semibold text-text">
               기본 캘린더 뷰
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -141,7 +141,7 @@ export default function SettingsPage() {
                   className={`rounded-xl px-4 py-2 text-sm font-medium ${
                     defaultCalendarView === value
                       ? 'bg-indigo-600 text-white'
-                      : 'bg-white text-slate-700'
+                      : 'bg-white text-text'
                   }`}
                 >
                   {value === 'team' ? '팀 캘린더' : '개인 캘린더'}
@@ -150,10 +150,10 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3">
+          <label className="flex items-center justify-between rounded-2xl border border-border bg-white px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-slate-900">알림 사용</p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="text-sm font-semibold text-text">알림 사용</p>
+              <p className="mt-1 text-xs text-text-subtle">
                 추천 완료, 작업 상태 변경 같은 주요 이벤트를 표시합니다.
               </p>
             </div>
@@ -189,7 +189,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">
+      <span className="mb-2 block text-sm font-medium text-text">
         {label}
       </span>
       {children}

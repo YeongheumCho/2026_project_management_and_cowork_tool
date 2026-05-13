@@ -14,8 +14,8 @@ type Props = {
  */
 export default function EtcSection({ f, set }: Props) {
   return (
-    <section className="rounded-xl border border-slate-200 p-4">
-      <h4 className="mb-3 text-sm font-semibold text-slate-700">
+    <section className="rounded-xl border border-border p-4">
+      <h4 className="mb-3 text-sm font-semibold text-text">
         기타 업무 정보
       </h4>
       <div className="grid gap-3 sm:grid-cols-3">

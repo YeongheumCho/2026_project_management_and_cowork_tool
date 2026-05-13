@@ -28,7 +28,7 @@ const TONE_BY_STATE: Record<VerifyState, Tone> = {
 };
 
 const TONE_BADGE: Record<Tone, string> = {
-  idle: 'bg-slate-100 text-slate-600',
+  idle: 'bg-surface-subtle text-text-muted',
   info: 'bg-blue-100 text-blue-700',
   warn: 'bg-amber-100 text-amber-700',
   fail: 'bg-red-100 text-red-700',

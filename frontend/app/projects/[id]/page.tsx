@@ -83,7 +83,7 @@ export default function ProjectDetailPage() {
   };
 
   if (meLoading || !me) {
-    return <main className="p-8 text-slate-900">불러오는 중...</main>;
+    return <main className="p-8 text-text">불러오는 중...</main>;
   }
 
   return (
@@ -97,13 +97,13 @@ export default function ProjectDetailPage() {
       {project ? (
         <div className="mb-6">
           <h1 className="text-2xl font-bold">{project.name}</h1>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-text-subtle">
             {'생성 '}{new Date(project.created_at).toLocaleDateString('ko-KR')}{' · 유형: '}
             {project.project_type}
           </p>
         </div>
       ) : (
-        <p className="mb-6 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-500">
+        <p className="mb-6 rounded-lg bg-surface-subtle px-3 py-2 text-sm text-text-subtle">
           {loading ? '불러오는 중...' : '프로젝트 정보를 표시할 수 없습니다.'}
         </p>
       )}
@@ -115,44 +115,44 @@ export default function ProjectDetailPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="flex flex-col rounded-2xl border border-border bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold">{'진행률 기록 추가'}</h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-text-subtle">
             {'오늘 이 프로젝트에서 진행한 내용을 기록하세요.'}
           </p>
 
           <form onSubmit={submit} className="mt-4 flex flex-1 flex-col gap-3">
             <label className="block">
-              <span className="text-xs font-medium text-slate-600">{'진행률 (%)'}</span>
+              <span className="text-xs font-medium text-text-muted">{'진행률 (%)'}</span>
               <input
                 type="number"
                 min={0}
                 max={100}
                 value={progressPercent}
                 onChange={(e) => setProgressPercent(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
                 required
               />
             </label>
 
             <label className="block">
-              <span className="text-xs font-medium text-slate-600">{'날짜'}</span>
+              <span className="text-xs font-medium text-text-muted">{'날짜'}</span>
               <input
                 type="date"
                 value={workDate}
                 onChange={(e) => setWorkDate(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
                 required
               />
             </label>
 
             <label className="block flex-1">
-              <span className="text-xs font-medium text-slate-600">{'메모'}</span>
+              <span className="text-xs font-medium text-text-muted">{'메모'}</span>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="오늘 한 일 / 이슈 / 다음 계획"
-                className="mt-1 min-h-[96px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                className="mt-1 min-h-[96px] w-full rounded-lg border border-border px-3 py-2 text-sm"
               />
             </label>
 
@@ -165,33 +165,33 @@ export default function ProjectDetailPage() {
           </form>
         </section>
 
-        <section className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="flex flex-col rounded-2xl border border-border bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold">{'수행 이력'}</h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-text-subtle">
             {'이 프로젝트에서 남긴 진행 기록입니다.'}
           </p>
 
           <div className="mt-4 flex-1 space-y-2 overflow-y-auto">
             {loading && (
-              <p className="py-6 text-center text-sm text-slate-400">
+              <p className="py-6 text-center text-sm text-text-faint">
                 {'불러오는 중...'}
               </p>
             )}
             {!loading && logs.length === 0 && (
-              <p className="py-6 text-center text-sm text-slate-400">
+              <p className="py-6 text-center text-sm text-text-faint">
                 {'아직 진행 기록이 없습니다.'}
               </p>
             )}
             {logs.map((log) => (
               <div
                 key={log.id}
-                className="rounded-xl border border-slate-100 bg-slate-50 p-3"
+                className="rounded-xl border border-border-subtle bg-surface-muted p-3"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-slate-800">{log.progress_percent}%</p>
-                  <p className="shrink-0 text-xs text-slate-500">{log.work_date}</p>
+                  <p className="text-sm font-semibold text-text">{log.progress_percent}%</p>
+                  <p className="shrink-0 text-xs text-text-subtle">{log.work_date}</p>
                 </div>
-                <p className="mt-1 text-xs text-slate-600">
+                <p className="mt-1 text-xs text-text-muted">
                   {log.comment || '메모 없음'}
                 </p>
               </div>

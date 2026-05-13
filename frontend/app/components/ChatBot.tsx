@@ -157,7 +157,7 @@ export default function ChatBot() {
 
       {/* 채팅 창 */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 flex h-[520px] w-[380px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="fixed bottom-24 right-6 z-50 flex h-[520px] w-[380px] flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
           {/* 헤더 */}
           <div className="flex items-center gap-3 bg-blue-600 px-5 py-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
@@ -194,7 +194,7 @@ export default function ChatBot() {
                   className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                     msg.role === 'user'
                       ? 'bg-blue-600 text-white rounded-br-md'
-                      : 'bg-slate-100 text-slate-800 rounded-bl-md'
+                      : 'bg-surface-subtle text-text rounded-bl-md'
                   }`}
                 >
                   {renderContent(msg.content)}
@@ -204,7 +204,7 @@ export default function ChatBot() {
 
             {isLoading && (
               <div className="flex justify-start">
-                <div className="rounded-2xl rounded-bl-md bg-slate-100 px-4 py-3">
+                <div className="rounded-2xl rounded-bl-md bg-surface-subtle px-4 py-3">
                   <TypingIndicator />
                 </div>
               </div>
@@ -214,7 +214,7 @@ export default function ChatBot() {
           </div>
 
           {/* 입력 영역 */}
-          <div className="border-t border-slate-200 px-4 py-3">
+          <div className="border-t border-border px-4 py-3">
             <div className="flex items-end gap-2">
               <textarea
                 ref={inputRef}
@@ -223,7 +223,7 @@ export default function ChatBot() {
                 onKeyDown={handleKeyDown}
                 placeholder="메시지를 입력하세요..."
                 rows={1}
-                className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition-colors focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                className="flex-1 resize-none rounded-xl border border-border px-3 py-2.5 text-sm text-text placeholder-text-faint outline-none transition-colors focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
                 style={{ maxHeight: '80px' }}
               />
               <button
@@ -236,7 +236,7 @@ export default function ChatBot() {
                 </svg>
               </button>
             </div>
-            <p className="mt-1.5 text-center text-micro text-slate-400">
+            <p className="mt-1.5 text-center text-micro text-text-faint">
               Shift+Enter로 줄바꿈 | Enter로 전송
             </p>
           </div>

@@ -81,7 +81,7 @@ export default function PersonalCalendarPage() {
   }, [selectedUserId, openSp, loadSubprojects]);
 
   if (meLoading || !me) {
-    return <main className="p-8 text-slate-900">불러오는 중...</main>;
+    return <main className="p-8 text-text">불러오는 중...</main>;
   }
 
   return (
@@ -122,7 +122,7 @@ export default function PersonalCalendarPage() {
       </div>
 
       {selectedUserId === null ? (
-        <p className="rounded-lg bg-slate-100 px-4 py-6 text-center text-sm text-slate-500">
+        <p className="rounded-lg bg-surface-subtle px-4 py-6 text-center text-sm text-text-subtle">
           팀원을 먼저 선택해주세요.
         </p>
       ) : (
@@ -136,20 +136,20 @@ export default function PersonalCalendarPage() {
             onSelectSubProject={(sp) => setOpenSp(sp)}
           />
 
-          <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <aside className="rounded-2xl border border-border bg-white p-4 shadow-sm">
             <h3 className="text-base font-semibold">담당 소프로젝트</h3>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-text-faint">
               체크박스로 단계별 진척을 기록할 수 있습니다.
             </p>
 
             <div className="mt-3 max-h-[560px] space-y-2 overflow-y-auto">
               {loading && (
-                <p className="py-4 text-center text-sm text-slate-400">
+                <p className="py-4 text-center text-sm text-text-faint">
                   불러오는 중...
                 </p>
               )}
               {!loading && orderedList.length === 0 && (
-                <p className="py-4 text-center text-sm text-slate-400">
+                <p className="py-4 text-center text-sm text-text-faint">
                   배정된 소프로젝트가 없습니다.
                 </p>
               )}
@@ -157,7 +157,7 @@ export default function PersonalCalendarPage() {
                 <button
                   key={sp.id}
                   onClick={() => setOpenSp(sp)}
-                  className="block w-full rounded-xl border border-slate-100 bg-slate-50 p-3 text-left hover:bg-slate-100"
+                  className="block w-full rounded-xl border border-border-subtle bg-surface-muted p-3 text-left hover:bg-surface-subtle"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{sp.name}</span>
@@ -167,7 +167,7 @@ export default function PersonalCalendarPage() {
                       </span>
                     )}
                   </div>
-                  <div className="mt-1 text-micro text-slate-500">
+                  <div className="mt-1 text-micro text-text-subtle">
                     {sp.start_date} ~ {sp.end_date}
                   </div>
                   <ProgressBar

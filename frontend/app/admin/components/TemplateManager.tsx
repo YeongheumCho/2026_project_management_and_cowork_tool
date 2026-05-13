@@ -610,9 +610,9 @@ function PreviewField({ field }: { field: FieldDefinition }) {
       ) : field.field_type === 'textarea' ? (
         <textarea className="input min-h-[72px] w-full" disabled />
       ) : field.field_type === 'checkbox' ? (
-        <div className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3">
+        <div className="flex h-10 items-center gap-2 rounded-lg border border-border bg-white px-3">
           <input type="checkbox" disabled className="h-4 w-4" />
-          <span className="text-sm text-slate-500">체크</span>
+          <span className="text-sm text-text-subtle">체크</span>
         </div>
       ) : (
         <input
