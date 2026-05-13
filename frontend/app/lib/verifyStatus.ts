@@ -28,19 +28,19 @@ const TONE_BY_STATE: Record<VerifyState, Tone> = {
 };
 
 const TONE_BADGE: Record<Tone, string> = {
-  idle: 'bg-surface-subtle text-text-muted',
-  info: 'bg-blue-100 text-blue-700',
-  warn: 'bg-amber-100 text-amber-700',
-  fail: 'bg-red-100 text-red-700',
-  pass: 'bg-emerald-100 text-emerald-700',
+  idle: 'bg-verify-idle-bg text-verify-idle-fg',
+  info: 'bg-verify-info-bg text-verify-info-fg',
+  warn: 'bg-verify-warn-bg text-verify-warn-fg',
+  fail: 'bg-verify-fail-bg text-verify-fail-fg',
+  pass: 'bg-verify-pass-bg text-verify-pass-fg',
 };
 
 const TONE_DOT: Record<Tone, string> = {
-  idle: 'bg-slate-400',
-  info: 'bg-blue-500',
-  warn: 'bg-amber-500',
-  fail: 'bg-red-500',
-  pass: 'bg-emerald-500',
+  idle: 'bg-text-faint',
+  info: 'bg-verify-info-fg',
+  warn: 'bg-verify-warn-fg',
+  fail: 'bg-verify-fail-fg',
+  pass: 'bg-verify-pass-fg',
 };
 
 /** 칩 형태 배지 클래스 */

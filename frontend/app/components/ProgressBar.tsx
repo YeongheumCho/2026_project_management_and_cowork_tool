@@ -17,10 +17,10 @@ const SIZE_TRACK: Record<Size, string> = {
 };
 
 const TONE_FILL: Record<Tone, string> = {
-  brand: 'bg-[#534AB7]',
-  progress: 'bg-[#854F0B]',
-  done: 'bg-[#3B6D11]',
-  planned: 'bg-[#B4B2A9]',
+  brand: 'bg-brand',
+  progress: 'bg-verify-warn-fg',
+  done: 'bg-verify-pass-fg',
+  planned: 'bg-text-faint',
 };
 
 export function ProgressBar({
@@ -34,7 +34,7 @@ export function ProgressBar({
   const clamped = Math.max(0, Math.min(100, safe));
 
   const trackCls = [
-    'overflow-hidden rounded-full bg-[#F1EFE8]',
+    'overflow-hidden rounded-full bg-surface-subtle',
     SIZE_TRACK[size],
     className,
   ]

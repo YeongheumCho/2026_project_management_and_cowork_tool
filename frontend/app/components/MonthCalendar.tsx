@@ -160,11 +160,11 @@ export default function MonthCalendar({
   }, [continuousBars, barSegments]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#EAEAE4] bg-white shadow-sm">
-      <div className="border-b border-[#EAEAE4] px-4 py-3">
+    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+      <div className="border-b border-border px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-body font-semibold text-[#1A1A1A]">{title}</h3>
+            <h3 className="text-body font-semibold text-text">{title}</h3>
             {tag && (
               <span
                 className="rounded-full px-2 py-0.5 text-tiny font-bold"
@@ -175,13 +175,13 @@ export default function MonthCalendar({
             )}
           </div>
           <div className="flex items-center gap-3">
-            <button type="button" onClick={onPrevMonth} className="text-base text-[#888780]" aria-label="이전 달">
+            <button type="button" onClick={onPrevMonth} className="text-base text-text-subtle" aria-label="이전 달">
               {'‹'}
             </button>
-            <span className="min-w-[76px] text-center text-micro font-semibold text-[#1A1A1A]">
+            <span className="min-w-[76px] text-center text-micro font-semibold text-text">
               {formatMonth(year, month)}
             </span>
-            <button type="button" onClick={onNextMonth} className="text-base text-[#888780]" aria-label="다음 달">
+            <button type="button" onClick={onNextMonth} className="text-base text-text-subtle" aria-label="다음 달">
               {'›'}
             </button>
             {rightAction}
@@ -193,7 +193,7 @@ export default function MonthCalendar({
       <div className="p-3">
         <div className="mb-1 grid grid-cols-7 gap-1 text-center">
           {WEEKDAYS.map((w) => (
-            <div key={w} className="py-1 text-nano font-bold text-[#888780]">{w}</div>
+            <div key={w} className="py-1 text-nano font-bold text-text-subtle">{w}</div>
           ))}
         </div>
 
@@ -220,11 +220,11 @@ export default function MonthCalendar({
                         style={{ height: uniformRowHeight }}
                         className={[
                           'relative flex flex-col rounded-[5px] px-1 pt-1 text-left transition',
-                          isPopoverOpen ? 'ring-2 ring-[#534AB7] ring-offset-1' : '',
-                          isToday ? 'bg-[#EEEDFE] text-[#1A1A1A]' : inMonth ? 'text-[#1A1A1A] hover:bg-[#F1EFE8]' : 'text-[#B4B2A9] hover:bg-[#F8F8F5]',
+                          isPopoverOpen ? 'ring-2 ring-brand ring-offset-1' : '',
+                          isToday ? 'bg-brand-soft text-text' : inMonth ? 'text-text hover:bg-surface-subtle' : 'text-text-faint hover:bg-background',
                         ].join(' ')}
                       >
-                        <span className={`text-tiny ${isToday ? 'inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[#534AB7] font-bold text-white' : ''}`}>{day.getDate()}</span>
+                        <span className={`text-tiny ${isToday ? 'inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-brand font-bold text-white' : ''}`}>{day.getDate()}</span>
                       </button>
                     );
                   })}
@@ -280,11 +280,11 @@ export default function MonthCalendar({
                   style={{ height: uniformRowHeight }}
                   className={[
                     'relative flex flex-col rounded-[5px] px-1 py-1 text-left align-top transition',
-                    isPopoverOpen ? 'ring-2 ring-[#534AB7] ring-offset-1' : '',
-                    isToday ? 'bg-[#EEEDFE] text-[#1A1A1A]' : inMonth ? 'text-[#1A1A1A] hover:bg-[#F1EFE8]' : 'text-[#B4B2A9] hover:bg-[#F8F8F5]',
+                    isPopoverOpen ? 'ring-2 ring-brand ring-offset-1' : '',
+                    isToday ? 'bg-brand-soft text-text' : inMonth ? 'text-text hover:bg-surface-subtle' : 'text-text-faint hover:bg-background',
                   ].join(' ')}
                 >
-                  <div className={`text-tiny ${isToday ? 'inline-flex h-[18px] w-[18px] items-center justify-center self-start rounded-full bg-[#534AB7] font-bold text-white' : ''}`}>{day.getDate()}</div>
+                  <div className={`text-tiny ${isToday ? 'inline-flex h-[18px] w-[18px] items-center justify-center self-start rounded-full bg-brand font-bold text-white' : ''}`}>{day.getDate()}</div>
                   <div className="mt-0.5 flex flex-col gap-[2px]">
                     {visibleItems.map((item) => {
                       const barColor = projectColor(item.project_id);
@@ -304,9 +304,9 @@ export default function MonthCalendar({
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); openDayPopover(iso, itemsToday, e.currentTarget); }}
-                        className={`flex h-[13px] items-center rounded-[3px] px-[4px] transition hover:bg-[#EAEAE4]`}
+                        className={`flex h-[13px] items-center rounded-[3px] px-[4px] transition hover:bg-surface-subtle`}
                       >
-                        <span className={`text-[7px] font-bold leading-none text-[#534AB7]`}>
+                        <span className={`text-[7px] font-bold leading-none text-brand`}>
                           +{hiddenCount}{'개 더'}
                         </span>
                       </button>
@@ -340,9 +340,9 @@ export default function MonthCalendar({
 import { forwardRef } from 'react';
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  completed:   { label: '완료',   cls: 'bg-[#E1F5EE] text-[#0F6E56]' },
-  in_progress: { label: '진행 중', cls: 'bg-[#E6F1FB] text-[#185FA5]' },
-  planned:     { label: '예정',   cls: 'bg-[#FAEEDA] text-[#854F0B]' },
+  completed:   { label: '완료',   cls: 'bg-verify-pass-bg text-verify-pass-fg' },
+  in_progress: { label: '진행 중', cls: 'bg-verify-info-bg text-verify-info-fg' },
+  planned:     { label: '예정',   cls: 'bg-verify-warn-bg text-verify-warn-fg' },
 };
 
 const DayPopover = forwardRef<
@@ -358,15 +358,15 @@ const DayPopover = forwardRef<
 >(({ iso, items, pos, onClose, onSelectSubProject, onSelectDate }, ref) => (
   <div
     ref={ref}
-    className="fixed z-[9999] w-72 rounded-xl border border-[#EAEAE4] bg-white shadow-xl"
+    className="fixed z-[9999] w-72 rounded-xl border border-border bg-surface shadow-xl"
     style={{ top: pos.top, left: pos.left }}
   >
-    <div className="flex items-center justify-between border-b border-[#F1EFE8] px-4 py-3">
+    <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
       <div>
-        <p className="text-small font-bold text-[#1A1A1A]">{iso}</p>
-        <p className="text-tiny text-[#888780]">{'소프로젝트'} {items.length}{'건'}</p>
+        <p className="text-small font-bold text-text">{iso}</p>
+        <p className="text-tiny text-text-subtle">{'소프로젝트'} {items.length}{'건'}</p>
       </div>
-      <button type="button" onClick={onClose} className="rounded-full p-1 text-[#888780] hover:bg-[#F1EFE8] hover:text-[#1A1A1A]" aria-label="닫기">
+      <button type="button" onClick={onClose} className="rounded-full p-1 text-text-subtle hover:bg-surface-subtle hover:text-text" aria-label="닫기">
         {'✕'}
       </button>
     </div>
@@ -379,16 +379,16 @@ const DayPopover = forwardRef<
             key={item.id}
             type="button"
             onClick={() => onSelectSubProject(item)}
-            className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-[#F8F8F5]"
+            className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-background"
           >
             <span className="mt-[3px] h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: barColor }} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-small font-semibold text-[#1A1A1A]">{item.name}</p>
-              <p className="mt-0.5 text-tiny text-[#888780]">{item.start_date} ~ {item.end_date}</p>
+              <p className="truncate text-small font-semibold text-text">{item.name}</p>
+              <p className="mt-0.5 text-tiny text-text-subtle">{item.start_date} ~ {item.end_date}</p>
               <div className="mt-1 flex items-center gap-1.5">
                 <span className={`rounded-full px-1.5 py-0.5 text-nano font-bold ${st.cls}`}>{st.label}</span>
-                <span className="text-nano text-[#888780]">{assigneeNames(item)}</span>
-                <span className="ml-auto text-tiny font-semibold text-[#1A1A1A]">{Math.round(item.progress)}%</span>
+                <span className="text-nano text-text-subtle">{assigneeNames(item)}</span>
+                <span className="ml-auto text-tiny font-semibold text-text">{Math.round(item.progress)}%</span>
               </div>
             </div>
           </button>
@@ -396,11 +396,11 @@ const DayPopover = forwardRef<
       })}
     </div>
     {onSelectDate && (
-      <div className="border-t border-[#F1EFE8] px-3 py-2">
+      <div className="border-t border-border-subtle px-3 py-2">
         <button
           type="button"
           onClick={() => onSelectDate(iso)}
-          className="w-full rounded-lg border border-dashed border-[#AFA9EC] py-1.5 text-micro font-bold text-[#534AB7] transition hover:bg-[#EEEDFE]"
+          className="w-full rounded-lg border border-dashed border-brand/50 py-1.5 text-micro font-bold text-brand transition hover:bg-brand-soft"
         >
           {'+ 이 날에 일정 추가'}
         </button>
