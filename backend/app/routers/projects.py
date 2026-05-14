@@ -1131,11 +1131,6 @@ def delete_subproject(
     admin: User = Depends(require_admin),
 ):
     sp = _load_subproject(db, subproject_id)
-    if sp.status == STATUS_COMPLETED:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?꾨즺???쇱젙? ??젣?????놁뒿?덈떎.",
-        )
     db.delete(sp)
     db.commit()
     return None

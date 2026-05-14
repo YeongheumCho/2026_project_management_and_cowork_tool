@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import type { MajorProject, Project, SubProject, UserBrief } from '../../lib/api';
-import { colorForId, colorForPosition } from './colors';
+import { colorForPosition } from './colors';
 import { compactPosition } from '../../lib/display';
 import {
   expandedKeysForMember,
@@ -393,12 +393,14 @@ function HierarchyButton({
   count,
   expanded,
   onClick,
+  active = false,
   className = '',
 }: {
   label: string;
   count: number;
   expanded: boolean;
   onClick: () => void;
+  active?: boolean;
   className?: string;
 }) {
   return (
@@ -406,7 +408,9 @@ function HierarchyButton({
       type="button"
       onClick={onClick}
       aria-expanded={expanded}
-      className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left font-semibold text-text-muted transition hover:bg-surface-muted ${className}`}
+      className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left font-semibold transition hover:bg-surface-muted ${
+        active ? 'bg-surface-subtle text-text' : 'text-text-muted'
+      } ${className}`}
     >
       <span
         className={`inline-block text-nano text-text-subtle transition-transform ${
@@ -501,23 +505,14 @@ function MajorProjectItem({
 
   return (
     <div>
-      <button type="button" onClick={onToggleMajor} className={itemClass(expanded)}>
-        <span
-          className={`inline-block text-nano text-text-subtle transition-transform ${
-            expanded ? 'rotate-90' : ''
-          }`}
-          aria-hidden
-        >
-          ??
-        </span>
-        <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(majorProject.id)}`} />
-        <span className="truncate">{majorProject.name}</span>
-        <span className="ml-auto shrink-0 text-tiny text-text-faint">
-          {projects.length}/{subprojectCount}
-        </span>
-      </button>
+      <HierarchyButton
+        label={majorProject.name}
+        count={subprojectCount || projects.length}
+        expanded={expanded}
+        onClick={onToggleMajor}
+      />
       {expanded && (
-        <ul className="ml-3 mt-0.5 space-y-0.5 border-l border-border-subtle pl-2">
+        <ul className="mt-0.5 space-y-0.5 pl-4">
           {projects.map((project) => (
             <li key={project.id}>
               <ProjectItem
@@ -550,21 +545,14 @@ function ProjectItem({
 }) {
   return (
     <div>
-      <button type="button" onClick={onToggle} className={itemClass(selected || expanded)}>
-        <span
-          className={`inline-block text-nano text-text-subtle transition-transform ${
-            expanded ? 'rotate-90' : ''
-          }`}
-          aria-hidden
-        >
-          ›
-        </span>
-        <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(project.id)}`} />
-        <span className="truncate">{project.name}</span>
-        <span className="ml-auto shrink-0 text-tiny text-text-faint">
-          {subprojects.length}
-        </span>
-      </button>
+      <HierarchyButton
+        label={project.name}
+        count={subprojects.length}
+        expanded={expanded}
+        onClick={onToggle}
+        active={selected}
+        className="text-[10.5px]"
+      />
       {expanded && (
         <SidebarSubprojectList
           subprojects={subprojects}

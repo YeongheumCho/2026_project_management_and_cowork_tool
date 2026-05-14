@@ -354,7 +354,6 @@ export default function TeamModal({
 
   const handleDelete = async () => {
     if (!initial || !isAdmin) return;
-    if (initial.status === 'completed') return;
     if (!window.confirm(TEXT.deleteConfirm)) return;
 
     setSaving(true);
@@ -383,7 +382,7 @@ export default function TeamModal({
         mode={mode}
         selectedProject={selectedProject}
         canDelete={
-          mode === 'edit' && isAdmin && initial?.status !== 'completed'
+          mode === 'edit' && isAdmin
         }
         onDelete={handleDelete}
       />
