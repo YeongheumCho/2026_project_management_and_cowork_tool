@@ -15,6 +15,7 @@ class ProgressLogCreate(BaseModel):
 class ProgressLogResponse(BaseModel):
     id: int
     project_id: int
+    subproject_id: int | None = None
     user_id: int
     progress_percent: int
     comment: str | None

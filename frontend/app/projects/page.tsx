@@ -15,6 +15,7 @@ import CreateProjectForm from './components/CreateProjectForm';
 import ProjectCard from './components/ProjectCard';
 import ProjectManageModal from './components/ProjectManageModal';
 import CsvImportModal from './components/CsvImportModal';
+import ProgressLogModal from './components/ProgressLogModal';
 import { useProjects } from './hooks/useProjects';
 
 export default function ProjectsPage() {
@@ -52,6 +53,7 @@ export default function ProjectsPage() {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [modalProjectId, setModalProjectId] = useState<number | undefined>();
   const [modalInitial, setModalInitial] = useState<SubProject | null>(null);
+  const [progressTarget, setProgressTarget] = useState<SubProject | null>(null);
 
   const openCreateSub = (projectId: number) => {
     if (!isAdmin) return;
@@ -73,6 +75,10 @@ export default function ProjectsPage() {
     setModalProjectId(sp.project_id);
     setModalInitial(sp);
     setModalOpen(true);
+  };
+
+  const openSubProgress = (sp: SubProject) => {
+    setProgressTarget(sp);
   };
 
   const openEditProject = (project: Project) => {
@@ -152,7 +158,8 @@ export default function ProjectsPage() {
             isOpen={expanded.has(project.id)}
             onToggle={toggleExpand}
             onAddSub={openCreateSub}
-          onCsvImport={openCsvImport}
+            onCsvImport={openCsvImport}
+            onOpenSubProgress={openSubProgress}
             onEditSub={openEditSub}
             onEditProject={openEditProject}
             onDeleteProject={handleDeleteProject}
@@ -189,6 +196,13 @@ export default function ProjectsPage() {
         lockedProjectId={modalMode === 'create' ? modalProjectId : undefined}
         initial={modalInitial}
         onClose={() => setModalOpen(false)}
+        onSaved={reload}
+      />
+
+      <ProgressLogModal
+        open={progressTarget !== null}
+        subproject={progressTarget}
+        onClose={() => setProgressTarget(null)}
         onSaved={reload}
       />
     </AppShell>

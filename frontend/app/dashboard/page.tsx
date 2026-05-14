@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
 import { useMe } from '../lib/useMe';
 import CreateProjectModal from '../projects/components/CreateProjectModal';
@@ -13,7 +12,6 @@ import TimerWidget from './components/TimerWidget';
 import { useDashboardData } from './hooks/useDashboardData';
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { me, loading: meLoading } = useMe();
   const {
     selectedMemberId,
@@ -126,11 +124,7 @@ export default function DashboardPage() {
         </p>
       )}
 
-      <DashboardHeader
-        onRequestAiSuggestion={
-          isAdmin ? () => router.push('/tasks') : undefined
-        }
-      />
+      <DashboardHeader />
 
       <KpiGrid
         inProgressProjects={summary.inProgressProjects}
@@ -150,6 +144,7 @@ export default function DashboardPage() {
       <TimerWidget
         candidates={timerCandidates}
         projects={projects}
+        onChanged={reload}
       />
 
       <CreateProjectModal

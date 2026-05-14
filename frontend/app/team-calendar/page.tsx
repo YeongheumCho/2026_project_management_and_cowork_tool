@@ -30,10 +30,6 @@ type MemberProjectGroup = {
   endDate: string;
 };
 
-type MemberViewStyle = {
-  label: string;
-};
-
 export default function TeamCalendarPage() {
   const { me, loading: meLoading } = useMe();
   const { selectedMemberId, setSelectedMemberId, toggleSelectedMemberId } =
@@ -169,10 +165,6 @@ export default function TeamCalendarPage() {
       });
   }, [projects, selectedMemberTasks]);
 
-  const memberViewStyle = useMemo(() => {
-    return deriveMemberViewStyle(selectedMemberGroups);
-  }, [selectedMemberGroups]);
-
   const memberSummary = useMemo(() => {
     const projectCount = selectedMemberGroups.length;
     const subprojectCount = selectedMemberTasks.length;
@@ -240,22 +232,10 @@ export default function TeamCalendarPage() {
           subprojects={projectCalendarItems}
           onPrevMonth={() => setCursor((current) => shiftMonth(current, -1))}
           onNextMonth={() => setCursor((current) => shiftMonth(current, 1))}
+          onSelectMonth={(nextYear, nextMonth) => setCursor(new Date(nextYear, nextMonth, 1))}
           onSelectDate={(iso) => openCreateProject(iso)}
           title="전체 프로젝트 캘린더"
-          tag="캘린더 A"
-          tagColor="#534AB7"
           continuousBars
-          rightAction={
-            isAdmin ? (
-              <button
-                type="button"
-                onClick={() => openCreateProject()}
-                className="rounded-lg border border-[#AFA9EC] bg-[#EEEDFE] px-3 py-1.5 text-micro font-bold text-[#534AB7]"
-              >
-                + 프로젝트 추가
-              </button>
-            ) : undefined
-          }
         />
 
         {/* ?섎떒 2?? 罹섎┛??B + ?대떦??蹂대뱶 */}
@@ -268,10 +248,9 @@ export default function TeamCalendarPage() {
               subprojects={selectedMemberTasks}
               onPrevMonth={() => setCursor((current) => shiftMonth(current, -1))}
               onNextMonth={() => setCursor((current) => shiftMonth(current, 1))}
+              onSelectMonth={(nextYear, nextMonth) => setCursor(new Date(nextYear, nextMonth, 1))}
               onSelectSubProject={openEdit}
               title="담당자별 캘린더"
-              tag="캘린더 B"
-              tagColor="#0F6E56"
               continuousBars
               filterSlot={
                 <div className="flex flex-col items-start gap-1.5">
@@ -288,27 +267,12 @@ export default function TeamCalendarPage() {
               }
             />
 
-            {/* ?댁뒋6-1: 李⑥썡 罹섎┛??*/}
-            <MonthCalendar
-              year={shiftMonth(cursor, 1).getFullYear()}
-              month={shiftMonth(cursor, 1).getMonth()}
-              subprojects={selectedMemberTasks}
-              onPrevMonth={() => setCursor((current) => shiftMonth(current, -1))}
-              onNextMonth={() => setCursor((current) => shiftMonth(current, 1))}
-              onSelectSubProject={openEdit}
-              title="담당자별 캘린더 (차월)"
-              tag="캘린더 B+1"
-              tagColor="#0F6E56"
-              continuousBars
-            />
-
           </div>
 
           <SelectedMemberProjectBoard
             member={selectedMember}
             groups={selectedMemberGroups}
             summary={memberSummary}
-            viewStyle={memberViewStyle}
             onOpenSubproject={openEdit}
           />
         </div>
@@ -347,7 +311,6 @@ function SelectedMemberProjectBoard({
   member,
   groups,
   summary,
-  viewStyle,
   onOpenSubproject,
 }: {
   member: UserBrief | null;
@@ -358,7 +321,6 @@ function SelectedMemberProjectBoard({
     averageProgress: number;
     nearestDeadline: string | null;
   };
-  viewStyle: { label: string };
   onOpenSubproject: (subproject: SubProject) => void;
 }) {
   if (!member) {
@@ -387,9 +349,6 @@ function SelectedMemberProjectBoard({
                 {compactPosition(member.position)}
               </span>
             )}
-            <span className="rounded-full border border-[#EAEAE4] px-2.5 py-1 text-tiny font-semibold text-[#66645C]">
-              {viewStyle.label}
-            </span>
           </div>
           <h2 className="mt-3 text-heading font-bold text-[#1A1A1A]">
             {member.name} 담당 프로젝트 보기
@@ -471,9 +430,6 @@ function SelectedMemberProjectBoard({
                     <p className="mt-1 text-micro text-[#888780]">
                       {subproject.start_date} to {subproject.end_date}
                     </p>
-                    <p className="mt-1 truncate text-micro text-[#66645C]">
-                      {buildSubprojectNarrative(member, subproject)}
-                    </p>
                   </div>
 
                   <div className="w-[78px] shrink-0">
@@ -537,53 +493,3 @@ function statusLabel(status: SubProject['status']) {
   return '예정';
 }
 
-function deriveMemberViewStyle(groups: MemberProjectGroup[]): MemberViewStyle {
-  const totalInProgress = groups.reduce((sum, group) => sum + group.inProgressCount, 0);
-  const totalPlanned = groups.reduce((sum, group) => sum + group.plannedCount, 0);
-  const totalCompleted = groups.reduce((sum, group) => sum + group.completedCount, 0);
-  const nearestDeadline = groups
-    .flatMap((group) => group.subprojects.map((subproject) => subproject.end_date))
-    .sort()[0];
-
-  if (nearestDeadline) {
-    const today = new Date();
-    const deadline = new Date(nearestDeadline);
-    const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays <= 7) {
-      return {
-        label: '마감 우선',
-      };
-    }
-  }
-
-  if (totalInProgress >= 2) {
-    return {
-      label: '동시 진행',
-    };
-  }
-
-  if (totalPlanned > totalCompleted) {
-    return {
-      label: '계획 중심',
-    };
-  }
-
-  return {
-    label: '완료 추적',
-  };
-}
-
-function buildSubprojectNarrative(member: UserBrief, subproject: SubProject) {
-  const completedSubtasks = subproject.subtasks.filter((task) => task.is_done).length;
-  const totalSubtasks = subproject.subtasks.length;
-  const assigneeLabel =
-    subproject.assignees?.find((assignee) => assignee.id === member.id)?.name ??
-    member.name;
-  const status = statusLabel(subproject.status);
-
-  if (totalSubtasks === 0) {
-    return `${assigneeLabel} 담당 일정은 ${subproject.start_date}부터 ${subproject.end_date}까지이며, 현재 상태는 ${status}입니다. 아직 등록된 세부 체크리스트는 없습니다.`;
-  }
-
-  return `${assigneeLabel} 담당 일정은 ${subproject.start_date}부터 ${subproject.end_date}까지이며, 현재 상태는 ${status}입니다. 체크리스트 ${totalSubtasks}개 중 ${completedSubtasks}개가 완료되었습니다.`;
-}

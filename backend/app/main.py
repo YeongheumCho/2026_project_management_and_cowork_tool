@@ -61,6 +61,15 @@ def _ensure_additive_schema_updates() -> None:
                 ]
             )
 
+    if "progress_logs" in table_names:
+        progress_log_columns = {
+            column["name"] for column in inspector.get_columns("progress_logs")
+        }
+        if "subproject_id" not in progress_log_columns:
+            statements.append(
+                "ALTER TABLE progress_logs ADD COLUMN subproject_id INTEGER REFERENCES subprojects(id) ON DELETE CASCADE"
+            )
+
     if not statements:
         statements = []
 

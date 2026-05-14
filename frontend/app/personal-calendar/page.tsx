@@ -133,6 +133,7 @@ export default function PersonalCalendarPage() {
             subprojects={subprojects}
             onPrevMonth={() => setCursor((c) => shiftMonth(c, -1))}
             onNextMonth={() => setCursor((c) => shiftMonth(c, +1))}
+            onSelectMonth={(nextYear, nextMonth) => setCursor(new Date(nextYear, nextMonth, 1))}
             onSelectSubProject={(sp) => setOpenSp(sp)}
           />
 

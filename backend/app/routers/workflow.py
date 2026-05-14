@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.config import settings
 from app.core.security import hash_password, verify_password
 from app.dependencies import get_current_user, get_db, require_admin
-from app.models.project import PROJECT_TYPES, Project, SubProject, SubTask
+from app.models.project import PROJECT_TYPES, STATUS_COMPLETED, Project, SubProject, SubTask
 from app.models.user import User
 from app.models.workflow import (
     ProjectExecutionHistory,
@@ -498,6 +498,120 @@ def resume_work_log(
     return log
 
 
+def _subproject_assignee_ids(subproject: SubProject) -> set[int]:
+    ids = {user.id for user in (subproject.assignees or [])}
+    if subproject.assignee_id is not None:
+        ids.add(subproject.assignee_id)
+    return ids
+
+
+def _estimate_worked_minutes(db: Session, subproject_id: int, assignee_id: int) -> int:
+    logs = db.scalars(
+        select(WorkLog).where(
+            WorkLog.subproject_id == subproject_id,
+            WorkLog.user_id == assignee_id,
+        )
+    ).all()
+    return max(0, sum(log.duration_sec for log in logs) // 60)
+
+
+def _build_history_keywords(project: Project, subproject: SubProject) -> str:
+    tokens = [
+        project.name,
+        subproject.name,
+        subproject.function_name,
+        subproject.controller_name,
+        subproject.vehicle_type,
+        subproject.verification_level,
+        subproject.priority,
+        subproject.cr_no,
+        subproject.etc_category,
+    ]
+    return " ".join(str(token).strip() for token in tokens if token and str(token).strip())
+
+
+def _sync_completed_subproject_history(
+    db: Session,
+    project: Project,
+    subproject: SubProject,
+) -> None:
+    assignee_ids = sorted(_subproject_assignee_ids(subproject))
+    if not assignee_ids:
+        return
+
+    existing_rows = db.scalars(
+        select(ProjectExecutionHistory).where(
+            ProjectExecutionHistory.subproject_id == subproject.id
+        )
+    ).all()
+    auto_by_user = {
+        row.user_id: row for row in existing_rows if not row.manual_override
+    }
+    fallback_minutes = (
+        subproject.total_minutes
+        or subproject.avg_expected_minutes
+        or max(1, (subproject.end_date - subproject.start_date).days + 1) * 60
+    )
+
+    for assignee_id in assignee_ids:
+        history = auto_by_user.get(assignee_id)
+        if history is None:
+            history = ProjectExecutionHistory(
+                user_id=assignee_id,
+                project_id=project.id,
+                subproject_id=subproject.id,
+            )
+            db.add(history)
+
+        worked_minutes = _estimate_worked_minutes(db, subproject.id, assignee_id)
+        if worked_minutes <= 0:
+            worked_minutes = fallback_minutes
+
+        history.project_name = project.name
+        history.subproject_name = subproject.name
+        history.project_type = project.project_type
+        history.role_in_project = "assignee"
+        history.started_on = subproject.start_date
+        history.ended_on = subproject.completed_on or subproject.end_date
+        history.worked_minutes = worked_minutes
+        history.completion_rate = 100
+        history.keyword_text = _build_history_keywords(project, subproject)
+
+
+def _complete_linked_subproject(
+    db: Session,
+    subproject_id: int | None,
+    completed_at: datetime,
+) -> None:
+    if subproject_id is None:
+        return
+
+    subproject = db.scalar(
+        select(SubProject)
+        .options(
+            selectinload(SubProject.subtasks),
+            selectinload(SubProject.assignees),
+        )
+        .where(SubProject.id == subproject_id)
+    )
+    if subproject is None or subproject.status == STATUS_COMPLETED:
+        return
+
+    for task in subproject.subtasks:
+        task.is_done = True
+        if task.done_at is None:
+            task.done_at = completed_at
+
+    subproject.progress = 100
+    subproject.status = STATUS_COMPLETED
+    if subproject.completed_on is None:
+        subproject.completed_on = completed_at.date()
+
+    project = db.get(Project, subproject.project_id)
+    if project is not None:
+        _sync_completed_subproject_history(db, project, subproject)
+
+
 @router.post("/work-logs/{log_id}/complete", response_model=WorkLogResponse)
 def complete_work_log(
     log_id: int,
@@ -515,6 +629,7 @@ def complete_work_log(
     log.current_started_at = None
     log.ended_at = now
     log.status = WORKLOG_COMPLETED
+    completed_subproject_ids = {log.subproject_id}
 
     for archive_id in payload.archived_ids:
         archived = db.get(WorkLog, archive_id)
@@ -527,6 +642,10 @@ def complete_work_log(
         archived.current_started_at = None
         archived.ended_at = now
         archived.status = WORKLOG_COMPLETED
+        completed_subproject_ids.add(archived.subproject_id)
+
+    for subproject_id in completed_subproject_ids:
+        _complete_linked_subproject(db, subproject_id, now)
 
     db.commit()
     db.refresh(log)
@@ -553,11 +672,40 @@ async def recommend_assignees(
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    project_participant_ids: set[int] | None = None
+    if payload.project_id is not None:
+        project = db.scalar(
+            select(Project)
+            .options(selectinload(Project.participants))
+            .where(Project.id == payload.project_id)
+        )
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="프로젝트를 찾을 수 없습니다.",
+            )
+        project_participant_ids = {participant.id for participant in project.participants}
+
+    if payload.subproject_id is not None:
+        subproject = db.get(SubProject, payload.subproject_id)
+        if not subproject:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="하위 프로젝트를 찾을 수 없습니다.",
+            )
+        if payload.project_id is not None and subproject.project_id != payload.project_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="선택한 하위 프로젝트가 프로젝트에 속하지 않습니다.",
+            )
+
     users = db.scalars(
         select(User).where(User.is_active.is_(True)).order_by(User.name.asc())
     ).all()
     active_subprojects = db.scalars(
-        select(SubProject).where(SubProject.status != "completed")
+        select(SubProject)
+        .options(selectinload(SubProject.assignees))
+        .where(SubProject.status != "completed")
     ).all()
     all_projects = {project.id: project for project in db.scalars(select(Project)).all()}
     completed_logs = db.scalars(
@@ -572,12 +720,14 @@ async def recommend_assignees(
     for user in users:
         if _should_exclude_from_assignment(user):
             continue
+        if project_participant_ids is not None and user.id not in project_participant_ids:
+            continue
         if not _matches_org_scope(user, payload.office, payload.team):
             continue
         assigned_subprojects = [
             subproject
             for subproject in active_subprojects
-            if subproject.assignee_id == user.id
+            if user.id in _subproject_assignee_ids(subproject)
         ]
         remaining_minutes = sum(
             subproject.total_minutes or subproject.avg_expected_minutes or DEFAULT_TASK_MINUTES
@@ -690,6 +840,54 @@ def assign_recommended_work(
     assignee = db.get(User, payload.assignee_id)
     if not assignee:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="담당자를 찾을 수 없습니다.")
+
+    if payload.subproject_id is not None:
+        subproject = db.scalar(
+            select(SubProject)
+            .options(selectinload(SubProject.assignees))
+            .where(SubProject.id == payload.subproject_id)
+        )
+        if not subproject:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="하위 프로젝트를 찾을 수 없습니다.",
+            )
+        if payload.project_id is not None and subproject.project_id != payload.project_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="선택한 하위 프로젝트가 프로젝트에 속하지 않습니다.",
+            )
+
+        project = db.scalar(
+            select(Project)
+            .options(selectinload(Project.participants))
+            .where(Project.id == subproject.project_id)
+        )
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="프로젝트를 찾을 수 없습니다.",
+            )
+        participant_ids = {user.id for user in project.participants}
+        if assignee.id not in participant_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="선택한 프로젝트 참여 인원만 배정할 수 있습니다.",
+            )
+
+        if assignee.id not in {user.id for user in subproject.assignees}:
+            subproject.assignees.append(assignee)
+        if subproject.assignee_id is None:
+            subproject.assignee_id = assignee.id
+
+        db.commit()
+        db.refresh(subproject)
+        return AssignmentResponse(
+            project_id=project.id,
+            subproject_id=subproject.id,
+            assignee_id=assignee.id,
+            assigned_member_name=assignee.name,
+        )
 
     project = Project(
         name=payload.project_name,

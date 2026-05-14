@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   apiFetch,
-  DEFAULT_PROJECT_FIELD_SCHEMAS,
   defaultFieldSchema,
   type FieldDefinition,
   type FieldOption,
   type FieldType,
+  type Project,
   type ProjectFieldSchema,
 } from '../../lib/api';
 
@@ -20,7 +20,17 @@ const FIELD_TYPE_LABEL: Record<FieldType, string> = {
   checkbox: '체크박스',
 };
 
-const DEFAULT_TEMPLATE_KEYS = Object.keys(DEFAULT_PROJECT_FIELD_SCHEMAS);
+function projectTemplatePrefix(projectId: number) {
+  return `project_${projectId}_template_`;
+}
+
+function newTemplateKey(projectId: number) {
+  return `${projectTemplatePrefix(projectId)}${Date.now().toString(36)}`;
+}
+
+function isTemplateForProject(schema: ProjectFieldSchema, projectId: number) {
+  return String(schema.project_type).startsWith(projectTemplatePrefix(projectId));
+}
 
 function newField(order: number): FieldDefinition {
   return {
@@ -33,59 +43,111 @@ function newField(order: number): FieldDefinition {
   };
 }
 
-function newTemplateKey() {
-  return `template_${Date.now().toString(36)}`;
+function cloneFields(fields: FieldDefinition[]): FieldDefinition[] {
+  return fields.map((field, order) => ({
+    ...field,
+    options: field.options.map((option) => ({ ...option })),
+    order,
+  }));
 }
 
-function orderedTemplateKeys(schemas: Record<string, ProjectFieldSchema>) {
-  const customKeys = Object.keys(schemas)
-    .filter((key) => !DEFAULT_TEMPLATE_KEYS.includes(key))
-    .sort((left, right) =>
-      schemas[left].section_label.localeCompare(schemas[right].section_label),
-    );
-  return [...DEFAULT_TEMPLATE_KEYS, ...customKeys];
+function uniqueTemplateName(baseName: string, templates: ProjectFieldSchema[]) {
+  const names = new Set(templates.map((template) => template.section_label));
+  if (!names.has(baseName)) return baseName;
+  let index = 2;
+  let nextName = `${baseName} 복사본`;
+  while (names.has(nextName)) {
+    nextName = `${baseName} 복사본 ${index}`;
+    index += 1;
+  }
+  return nextName;
 }
 
 export default function TemplateManager() {
+  const [projects, setProjects] = useState<Project[]>([]);
   const [schemas, setSchemas] = useState<Record<string, ProjectFieldSchema>>({});
-  const [activeKey, setActiveKey] = useState('regular_inspection');
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
+  const [activeKey, setActiveKey] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [templateName, setTemplateName] = useState('검증 정보');
+  const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<FieldDefinition[]>([]);
+  const [reuseSourceKey, setReuseSourceKey] = useState('');
 
-  const templateKeys = useMemo(() => orderedTemplateKeys(schemas), [schemas]);
+  const activeProject = useMemo(
+    () => projects.find((project) => project.id === activeProjectId) ?? null,
+    [activeProjectId, projects],
+  );
+  const projectTemplates = useMemo(
+    () =>
+      activeProject
+        ? Object.values(schemas)
+            .filter((schema) => isTemplateForProject(schema, activeProject.id))
+            .sort((left, right) =>
+              left.section_label.localeCompare(right.section_label, 'ko-KR'),
+            )
+        : [],
+    [activeProject, schemas],
+  );
   const sortedFields = useMemo(
     () => fields.slice().sort((a, b) => a.order - b.order),
     [fields],
   );
-  const isDefaultTemplate = DEFAULT_TEMPLATE_KEYS.includes(activeKey);
+  const reusableTemplates = useMemo(
+    () =>
+      Object.values(schemas)
+        .filter((schema) => schema.section_label.trim())
+        .sort((left, right) =>
+          left.section_label.localeCompare(right.section_label, 'ko-KR'),
+        ),
+    [schemas],
+  );
 
   useEffect(() => {
-    void loadSchemas();
+    void load();
   }, []);
 
   useEffect(() => {
-    const schema = schemas[activeKey] ?? defaultFieldSchema(activeKey);
-    setTemplateName(schema.section_label);
-    setFields(schema.fields.slice().sort((a, b) => a.order - b.order));
-    setMessage('');
+    if (activeProjectId !== null) return;
+    if (projects.length > 0) setActiveProjectId(projects[0].id);
+  }, [activeProjectId, projects]);
+
+  useEffect(() => {
+    if (!activeProject) return;
+    const templates = Object.values(schemas)
+      .filter((schema) => isTemplateForProject(schema, activeProject.id))
+      .sort((left, right) =>
+        left.section_label.localeCompare(right.section_label, 'ko-KR'),
+      );
+    const nextActive = templates.some((schema) => schema.project_type === activeKey)
+      ? activeKey
+      : String(templates[0]?.project_type ?? '');
+    setActiveKey(nextActive);
+  }, [activeKey, activeProject, schemas]);
+
+  useEffect(() => {
+    const schema = activeKey ? schemas[activeKey] : null;
+    setTemplateName(schema?.section_label ?? '');
+    setFields(schema ? cloneFields(schema.fields) : []);
     setError('');
+    setMessage('');
   }, [activeKey, schemas]);
 
-  async function loadSchemas() {
+  async function load() {
     setLoading(true);
     try {
-      const saved = await apiFetch<ProjectFieldSchema[]>('/field-schemas');
-      const next = Object.fromEntries(
-        DEFAULT_TEMPLATE_KEYS.map((key) => [key, defaultFieldSchema(key)]),
-      ) as Record<string, ProjectFieldSchema>;
-      for (const schema of saved) {
-        next[schema.project_type] = schema;
-      }
-      setSchemas(next);
+      const [projectRows, savedSchemas] = await Promise.all([
+        apiFetch<Project[]>('/projects'),
+        apiFetch<ProjectFieldSchema[]>('/field-schemas'),
+      ]);
+      setProjects(projectRows);
+      setSchemas(
+        Object.fromEntries(
+          savedSchemas.map((schema) => [String(schema.project_type), schema]),
+        ),
+      );
       setError('');
     } catch (nextError) {
       setError((nextError as Error).message);
@@ -161,13 +223,15 @@ export default function TemplateManager() {
     }));
   }
 
-  async function handleAddTemplate() {
-    const key = newTemplateKey();
+  function handleAddTemplate() {
+    if (!activeProject) return;
+    const key = newTemplateKey(activeProject.id);
+    const base = defaultFieldSchema(String(activeProject.project_type));
     const nextSchema: ProjectFieldSchema = {
       id: 0,
       project_type: key,
       section_label: '새 템플릿',
-      fields: [],
+      fields: cloneFields(base.fields),
       created_by: null,
       updated_at: new Date().toISOString(),
     };
@@ -176,25 +240,48 @@ export default function TemplateManager() {
     setMessage('새 템플릿을 추가했습니다. 이름과 필드를 설정한 뒤 저장해주세요.');
   }
 
+  function handleReuseTemplate() {
+    if (!activeProject || !reuseSourceKey) return;
+    const source = schemas[reuseSourceKey];
+    if (!source) return;
+
+    const key = newTemplateKey(activeProject.id);
+    const copiedName = uniqueTemplateName(source.section_label, projectTemplates);
+    const nextSchema: ProjectFieldSchema = {
+      id: 0,
+      project_type: key,
+      section_label: copiedName,
+      fields: cloneFields(source.fields),
+      created_by: null,
+      updated_at: new Date().toISOString(),
+    };
+
+    setSchemas((current) => ({ ...current, [key]: nextSchema }));
+    setActiveKey(key);
+    setReuseSourceKey('');
+    setMessage('저장된 템플릿을 선택한 프로젝트에 복사했습니다. 필요하면 이름과 필드를 조정한 뒤 저장해주세요.');
+  }
+
   async function handleSave() {
+    if (!activeProject || !activeKey) return;
     const normalizedFields = normalizeFields();
     const keys = normalizedFields.map((field) => field.key).filter(Boolean);
+    const name = templateName.trim();
 
-    if (!templateName.trim()) {
+    if (!name) {
       setError('템플릿 이름을 입력해주세요.');
       return;
     }
     if (
-      Object.entries(schemas).some(
-        ([key, schema]) =>
-          key !== activeKey && schema.section_label === templateName.trim(),
+      projectTemplates.some(
+        (schema) => schema.project_type !== activeKey && schema.section_label === name,
       )
     ) {
-      setError('같은 이름의 템플릿이 이미 있습니다.');
+      setError('이 프로젝트에 같은 이름의 템플릿이 이미 있습니다.');
       return;
     }
     if (keys.length !== normalizedFields.length) {
-      setError('모든 필드에 고유 키를 입력해주세요.');
+      setError('모든 필드의 고유 키를 입력해주세요.');
       return;
     }
     if (new Set(keys).size !== keys.length) {
@@ -216,7 +303,7 @@ export default function TemplateManager() {
           method: 'PUT',
           body: JSON.stringify({
             project_type: activeKey,
-            section_label: templateName.trim(),
+            section_label: name,
             fields: normalizedFields,
           }),
         },
@@ -231,55 +318,41 @@ export default function TemplateManager() {
   }
 
   async function handleDelete() {
-    const schema = schemas[activeKey] ?? defaultFieldSchema(activeKey);
-    const actionLabel = isDefaultTemplate ? '기본값으로 되돌릴까요?' : '삭제할까요?';
-    if (!window.confirm(`"${schema.section_label}" 템플릿을 ${actionLabel}`)) return;
+    if (!activeKey) return;
+    const schema = schemas[activeKey];
+    if (!schema) return;
+    if (!window.confirm(`"${schema.section_label}" 템플릿을 삭제할까요?`)) return;
 
     try {
       await apiFetch<void>(`/field-schemas/${activeKey}`, { method: 'DELETE' });
-      if (isDefaultTemplate) {
-        setSchemas((current) => ({
-          ...current,
-          [activeKey]: defaultFieldSchema(activeKey),
-        }));
-        setMessage('기본 템플릿 구성으로 되돌렸습니다.');
-      } else {
-        setSchemas((current) => {
-          const next = { ...current };
-          delete next[activeKey];
-          return next;
-        });
-        setActiveKey('regular_inspection');
-        setMessage('템플릿을 삭제했습니다.');
-      }
+      setSchemas((current) => {
+        const next = { ...current };
+        delete next[activeKey];
+        return next;
+      });
+      setActiveKey('');
+      setMessage('템플릿을 삭제했습니다.');
     } catch (nextError) {
       setError((nextError as Error).message);
     }
   }
 
-  function resetToDefault() {
-    const schema = defaultFieldSchema(activeKey);
-    setTemplateName(schema.section_label);
-    setFields(schema.fields.map((field) => ({ ...field })));
-    setMessage('저장 버튼을 누르면 기본 구성이 적용됩니다.');
+  function resetToProjectDefault() {
+    if (!activeProject) return;
+    const schema = defaultFieldSchema(String(activeProject.project_type));
+    setFields(cloneFields(schema.fields));
+    setMessage('프로젝트 유형의 기본 필드 구성을 불러왔습니다. 저장해야 적용됩니다.');
   }
 
   return (
     <section className="rounded-3xl border border-[#EAEAE4] bg-white p-6 shadow-sm">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-xl font-bold text-[#1A1A1A]">템플릿 관리</h3>
+          <h3 className="text-xl font-bold text-[#1A1A1A]">템플릿 필드 구성 관리</h3>
           <p className="mt-1 text-sm text-[#888780]">
-            하위 프로젝트 추가/수정 모달에 표시될 입력 필드 템플릿을 관리합니다.
+            프로젝트별로 하위 프로젝트 생성에 사용할 템플릿을 관리합니다.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void handleAddTemplate()}
-          className="rounded-lg bg-[#534AB7] px-4 py-2 text-xs font-bold text-white hover:bg-[#433A9A]"
-        >
-          + 템플릿 추가
-        </button>
       </div>
 
       {error && (
@@ -293,117 +366,210 @@ export default function TemplateManager() {
         </p>
       )}
 
-      <div className="mb-5 flex flex-wrap gap-2">
-        {templateKeys.map((key) => {
-          const schema = schemas[key] ?? defaultFieldSchema(key);
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setActiveKey(key)}
-              className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
-                activeKey === key
-                  ? 'bg-[#534AB7] text-white'
-                  : 'border border-[#D3D1C7] text-[#5F5E5A] hover:bg-[#F5F5F0]'
-              }`}
-            >
-              {schema.section_label}
-              {schema.fields.length ? (
-                <span className="ml-1.5 rounded-full bg-white/30 px-1.5 py-0.5 text-tiny">
-                  {schema.fields.length}
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-
       {loading ? (
         <p className="py-8 text-center text-sm text-[#888780]">불러오는 중...</p>
+      ) : projects.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-[#D3D1C7] px-4 py-8 text-center text-sm text-[#888780]">
+          등록된 프로젝트가 없습니다.
+        </p>
       ) : (
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="rounded-2xl border border-[#EAEAE4] bg-[#FAFAFA] p-3">
+            <p className="mb-2 px-2 text-xs font-bold text-[#888780]">프로젝트</p>
+            <div className="max-h-[620px] space-y-1 overflow-y-auto pr-1">
+              {projects.map((project) => {
+                const count = Object.values(schemas).filter((schema) =>
+                  isTemplateForProject(schema, project.id),
+                ).length;
+                return (
+                  <button
+                    key={project.id}
+                    type="button"
+                    onClick={() => setActiveProjectId(project.id)}
+                    className={`w-full rounded-xl px-3 py-2 text-left text-xs font-bold transition ${
+                      activeProjectId === project.id
+                        ? 'bg-[#534AB7] text-white'
+                        : 'text-[#5F5E5A] hover:bg-white'
+                    }`}
+                  >
+                    <span className="block truncate">{project.name}</span>
+                    <span className="mt-0.5 block text-[10px] opacity-70">
+                      템플릿 {count}개
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+
           <div className="space-y-5">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <label className="block min-w-[240px] max-w-sm flex-1">
-                <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
-                  템플릿 이름
-                </span>
-                <input
-                  value={templateName}
-                  onChange={(event) => setTemplateName(event.target.value)}
-                  className="input w-full"
-                  placeholder="예: 검증 정보"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={resetToDefault}
-                className="rounded-lg border border-[#D3D1C7] px-4 py-2 text-xs font-bold text-[#5F5E5A]"
-              >
-                기본 구성 불러오기
-              </button>
+            <div className="rounded-2xl border border-[#EAEAE4] bg-white p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-[#888780]">선택 프로젝트</p>
+                  <h4 className="text-lg font-bold text-[#1A1A1A]">
+                    {activeProject?.name}
+                  </h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {activeKey && (
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete()}
+                      className="rounded-lg border border-[#F4C9C9] px-3 py-2 text-xs font-bold text-[#A32D2D] hover:bg-[#FFF7F7]"
+                    >
+                      템플릿 삭제
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleAddTemplate}
+                    className="rounded-lg border border-[#D8D3F2] px-3 py-2 text-xs font-bold text-[#534AB7]"
+                  >
+                    템플릿 추가
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-3 flex flex-wrap items-end gap-2 rounded-xl border border-[#EAEAE4] bg-[#FAFAFA] p-3">
+                <label className="min-w-[220px] flex-1">
+                  <span className="mb-1 block text-xs font-bold text-[#888780]">
+                    저장된 템플릿 재사용
+                  </span>
+                  <select
+                    value={reuseSourceKey}
+                    onChange={(event) => setReuseSourceKey(event.target.value)}
+                    className="input w-full"
+                  >
+                    <option value="">재사용할 템플릿 선택</option>
+                    {reusableTemplates.map((schema) => (
+                      <option key={schema.project_type} value={String(schema.project_type)}>
+                        {schema.section_label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleReuseTemplate}
+                  disabled={!reuseSourceKey || !activeProject}
+                  className="rounded-lg border border-[#D8D3F2] px-3 py-2 text-xs font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  선택 템플릿 복사
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {projectTemplates.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-[#D3D1C7] px-4 py-4 text-sm text-[#888780]">
+                    이 프로젝트에 할당된 템플릿이 없습니다. 템플릿을 추가해주세요.
+                  </p>
+                ) : (
+                  projectTemplates.map((schema) => (
+                    <button
+                      key={schema.project_type}
+                      type="button"
+                      onClick={() => setActiveKey(String(schema.project_type))}
+                      className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+                        activeKey === schema.project_type
+                          ? 'bg-[#534AB7] text-white'
+                          : 'border border-[#D3D1C7] text-[#5F5E5A] hover:bg-[#F5F5F0]'
+                      }`}
+                    >
+                      {schema.section_label}
+                      <span className="ml-1.5 rounded-full bg-white/30 px-1.5 py-0.5 text-[10px]">
+                        {schema.fields.length}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
 
-            <div className="space-y-3">
-              {fields.length === 0 && (
-                <p className="rounded-xl border border-dashed border-[#D3D1C7] px-4 py-6 text-center text-sm text-[#B4B2A9]">
-                  아직 정의된 필드가 없습니다.
-                </p>
-              )}
-              {fields.map((field, index) => (
-                <FieldEditor
-                  key={index}
-                  field={field}
-                  index={index}
-                  total={fields.length}
-                  onChange={(key, value) => updateField(index, key, value)}
-                  onMove={(direction) => moveField(index, direction)}
-                  onRemove={() =>
-                    setFields((current) =>
-                      current.filter((_, fieldIndex) => fieldIndex !== index),
-                    )
-                  }
-                  onAddOption={() => addOption(index)}
-                  onUpdateOption={(optionIndex, key, value) =>
-                    updateOption(index, optionIndex, key, value)
-                  }
-                  onRemoveOption={(optionIndex) =>
-                    removeOption(index, optionIndex)
-                  }
-                />
-              ))}
-            </div>
+            {activeKey ? (
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+                <div className="space-y-5">
+                  <div className="flex flex-wrap items-end justify-between gap-3">
+                    <label className="block min-w-[240px] max-w-sm flex-1">
+                      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
+                        템플릿 이름
+                      </span>
+                      <input
+                        value={templateName}
+                        onChange={(event) => setTemplateName(event.target.value)}
+                        className="input w-full"
+                        placeholder="예: 검증 정보"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={resetToProjectDefault}
+                      className="rounded-lg border border-[#D3D1C7] px-4 py-2 text-xs font-bold text-[#5F5E5A]"
+                    >
+                      프로젝트 기본 구성 불러오기
+                    </button>
+                  </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                setFields((current) => [...current, newField(current.length)])
-              }
-              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#534AB7]/40 py-3 text-sm font-bold text-[#534AB7] hover:border-[#534AB7] hover:bg-[#EEEDFE]/30"
-            >
-              + 필드 추가
-            </button>
+                  <div className="space-y-3">
+                    {fields.length === 0 && (
+                      <p className="rounded-xl border border-dashed border-[#D3D1C7] px-4 py-6 text-center text-sm text-[#B4B2A9]">
+                        아직 정의된 필드가 없습니다.
+                      </p>
+                    )}
+                    {fields.map((field, index) => (
+                      <FieldEditor
+                        key={index}
+                        field={field}
+                        index={index}
+                        total={fields.length}
+                        onChange={(key, value) => updateField(index, key, value)}
+                        onMove={(direction) => moveField(index, direction)}
+                        onRemove={() =>
+                          setFields((current) =>
+                            current.filter((_, fieldIndex) => fieldIndex !== index),
+                          )
+                        }
+                        onAddOption={() => addOption(index)}
+                        onUpdateOption={(optionIndex, key, value) =>
+                          updateOption(index, optionIndex, key, value)
+                        }
+                        onRemoveOption={(optionIndex) =>
+                          removeOption(index, optionIndex)
+                        }
+                      />
+                    ))}
+                  </div>
 
-            <div className="flex justify-between gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => void handleDelete()}
-                className="rounded-lg border border-[#F4C9C9] px-4 py-2 text-xs font-bold text-[#A32D2D]"
-              >
-                {isDefaultTemplate ? '기본값으로 되돌리기' : '템플릿 삭제'}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleSave()}
-                disabled={saving}
-                className="rounded-lg bg-[#534AB7] px-5 py-2 text-xs font-bold text-white disabled:opacity-50 hover:bg-[#433A9A]"
-              >
-                {saving ? '저장 중...' : '저장'}
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFields((current) => [...current, newField(current.length)])
+                    }
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#534AB7]/40 py-3 text-sm font-bold text-[#534AB7] hover:border-[#534AB7] hover:bg-[#EEEDFE]/30"
+                  >
+                    + 필드 추가
+                  </button>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleSave()}
+                      disabled={saving}
+                      className="rounded-lg bg-[#534AB7] px-5 py-2 text-xs font-bold text-white disabled:opacity-50 hover:bg-[#433A9A]"
+                    >
+                      {saving ? '저장 중...' : '저장'}
+                    </button>
+                  </div>
+                </div>
+
+                <TemplatePreview templateName={templateName} fields={sortedFields} />
+              </div>
+            ) : (
+              <p className="rounded-xl border border-dashed border-[#D3D1C7] px-4 py-8 text-center text-sm text-[#888780]">
+                선택한 프로젝트에 템플릿을 추가하면 필드 구성을 편집할 수 있습니다.
+              </p>
+            )}
           </div>
-
-          <TemplatePreview templateName={templateName} fields={sortedFields} />
         </div>
       )}
     </section>
@@ -573,17 +739,17 @@ function TemplatePreview({
   return (
     <aside className="rounded-2xl border border-[#EAEAE4] bg-[#FCFCFA] p-4 xl:sticky xl:top-4 xl:self-start">
       <div className="mb-4">
-        <p className="text-micro font-bold uppercase tracking-[0.08em] text-[#888780]">
+        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#888780]">
           미리보기
         </p>
-        <h4 className="mt-1 text-heading font-bold text-[#1A1A1A]">
+        <h4 className="mt-1 text-lg font-bold text-[#1A1A1A]">
           {templateName || '템플릿 이름'}
         </h4>
       </div>
 
       {fields.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#D3D1C7] px-4 py-8 text-center text-sm text-[#B4B2A9]">
-          추가된 필드가 없습니다.
+          추가한 필드가 없습니다.
         </div>
       ) : (
         <div className="grid gap-3">

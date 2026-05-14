@@ -18,6 +18,7 @@ type Props = {
   subprojects: SubProject[];
   onPrevMonth: () => void;
   onNextMonth: () => void;
+  onSelectMonth?: (year: number, month: number) => void;
   onSelectDate?: (isoDate: string) => void;
   onSelectSubProject?: (sp: SubProject) => void;
   rightAction?: ReactNode;
@@ -46,6 +47,9 @@ function assigneeNames(item: SubProject): string {
 const BAR_H = 13;
 const BAR_GAP = 2;
 const DATE_AREA_H = 18;
+const FIXED_TRACK_COUNT = 4;
+const FIXED_ROW_HEIGHT = DATE_AREA_H + FIXED_TRACK_COUNT * (BAR_H + BAR_GAP) + 4;
+const MONTH_LABELS = Array.from({ length: 12 }, (_, index) => `${index + 1}월`);
 
 export default function MonthCalendar({
   year,
@@ -53,6 +57,7 @@ export default function MonthCalendar({
   subprojects,
   onPrevMonth,
   onNextMonth,
+  onSelectMonth,
   onSelectDate,
   onSelectSubProject,
   rightAction,
@@ -68,7 +73,10 @@ export default function MonthCalendar({
   const [popoverIso, setPopoverIso] = useState<string | null>(null);
   const [popoverItems, setPopoverItems] = useState<SubProject[]>([]);
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number; openUp: boolean }>({ top: 0, left: 0, openUp: false });
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(year);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const monthPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!popoverIso) return;
@@ -82,6 +90,18 @@ export default function MonthCalendar({
   }, [popoverIso]);
 
   useEffect(() => { setPopoverIso(null); }, [year, month]);
+  useEffect(() => { setMonthPickerOpen(false); setPickerYear(year); }, [year, month]);
+
+  useEffect(() => {
+    if (!monthPickerOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (monthPickerRef.current && !monthPickerRef.current.contains(e.target as Node)) {
+        setMonthPickerOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [monthPickerOpen]);
 
   // continuousBars 모드에서는 DayPopover의 "일정 추가" 버튼을 숨김
   // (전체 프로젝트 캘린더에서는 헤더의 "+ 일정 추가" 버튼으로만 생성)
@@ -153,14 +173,15 @@ export default function MonthCalendar({
 
   // 전체 최대 트랙 수로 모든 행의 높이를 통일 — 달력 칸 크기를 일정하게 유지
   // cell 모드: MAX_BARS(2) + hiddenCount 버튼 행 포함해 3행분 확보 → 52px
-  const uniformRowHeight = useMemo(() => {
-    if (!continuousBars) return DATE_AREA_H + 3 * (BAR_H + BAR_GAP) + 4;
-    const maxTrack = barSegments.length === 0 ? 0 : Math.max(...barSegments.map((s) => s.track)) + 1;
-    return DATE_AREA_H + Math.max(maxTrack, 1) * (BAR_H + BAR_GAP) + 4;
-  }, [continuousBars, barSegments]);
+  const uniformRowHeight = FIXED_ROW_HEIGHT;
+
+  function selectMonth(nextMonth: number) {
+    onSelectMonth?.(pickerYear, nextMonth);
+    setMonthPickerOpen(false);
+  }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+    <div className="relative rounded-xl border border-border bg-surface shadow-sm">
       <div className="border-b border-border px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -174,17 +195,67 @@ export default function MonthCalendar({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="relative flex items-center gap-3" ref={monthPickerRef}>
             <button type="button" onClick={onPrevMonth} className="text-base text-text-subtle" aria-label="이전 달">
               {'‹'}
             </button>
-            <span className="min-w-[76px] text-center text-micro font-semibold text-text">
+            <button
+              type="button"
+              onClick={() => {
+                setPickerYear(year);
+                setMonthPickerOpen((current) => !current);
+              }}
+              className="min-w-[86px] rounded-lg px-2 py-1 text-center text-micro font-semibold text-text transition hover:bg-surface-subtle"
+            >
               {formatMonth(year, month)}
-            </span>
+            </button>
             <button type="button" onClick={onNextMonth} className="text-base text-text-subtle" aria-label="다음 달">
               {'›'}
             </button>
             {rightAction}
+            {monthPickerOpen && (
+              <div className="absolute right-0 top-9 z-50 w-64 rounded-xl border border-border bg-surface p-3 shadow-xl">
+                <div className="mb-3 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setPickerYear((current) => current - 1)}
+                    className="rounded-lg px-2 py-1 text-sm font-bold text-text-subtle hover:bg-surface-subtle"
+                    aria-label="이전 연도"
+                  >
+                    {'<'}
+                  </button>
+                  <span className="text-sm font-bold text-text">{pickerYear}년</span>
+                  <button
+                    type="button"
+                    onClick={() => setPickerYear((current) => current + 1)}
+                    className="rounded-lg px-2 py-1 text-sm font-bold text-text-subtle hover:bg-surface-subtle"
+                    aria-label="다음 연도"
+                  >
+                    {'>'}
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {MONTH_LABELS.map((label, index) => {
+                    const active = pickerYear === year && index === month;
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => selectMonth(index)}
+                        className={[
+                          'rounded-lg px-2 py-2 text-sm font-semibold transition',
+                          active
+                            ? 'bg-brand text-white'
+                            : 'text-text hover:bg-surface-subtle',
+                        ].join(' ')}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         {filterSlot && <div className="mt-3">{filterSlot}</div>}
@@ -201,9 +272,9 @@ export default function MonthCalendar({
           <div className="space-y-[2px]">
             {[0, 1, 2, 3, 4, 5].map((wr) => {
               const weekDays = days.slice(wr * 7, wr * 7 + 7);
-              const segsThisRow = barSegments.filter((s) => s.weekRow === wr);
+              const segsThisRow = barSegments.filter((s) => s.weekRow === wr && s.track < FIXED_TRACK_COUNT);
               return (
-                <div key={wr} className="relative grid grid-cols-7 gap-[2px]" style={{ height: uniformRowHeight }}>
+                <div key={wr} className="relative grid grid-cols-7 gap-[2px] overflow-hidden" style={{ height: uniformRowHeight }}>
                   {weekDays.map((day) => {
                     const iso = toISODate(day);
                     const inMonth = day.getMonth() === month;

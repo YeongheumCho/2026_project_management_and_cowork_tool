@@ -24,9 +24,11 @@ const TEXT = {
 type Props = {
   sp: SubProject;
   onClick: (sp: SubProject) => void;
+  canEdit?: boolean;
+  onEdit?: (sp: SubProject) => void;
 };
 
-export default function SubProjectListItem({ sp, onClick }: Props) {
+export default function SubProjectListItem({ sp, onClick, canEdit = false, onEdit }: Props) {
   const level = sp.verification_level
     ? VERIFICATION_LEVEL_LABEL[sp.verification_level]
     : null;
@@ -43,9 +45,15 @@ export default function SubProjectListItem({ sp, onClick }: Props) {
 
   return (
     <li>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => onClick(sp)}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          onClick(sp);
+        }}
         className="block w-full rounded-[20px] border border-[#ECE9DF] bg-white px-4 py-4 text-left shadow-[0_8px_24px_rgba(28,25,23,0.04)] transition hover:border-[#D9D3FF] hover:bg-[#FEFEFF]"
       >
         <div className="flex flex-wrap items-start gap-3">
@@ -91,11 +99,25 @@ export default function SubProjectListItem({ sp, onClick }: Props) {
           </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between text-micro text-[#7A786F]">
-          <span>{TEXT.progress}</span>
-          <span className="font-semibold text-[#1D1D1B]">
-            {sp.progress.toFixed(0)}%
-          </span>
+        <div className="mt-4 flex items-center justify-between gap-3 text-micro text-[#7A786F]">
+          <div className="flex flex-1 items-center justify-between">
+            <span>{TEXT.progress}</span>
+            <span className="font-semibold text-[#1D1D1B]">
+              {sp.progress.toFixed(0)}%
+            </span>
+          </div>
+          {canEdit && onEdit && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onEdit(sp);
+              }}
+              className="rounded-lg border border-[#D8D3FF] bg-white px-3 py-1.5 text-tiny font-bold text-[#534AB7] hover:bg-[#F5F3FF]"
+            >
+              하위 프로젝트 수정
+            </button>
+          )}
         </div>
 
         <ProgressBar
@@ -103,7 +125,7 @@ export default function SubProjectListItem({ sp, onClick }: Props) {
           className="mt-2"
           ariaLabel={`${sp.name} ${TEXT.progress}`}
         />
-      </button>
+      </div>
     </li>
   );
 }

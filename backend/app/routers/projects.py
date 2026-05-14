@@ -102,6 +102,55 @@ def _recalc_status_and_progress(sp: SubProject) -> None:
         sp.status = STATUS_PLANNED
 
 
+def _recalc_status_and_progress_from_logs(db: Session, sp: SubProject) -> None:
+    assignee_ids = sorted(_subproject_assignee_ids(sp))
+    if not assignee_ids:
+        sp.progress = 0
+        sp.status = STATUS_PLANNED
+        return
+
+    logs = db.scalars(
+        select(ProgressLog)
+        .where(
+            ProgressLog.subproject_id == sp.id,
+            ProgressLog.user_id.in_(assignee_ids),
+        )
+        .order_by(
+            ProgressLog.user_id.asc(),
+            ProgressLog.work_date.desc(),
+            ProgressLog.id.desc(),
+        )
+    ).all()
+    latest_by_user: dict[int, int] = {}
+    for log in logs:
+        if log.user_id not in latest_by_user:
+            latest_by_user[log.user_id] = log.progress_percent
+
+    per_assignee_share = 100 / len(assignee_ids)
+    contributed_progress = sum(
+        per_assignee_share * (latest_by_user.get(user_id, 0) / 100)
+        for user_id in assignee_ids
+    )
+    sp.progress = round(contributed_progress, 2)
+    if sp.progress >= 100:
+        sp.status = STATUS_COMPLETED
+    elif sp.progress > 0:
+        sp.status = STATUS_IN_PROGRESS
+    else:
+        sp.status = STATUS_PLANNED
+
+
+def _has_subproject_progress_logs(db: Session, subproject_id: int) -> bool:
+    return (
+        db.scalar(
+            select(ProgressLog.id)
+            .where(ProgressLog.subproject_id == subproject_id)
+            .limit(1)
+        )
+        is not None
+    )
+
+
 def _load_subproject(db: Session, subproject_id: int) -> SubProject:
     sp = db.scalar(
         select(SubProject)
@@ -220,6 +269,30 @@ def _ensure_subproject_access(sp: SubProject, current_user: User) -> None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="해당 소프로젝트에 접근할 수 없습니다.",
+        )
+
+
+def _validate_subproject_dates_within_project(
+    project: Project | None,
+    start_date: date,
+    end_date: date,
+) -> None:
+    if end_date < start_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="종료일은 시작일 이후여야 합니다.",
+        )
+    if project is None:
+        return
+    if project.start_date is not None and start_date < project.start_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="하위 프로젝트 시작일은 상위 프로젝트 시작일 이후여야 합니다.",
+        )
+    if project.end_date is not None and end_date > project.end_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="하위 프로젝트 종료일은 상위 프로젝트 종료일 이내여야 합니다.",
         )
 
 
@@ -615,6 +688,12 @@ def create_subproject(
             detail="프로젝트를 찾을 수 없습니다.",
         )
 
+    _validate_subproject_dates_within_project(
+        project,
+        payload.start_date,
+        payload.end_date,
+    )
+
     assignees = _load_valid_assignees(
         db,
         project,
@@ -728,6 +807,8 @@ def update_subproject(
             detail="종료일은 시작일 이후여야 합니다.",
         )
 
+    _validate_subproject_dates_within_project(project, new_start, new_end)
+
     if payload.name is not None:
         sp.name = payload.name
     next_assignee_ids = _payload_assignee_ids(payload)
@@ -754,6 +835,10 @@ def update_subproject(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"{fk_name} 사용자를 찾을 수 없습니다.",
                 )
+
+    db.flush()
+    if _has_subproject_progress_logs(db, sp.id):
+        _recalc_status_and_progress_from_logs(db, sp)
 
     if project is not None:
         _sync_subproject_execution_history(db, project, sp)
@@ -814,7 +899,10 @@ def update_subtask(
         task.weight = payload.weight
 
     db.flush()
-    _recalc_status_and_progress(sp)
+    if _has_subproject_progress_logs(db, sp.id):
+        _recalc_status_and_progress_from_logs(db, sp)
+    else:
+        _recalc_status_and_progress(sp)
     project = db.get(Project, sp.project_id)
     if project is not None:
         _sync_subproject_execution_history(db, project, sp)
@@ -1098,6 +1186,69 @@ def backfill_project_execution_history(
 #  ProgressLog 엔드포인트 (main_branch에서 병합)
 #  사용자가 날짜별로 진행률(%)과 코멘트를 기록하는 업무 일지.
 # ─────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/subprojects/{subproject_id}/progress",
+    response_model=ProgressLogResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_subproject_progress_log(
+    subproject_id: int,
+    payload: ProgressLogCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sp = _load_subproject(db, subproject_id)
+    assignee_ids = _subproject_assignee_ids(sp)
+    if current_user.id not in assignee_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="본인에게 배정된 하위 프로젝트만 진행률을 기록할 수 있습니다.",
+        )
+
+    progress_log = ProgressLog(
+        project_id=sp.project_id,
+        subproject_id=sp.id,
+        user_id=current_user.id,
+        progress_percent=payload.progress_percent,
+        comment=payload.comment,
+        work_date=payload.work_date,
+    )
+    db.add(progress_log)
+    db.flush()
+    _recalc_status_and_progress_from_logs(db, sp)
+    project = db.get(Project, sp.project_id)
+    if project is not None:
+        _sync_subproject_execution_history(db, project, sp)
+    db.commit()
+    db.refresh(progress_log)
+    return progress_log
+
+
+@router.get(
+    "/subprojects/{subproject_id}/progress",
+    response_model=list[ProgressLogResponse],
+)
+def list_subproject_progress_logs(
+    subproject_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sp = _load_subproject(db, subproject_id)
+    if current_user.role != "admin" and current_user.id not in _subproject_assignee_ids(sp):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="본인에게 배정된 하위 프로젝트의 진행률 기록만 볼 수 있습니다.",
+        )
+
+    stmt = select(ProgressLog).where(ProgressLog.subproject_id == subproject_id)
+    if current_user.role != "admin":
+        stmt = stmt.where(ProgressLog.user_id == current_user.id)
+    logs = db.scalars(
+        stmt.order_by(ProgressLog.work_date.desc(), ProgressLog.id.desc())
+    ).all()
+    return logs
 
 
 @router.post(
