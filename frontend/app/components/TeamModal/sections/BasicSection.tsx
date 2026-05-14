@@ -83,15 +83,17 @@ export default function BasicSection({
           </select>
         </Field>
 
-        <Field label={isEtc ? '업무 제목' : '하위 프로젝트 / 기능명'} required>
-          <input
-            value={f.name}
-            onChange={(e) => set('name', e.target.value)}
-            disabled={!isAdmin}
-            className="input"
-            placeholder={isEtc ? '예: 4월 교육' : '예: 로그 분석 기능 개발'}
-          />
-        </Field>
+        {mode === 'edit' && (
+          <Field label={isEtc ? '업무 제목' : '하위 프로젝트 / 기능명'} required>
+            <input
+              value={f.name}
+              onChange={(e) => set('name', e.target.value)}
+              disabled={!isAdmin}
+              className="input"
+              placeholder={isEtc ? '예: 4월 교육' : '예: 로그 분석 기능 개발'}
+            />
+          </Field>
+        )}
 
         <Field
           label="담당자"
@@ -121,7 +123,8 @@ export default function BasicSection({
             <input
               type="date"
               value={f.startDate}
-              max={MAX_DATE_VALUE}
+              min={selectedProject?.start_date ?? undefined}
+              max={selectedProject?.end_date ?? MAX_DATE_VALUE}
               onInput={(e) => {
                 e.currentTarget.value = clampDateYear(e.currentTarget.value);
               }}
@@ -132,7 +135,8 @@ export default function BasicSection({
             <input
               type="date"
               value={f.endDate}
-              max={MAX_DATE_VALUE}
+              min={selectedProject?.start_date ?? undefined}
+              max={selectedProject?.end_date ?? MAX_DATE_VALUE}
               onInput={(e) => {
                 e.currentTarget.value = clampDateYear(e.currentTarget.value);
               }}
@@ -146,24 +150,44 @@ export default function BasicSection({
               종료일은 시작일 이후여야 합니다.
             </p>
           )}
+          {selectedProject?.start_date &&
+            f.startDate &&
+            f.startDate < selectedProject.start_date && (
+              <p className="mt-1 text-xs text-red-500">
+                하위 프로젝트 시작일은 상위 프로젝트 시작일 이후여야 합니다.
+              </p>
+            )}
+          {selectedProject?.end_date &&
+            f.endDate &&
+            f.endDate > selectedProject.end_date && (
+              <p className="mt-1 text-xs text-red-500">
+                하위 프로젝트 종료일은 상위 프로젝트 종료일 이내여야 합니다.
+              </p>
+            )}
         </Field>
 
         <Field
           label="템플릿"
           span={2}
+          required
           helper={
-            configuredFieldCount > 0
-              ? '선택한 템플릿 이름이 하위 프로젝트에 저장되고, 해당 필드 구성이 아래 입력 영역에 적용됩니다.'
-              : '선택한 템플릿에 적용할 필드가 없습니다.'
+            fieldSchemaOptions.length === 0
+              ? '선택한 프로젝트에 할당된 템플릿이 없습니다. 관리 탭에서 템플릿을 먼저 추가해주세요.'
+              : configuredFieldCount > 0
+                ? '이 프로젝트에 할당된 템플릿만 선택할 수 있습니다.'
+                : '선택한 템플릿에 적용할 필드가 없습니다.'
           }
         >
           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
             <select
               value={selectedFieldSchemaType}
               onChange={(event) => onFieldSchemaTypeChange(event.target.value)}
-              disabled={!isAdmin}
+              disabled={!isAdmin || fieldSchemaOptions.length === 0}
               className="input"
             >
+              {fieldSchemaOptions.length === 0 && (
+                <option value="">템플릿 없음</option>
+              )}
               {fieldSchemaOptions.map((schema) => (
                 <option key={schema.project_type} value={schema.project_type}>
                   {schema.section_label} · {schema.fields.length}개 필드

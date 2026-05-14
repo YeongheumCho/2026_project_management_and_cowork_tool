@@ -53,35 +53,44 @@ export default function DatePicker({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className={`flex w-full items-center justify-between rounded-lg border px-[10px] py-[7px] text-small ${
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={selectedValue ? `선택된 날짜: ${selectedValue}, 달력 열기` : `${placeholder}, 달력 열기`}
+        className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-1.5 text-small ${
           open
-            ? 'border-[#534AB7] bg-white'
-            : 'border-[#D3D1C7] bg-[#FAFAFA]'
+            ? 'border-brand bg-surface'
+            : 'border-border-strong bg-surface-muted'
         }`}
       >
-        <span className={selectedValue ? 'text-[#1A1A1A]' : 'text-[#B4B2A9]'}>
+        <span className={selectedValue ? 'text-text' : 'text-text-faint'}>
           {selectedValue || placeholder}
         </span>
-        <span className="text-body text-[#888780]">▾</span>
+        <span className="text-body text-text-subtle" aria-hidden="true">▾</span>
       </button>
 
       {open && (
-        <div className="absolute left-0 top-[calc(100%+4px)] z-[400] min-w-[240px] rounded-xl border border-[#D3D1C7] bg-white p-[14px] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+        <div
+          role="dialog"
+          aria-label="날짜 선택 달력"
+          className="absolute left-0 top-[calc(100%+4px)] z-[400] min-w-[240px] rounded-xl border border-border-strong bg-surface p-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+        >
           <div className="mb-3 flex items-center justify-between">
             <button
               type="button"
               onClick={() => setCursor((current) => addMonths(current, -1))}
-              className="text-base text-[#888780]"
+              aria-label="이전 달"
+              className="rounded px-1 text-base text-text-subtle hover:bg-surface-subtle hover:text-text transition"
             >
               ‹
             </button>
-            <p className="text-body font-bold text-[#1A1A1A]">
+            <p className="text-body font-bold text-text">
               {formatMonth(cursor.getFullYear(), cursor.getMonth())}
             </p>
             <button
               type="button"
               onClick={() => setCursor((current) => addMonths(current, 1))}
-              className="text-base text-[#888780]"
+              aria-label="다음 달"
+              className="rounded px-1 text-base text-text-subtle hover:bg-surface-subtle hover:text-text transition"
             >
               ›
             </button>
@@ -91,14 +100,15 @@ export default function DatePicker({
             {weekdayLabels.map((label) => (
               <div
                 key={label}
-                className="py-1 text-nano font-bold text-[#888780]"
+                className="py-1 text-nano font-bold text-text-subtle"
+                aria-hidden="true"
               >
                 {label}
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-1" role="grid">
             {days.map((day) => {
               const iso = toISODate(day);
               const inMonth = day.getMonth() === cursor.getMonth();
@@ -110,19 +120,21 @@ export default function DatePicker({
                   key={iso}
                   type="button"
                   disabled={disabled}
+                  aria-label={`${iso}${selected ? ', 선택됨' : ''}${disabled ? ', 선택 불가' : ''}`}
+                  aria-pressed={selected}
                   onClick={() => {
                     if (disabled) return;
-                    onChange(iso);
+                                    onChange(iso);
                     setOpen(false);
                   }}
-                  className={`rounded-md py-[5px] text-center text-small transition ${
+                  className={`rounded-md py-1 text-center text-small transition \${
                     selected
-                      ? 'bg-[#534AB7] font-bold text-white'
+                      ? 'bg-brand font-bold text-white'
                       : disabled
-                        ? 'text-[#D3D1C7]'
+                        ? 'text-border-strong'
                         : inMonth
-                          ? 'text-[#1A1A1A] hover:bg-[#F1EFE8]'
-                          : 'text-[#B4B2A9] hover:bg-[#F8F8F5]'
+                          ? 'text-text hover:bg-surface-subtle'
+                          : 'text-text-faint hover:bg-background'
                   }`}
                 >
                   {day.getDate()}

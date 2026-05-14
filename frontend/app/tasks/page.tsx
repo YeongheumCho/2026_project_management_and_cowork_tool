@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
-import DatePicker from '../components/DatePicker';
 import {
   apiFetch,
   type AssignmentRequest,
@@ -21,17 +20,8 @@ export default function TasksPage() {
   const { setSelectedMemberId } = useWorkflowSelection();
   const { projects, subprojects, users, loading, error } = useDashboardData(!!me);
 
-  const today = new Date();
-  const weekLater = new Date(today);
-  weekLater.setDate(today.getDate() + 7);
-
-  // ── 선택 상태 ──────────────────────────────────────────────────────────────
   const [selectedProjectId, setSelectedProjectId] = useState<number | ''>('');
   const [selectedSubprojectId, setSelectedSubprojectId] = useState<number | ''>('');
-  const [startDate, setStartDate] = useState(toISODate(today));
-  const [endDate, setEndDate] = useState(toISODate(weekLater));
-  const [selectedOffice, setSelectedOffice] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState('');
   const [availabilityWeight, setAvailabilityWeight] = useState(60);
   const [busy, setBusy] = useState(false);
   const [screenError, setScreenError] = useState('');
@@ -40,87 +30,61 @@ export default function TasksPage() {
 
   const capabilityWeight = 100 - availabilityWeight;
 
-  // ── 파생 값 ────────────────────────────────────────────────────────────────
   const selectedProject = useMemo(
-    () => projects.find((p) => p.id === selectedProjectId) ?? null,
+    () => projects.find((project) => project.id === selectedProjectId) ?? null,
     [projects, selectedProjectId],
   );
 
-  // 선택한 프로젝트에 속한 소프로젝트 목록
   const projectSubprojects = useMemo(() => {
     if (!selectedProjectId) return [];
-    return subprojects.filter((sp) => sp.project_id === selectedProjectId);
-  }, [subprojects, selectedProjectId]);
+    return subprojects.filter((subproject) => subproject.project_id === selectedProjectId);
+  }, [selectedProjectId, subprojects]);
 
   const selectedSubproject = useMemo(
-    () => projectSubprojects.find((sp) => sp.id === selectedSubprojectId) ?? null,
+    () => projectSubprojects.find((subproject) => subproject.id === selectedSubprojectId) ?? null,
     [projectSubprojects, selectedSubprojectId],
   );
 
-  // 실 필터 옵션 (전체 사용자 기준)
-  const officeOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          users
-            .map((u) => (u.office ?? '').trim())
-            .filter(Boolean),
-        ),
-      ).sort((a, b) => a.localeCompare(b, 'ko')),
-    [users],
-  );
+  const participantCount = selectedProject?.participants?.length ?? 0;
+  const canSubmit = Boolean(selectedProject && selectedSubproject) && !busy;
 
-  // 팀 필터 옵션 (선택한 실 기준)
-  const teamOptions = useMemo(() => {
-    const filtered = selectedOffice
-      ? users.filter((u) => (u.office ?? '').trim() === selectedOffice)
-      : users;
-    return Array.from(
-      new Set(filtered.map((u) => (u.team ?? '').trim()).filter(Boolean)),
-    ).sort((a, b) => a.localeCompare(b, 'ko'));
-  }, [users, selectedOffice]);
-
-  // 활성 인원: 프로젝트가 선택되면 해당 프로젝트 참여자 수, 아니면 전체
-  const activeCount = selectedProject
-    ? (selectedProject.participants?.length ?? 0)
-    : users.length;
-
-  const canSubmit =
-    selectedProjectId !== '' &&
-    selectedSubprojectId !== '' &&
-    !busy;
-
-  // ── 이벤트 핸들러 ─────────────────────────────────────────────────────────
   function handleProjectChange(projectId: number | '') {
     setSelectedProjectId(projectId);
-    setSelectedSubprojectId(''); // 소프로젝트 초기화
+    setSelectedSubprojectId('');
     setRecommendation(null);
+    setScreenError('');
+  }
+
+  function handleSubprojectChange(subprojectId: number | '') {
+    setSelectedSubprojectId(subprojectId);
+    setRecommendation(null);
+    setScreenError('');
   }
 
   async function handleRecommend() {
-    if (!canSubmit || !selectedProject) return;
+    if (!canSubmit || !selectedProject || !selectedSubproject) return;
     setBusy(true);
     setScreenError('');
 
     try {
-      const response = await Promise.all([
+      const [response] = await Promise.all([
         apiFetch<RecommendationResponse>('/ai/recommendations', {
           method: 'POST',
           body: JSON.stringify({
+            project_id: selectedProject.id,
+            subproject_id: selectedSubproject.id,
             project_name: selectedProject.name,
             project_type: selectedProject.project_type,
-            start_date: startDate,
-            end_date: endDate,
-            office: selectedOffice || null,
-            team: selectedTeam || null,
+            start_date: selectedSubproject.start_date,
+            end_date: selectedSubproject.end_date,
             availability_weight: availabilityWeight / 100,
             capability_weight: capabilityWeight / 100,
           }),
         }),
-        wait(1400),
+        wait(800),
       ]);
 
-      setRecommendation(response[0]);
+      setRecommendation(response);
     } catch (err) {
       setScreenError((err as Error).message);
     } finally {
@@ -132,13 +96,15 @@ export default function TasksPage() {
     if (!selectedProject || !selectedSubproject) return;
 
     const payload: AssignmentRequest = {
+      project_id: selectedProject.id,
+      subproject_id: selectedSubproject.id,
       project_name: selectedProject.name,
       project_type: selectedProject.project_type,
       subproject_name: selectedSubproject.name,
       assignee_id: candidate.user_id,
-      start_date: startDate,
-      end_date: endDate,
-      apply_template: true,
+      start_date: selectedSubproject.start_date,
+      end_date: selectedSubproject.end_date,
+      apply_template: false,
     };
 
     setAssigningUserId(candidate.user_id);
@@ -150,7 +116,7 @@ export default function TasksPage() {
         body: JSON.stringify(payload),
       });
       setSelectedMemberId(candidate.user_id);
-      await wait(600);
+      await wait(400);
       router.push('/personal-calendar');
     } catch (err) {
       setScreenError((err as Error).message);
@@ -159,7 +125,6 @@ export default function TasksPage() {
     }
   }
 
-  // ── 렌더 ──────────────────────────────────────────────────────────────────
   if (meLoading || !me) {
     return <main className="p-8 text-text">불러오는 중...</main>;
   }
@@ -168,9 +133,9 @@ export default function TasksPage() {
     return (
       <AppShell me={me} sidebarProjects={projects} sidebarUsers={users}>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
-          <h1 className="text-xl font-semibold">AI 업무 배정은 관리자 전용입니다.</h1>
+          <h1 className="text-xl font-semibold">AI 업무 배정은 관리자 전용입니다</h1>
           <p className="mt-2 text-sm">
-            개인 캘린더와 팀 캘린더에서 배정된 작업을 확인해주세요.
+            개인 캘린더와 팀 캘린더에서 배정된 업무를 확인해주세요.
           </p>
         </div>
       </AppShell>
@@ -186,22 +151,20 @@ export default function TasksPage() {
       )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]">
-        {/* ── 왼쪽: 입력 폼 ─────────────────────────────────────────── */}
         <section className="rounded-3xl border border-[#EAEAE4] bg-white p-6 shadow-sm">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-text">AI 업무 배정</h1>
             <p className="mt-2 text-sm text-text-subtle">
-              프로젝트 조건을 입력하면 가용성과 적합도를 함께 고려해 상위 3명의 추천 후보를 제안합니다.
+              프로젝트와 하위 프로젝트를 선택하면 해당 프로젝트 참여 인원 안에서 추천 후보를 계산합니다.
             </p>
           </div>
 
           <div className="space-y-5">
-            {/* 프로젝트명 드롭다운 */}
-            <Field label="프로젝트명">
+            <Field label="프로젝트">
               <select
                 value={selectedProjectId}
-                onChange={(e) =>
-                  handleProjectChange(e.target.value === '' ? '' : Number(e.target.value))
+                onChange={(event) =>
+                  handleProjectChange(event.target.value === '' ? '' : Number(event.target.value))
                 }
                 className="input"
               >
@@ -209,21 +172,20 @@ export default function TasksPage() {
                 {loading ? (
                   <option disabled>불러오는 중...</option>
                 ) : (
-                  projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
+                  projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
                     </option>
                   ))
                 )}
               </select>
             </Field>
 
-            {/* 배정할 업무명 드롭다운 (하위 프로젝트명) */}
-            <Field label="배정할 업무명 (하위 프로젝트명)">
+            <Field label="하위 프로젝트">
               <select
                 value={selectedSubprojectId}
-                onChange={(e) =>
-                  setSelectedSubprojectId(e.target.value === '' ? '' : Number(e.target.value))
+                onChange={(event) =>
+                  handleSubprojectChange(event.target.value === '' ? '' : Number(event.target.value))
                 }
                 disabled={!selectedProjectId}
                 className="input disabled:cursor-not-allowed disabled:opacity-50"
@@ -235,76 +197,30 @@ export default function TasksPage() {
                       : '하위 프로젝트를 선택하세요'
                     : '먼저 프로젝트를 선택하세요'}
                 </option>
-                {projectSubprojects.map((sp) => (
-                  <option key={sp.id} value={sp.id}>
-                    {sp.name}
+                {projectSubprojects.map((subproject) => (
+                  <option key={subproject.id} value={subproject.id}>
+                    {subproject.name}
                   </option>
                 ))}
               </select>
             </Field>
 
-            {/* 실 / 팀 필터 */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="실 단위 선택">
-                <select
-                  value={selectedOffice}
-                  onChange={(e) => {
-                    setSelectedOffice(e.target.value);
-                    setSelectedTeam('');
-                  }}
-                  className="input"
-                >
-                  <option value="">전체 실</option>
-                  {officeOptions.map((office) => (
-                    <option key={office} value={office}>
-                      {office}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="팀 단위 선택">
-                <select
-                  value={selectedTeam}
-                  onChange={(e) => setSelectedTeam(e.target.value)}
-                  className="input"
-                >
-                  <option value="">전체 팀</option>
-                  {teamOptions.map((team) => (
-                    <option key={team} value={team}>
-                      {team}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-
-            {/* 날짜 */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="시작일">
-                <DatePicker value={startDate} onChange={setStartDate} />
-              </Field>
-              <Field label="종료일">
-                <DatePicker value={endDate} onChange={setEndDate} min={startDate} />
-              </Field>
-            </div>
-
-            {startDate && endDate && (
+            {selectedSubproject && (
               <div className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2 text-small font-semibold text-[#1D4ED8]">
-                일정 {startDate} ~ {endDate}
+                일정 {selectedSubproject.start_date} ~ {selectedSubproject.end_date}
               </div>
             )}
 
-            {/* 가용성 가중치 */}
             <div className="rounded-2xl border border-[#EAEAE4] bg-[#FAFAFA] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-[#1A1A1A]">가용성 가중치</p>
+                  <p className="text-sm font-semibold text-[#1A1A1A]">업무량 가중치</p>
                   <p className="mt-1 text-xs text-[#888780]">
-                    현재 업무량과 일정 여유를 얼마나 크게 반영할지 조정합니다.
+                    현재 업무량과 유사 업무 경험 중 무엇을 더 크게 반영할지 조정합니다.
                   </p>
                 </div>
                 <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-[#5F5E5A]">
-                  {availabilityWeight}% / 역량 {capabilityWeight}%
+                  업무량 {availabilityWeight}% / 역량 {capabilityWeight}%
                 </span>
               </div>
               <input
@@ -313,7 +229,7 @@ export default function TasksPage() {
                 max={100}
                 step={5}
                 value={availabilityWeight}
-                onChange={(e) => setAvailabilityWeight(Number(e.target.value))}
+                onChange={(event) => setAvailabilityWeight(Number(event.target.value))}
                 className="mt-4 w-full accent-indigo-600"
               />
             </div>
@@ -329,13 +245,12 @@ export default function TasksPage() {
           </div>
         </section>
 
-        {/* ── 오른쪽: 추천 결과 ─────────────────────────────────────── */}
         <section className="rounded-3xl border border-[#EAEAE4] bg-white p-6 shadow-sm">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-text">추천 결과 TOP 3</h2>
               <p className="mt-2 text-sm text-text-subtle">
-                센터장, 실장, 팀장은 추천 후보에서 제외되며, Claude가 추천 이유를 보강합니다.
+                선택한 프로젝트 참여 인원 중 업무량과 역량 점수가 높은 후보를 보여줍니다.
               </p>
               {recommendation && (
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -346,7 +261,7 @@ export default function TasksPage() {
                         : 'bg-[#FFF4F4] text-[#A32D2D]'
                     }`}
                   >
-                    {recommendation.claude_used ? 'Claude API 사용됨' : 'Claude API 미사용'}
+                    {recommendation.claude_used ? 'Claude API 사용' : '규칙 기반 추천'}
                   </span>
                   {recommendation.claude_error && (
                     <span className="text-micro text-[#A32D2D]">
@@ -357,13 +272,10 @@ export default function TasksPage() {
               )}
             </div>
 
-            {/* 활성 인원: 선택한 프로젝트 참여자 수 기준 */}
             <div className="rounded-2xl bg-[#F8F8F5] px-4 py-3 text-right">
-              <p className="text-xs text-[#888780]">
-                {selectedProject ? '프로젝트 인원' : '활성 인원'}
-              </p>
+              <p className="text-xs text-[#888780]">프로젝트 참여 인원</p>
               <p className="text-2xl font-bold text-[#1A1A1A]">
-                {loading ? '--' : activeCount}
+                {loading ? '--' : participantCount}
               </p>
             </div>
           </div>
@@ -371,19 +283,21 @@ export default function TasksPage() {
           {busy && (
             <div className="rounded-2xl border border-[#AFA9EC] bg-[#EEEDFE] p-6 text-center">
               <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#D9D7FB] border-t-[#534AB7]" />
-              <p className="mt-4 text-sm font-medium text-[#26215C]">업무 추천을 계산하는 중입니다</p>
+              <p className="mt-4 text-sm font-medium text-[#26215C]">
+                업무 추천을 계산하는 중입니다
+              </p>
               <p className="mt-1 text-xs text-[#534AB7]">
-                최근 수행 이력, 잔여 업무, 프로젝트 유형 경험치와 Claude 추천을 함께 반영하고 있습니다.
+                선택한 프로젝트 참여 인원의 업무량, 수행 이력, 프로젝트 유형 경험치를 반영합니다.
               </p>
             </div>
           )}
 
           {!busy && !recommendation && (
-            <EmptyPanel text="왼쪽에서 조건을 입력하고 추천을 실행하면 후보 카드가 여기에 표시됩니다." />
+            <EmptyPanel text="왼쪽에서 프로젝트와 하위 프로젝트를 선택하고 추천을 실행하세요." />
           )}
 
           {!busy && recommendation && recommendation.candidates.length === 0 && (
-            <EmptyPanel text="추천 가능한 후보가 없습니다. 날짜나 가중치를 조정해보세요." />
+            <EmptyPanel text="추천 가능한 후보가 없습니다. 프로젝트 참여 인원을 확인해주세요." />
           )}
 
           {!busy && recommendation && recommendation.candidates.length > 0 && (
@@ -409,15 +323,11 @@ export default function TasksPage() {
                         >
                           {candidate.rank}
                         </div>
-                        {candidate.recommendation_source === 'claude' ? (
-                          <span className="rounded-full border border-[#D8D3FF] bg-[#F5F3FF] px-2.5 py-1 text-tiny font-bold text-[#534AB7]">
-                            Claude 추천
-                          </span>
-                        ) : (
-                          <span className="rounded-full border border-[#F1D5D5] bg-[#FFF7F7] px-2.5 py-1 text-tiny font-bold text-[#A32D2D]">
-                            규칙 기반
-                          </span>
-                        )}
+                        <span className="rounded-full border border-[#D8D3FF] bg-[#F5F3FF] px-2.5 py-1 text-tiny font-bold text-[#534AB7]">
+                          {candidate.recommendation_source === 'claude'
+                            ? 'Claude 추천'
+                            : '규칙 기반'}
+                        </span>
                       </div>
                       <h3 className="text-body font-bold text-[#1A1A1A]">{candidate.name}</h3>
                       <p className="mt-1 text-tiny text-[#888780]">
@@ -436,7 +346,7 @@ export default function TasksPage() {
                   </div>
 
                   <div className="mt-4 grid gap-3 md:grid-cols-3">
-                    <MetricCard label="가용성" value={`${Math.round(candidate.availability_score)}점`} />
+                    <MetricCard label="업무량" value={`${Math.round(candidate.availability_score)}점`} />
                     <MetricCard label="역량" value={`${Math.round(candidate.capability_score)}점`} />
                     <MetricCard label="잔여 업무" value={`${candidate.remaining_minutes}분`} />
                   </div>
@@ -446,7 +356,7 @@ export default function TasksPage() {
                       <p className="text-sm font-semibold text-[#1A1A1A]">추천 이유</p>
                       <span className="text-micro text-[#888780]">
                         {candidate.recommendation_source === 'claude'
-                          ? 'AI가 생성한 추천 이유'
+                          ? 'AI 생성 추천 이유'
                           : '규칙 기반 추천 이유'}
                       </span>
                     </div>
@@ -479,7 +389,7 @@ export default function TasksPage() {
                   >
                     {assigningUserId === candidate.user_id
                       ? '배정 적용 중...'
-                      : `${candidate.name}님에게 확정 배정`}
+                      : `${candidate.name}에게 확정 배정`}
                   </button>
                 </article>
               ))}
@@ -515,10 +425,6 @@ function EmptyPanel({ text }: { text: string }) {
       {text}
     </div>
   );
-}
-
-function toISODate(value: Date) {
-  return value.toISOString().slice(0, 10);
 }
 
 function wait(ms: number) {

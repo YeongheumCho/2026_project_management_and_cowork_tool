@@ -150,6 +150,17 @@ export type Project = {
   in_progress_subproject_count: number;
 };
 
+export type ProgressLog = {
+  id: number;
+  project_id: number;
+  subproject_id: number | null;
+  user_id: number;
+  progress_percent: number;
+  comment: string | null;
+  work_date: string;
+  created_at: string;
+};
+
 export type ProjectMemberTimeSummary = {
   user_id: number;
   user_name: string;
@@ -261,6 +272,8 @@ export type WorkLog = {
 };
 
 export type RecommendationRequest = {
+  project_id?: number | null;
+  subproject_id?: number | null;
   project_name: string;
   project_type: ProjectType | string;
   start_date: string;
@@ -295,6 +308,8 @@ export type RecommendationResponse = {
 };
 
 export type AssignmentRequest = {
+  project_id?: number | null;
+  subproject_id?: number | null;
   project_name: string;
   project_type: ProjectType | string;
   subproject_name: string;

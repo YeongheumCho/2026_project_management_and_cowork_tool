@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
 import { API_BASE_URL, apiFetch, type Me } from '../lib/api';
+import Button from '../components/Button';
 
 type ApiError = {
   detail?: string | Array<{ msg: string }>;
@@ -76,21 +77,21 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8F8F5] px-6 py-12 text-[#1A1A1A]">
-      <div className="mx-auto max-w-md rounded-[28px] border border-[#EAEAE4] bg-white p-8 shadow-sm">
+    <main className="min-h-screen bg-background px-6 py-12 text-text">
+      <div className="mx-auto max-w-md rounded-[28px] border border-border bg-surface p-8 shadow-sm">
         <div className="mb-8">
-          <p className="text-tiny font-bold uppercase tracking-[1px] text-[#888780]">
+          <p className="text-tiny font-bold uppercase tracking-[1px] text-text-subtle">
             WorkFlow AI
           </p>
           <h1 className="mt-2 text-3xl font-bold">로그인</h1>
-          <p className="mt-2 text-sm text-[#888780]">
+          <p className="mt-2 text-sm text-text-subtle">
             사번과 비밀번호로 로그인한 뒤 대시보드로 이동합니다.
           </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-text-subtle">
               사번
             </span>
             <input
@@ -102,7 +103,7 @@ export default function LoginPage() {
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-text-subtle">
               비밀번호
             </span>
             <input
@@ -114,14 +115,14 @@ export default function LoginPage() {
             />
           </label>
 
-          <div className="flex items-center justify-between text-xs text-[#888780]">
+          <div className="flex items-center justify-between text-xs text-text-subtle">
             <span>인증 실패 시 관리자에게 비밀번호 초기화를 요청하세요.</span>
             <button
               type="button"
               onClick={() =>
                 setMessage('비밀번호 분실 시 관리자에게 초기화를 요청해주세요.')
               }
-              className="font-semibold text-[#534AB7]"
+              className="font-semibold text-brand"
             >
               비밀번호 분실
             </button>
@@ -131,26 +132,27 @@ export default function LoginPage() {
             <p
               className={`rounded-xl px-4 py-3 text-sm ${
                 message.includes('요청') || message.includes('실패') || message.includes('못')
-                  ? 'bg-[#FCEBEB] text-[#A32D2D]'
-                  : 'bg-[#EEEDFE] text-[#534AB7]'
+                  ? 'bg-verify-fail-bg text-verify-fail-fg'
+                  : 'bg-brand-soft text-brand'
               }`}
             >
               {message}
             </p>
           )}
 
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-[#534AB7] px-5 py-3 text-sm font-bold text-white disabled:opacity-50"
+            variant="primary"
+            block
+            loading={loading}
           >
-            {loading ? '로그인 처리 중...' : '로그인'}
-          </button>
+            로그인
+          </Button>
         </form>
 
-        <p className="mt-6 text-sm text-[#888780]">
+        <p className="mt-6 text-sm text-text-subtle">
           아직 계정이 없다면{' '}
-          <Link href="/signup" className="font-semibold text-[#534AB7] underline">
+          <Link href="/signup" className="font-semibold text-brand underline">
             회원가입
           </Link>
         </p>

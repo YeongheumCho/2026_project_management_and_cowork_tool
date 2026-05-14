@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   apiFetch,
-  DEFAULT_PROJECT_FIELD_SCHEMAS,
   defaultFieldSchema,
   effectiveFieldSchema,
   type FieldDefinition,
@@ -68,9 +67,16 @@ const SYSTEM_FIELD_MAP: Record<string, keyof FormState> = {
   etc_note: 'etcNote',
 };
 
-const DEFAULT_TEMPLATE_KEYS = Object.keys(DEFAULT_PROJECT_FIELD_SCHEMAS);
 const FIELD_SCHEMA_NAME_KEY = '__field_schema_name';
 const LEGACY_FIELD_SCHEMA_TYPE_KEY = '__field_schema_type';
+
+function projectTemplatePrefix(projectId: number) {
+  return `project_${projectId}_template_`;
+}
+
+function isTemplateForProject(schema: ProjectFieldSchema, projectId: number) {
+  return String(schema.project_type).startsWith(projectTemplatePrefix(projectId));
+}
 
 type Props = {
   open: boolean;
@@ -110,15 +116,20 @@ export default function TeamModal({
   );
   const projectType = selectedProject?.project_type ?? 'general';
   const fieldSchemaType = selectedFieldSchemaType;
+  const fieldSchemaOptions = useMemo(
+    () =>
+      selectedProject
+        ? orderedFieldSchemas(fieldSchemas, selectedProject.id)
+        : [],
+    [fieldSchemas, selectedProject],
+  );
   const effectiveSchema = useMemo(
     () => effectiveFieldSchema(
-      fieldSchemas[fieldSchemaType] ?? defaultFieldSchema(fieldSchemaType),
+      fieldSchemas[fieldSchemaType] ??
+        fieldSchemaOptions[0] ??
+        emptyProjectTemplateSchema(selectedProject?.id ?? 0),
     ),
-    [fieldSchemaType, fieldSchemas],
-  );
-  const fieldSchemaOptions = useMemo(
-    () => orderedFieldSchemas(fieldSchemas),
-    [fieldSchemas],
+    [fieldSchemaOptions, fieldSchemaType, fieldSchemas, selectedProject?.id],
   );
   const projectParticipants = useMemo(
     () => selectedProject?.participants ?? [],
@@ -163,39 +174,49 @@ export default function TeamModal({
     if (!open) return;
     apiFetch<ProjectFieldSchema[]>('/field-schemas')
       .then((saved) => {
-        const next = Object.fromEntries(
-          DEFAULT_TEMPLATE_KEYS.map((type) => [type, defaultFieldSchema(type)]),
-        ) as Record<string, ProjectFieldSchema>;
-        for (const schema of saved) {
-          next[schema.project_type] = schema;
-        }
-        setFieldSchemas(next);
-      })
-      .catch(() => {
         setFieldSchemas(
           Object.fromEntries(
-            DEFAULT_TEMPLATE_KEYS.map((type) => [type, defaultFieldSchema(type)]),
-          ) as Record<string, ProjectFieldSchema>,
+            saved.map((schema) => [String(schema.project_type), schema]),
+          ),
         );
+      })
+      .catch(() => {
+        setFieldSchemas({});
       });
   }, [open]);
 
   useEffect(() => {
     if (!open || mode !== 'create') return;
-    setSelectedFieldSchemaType(projectType);
-    const templateName = templateNameForType(projectType, fieldSchemas);
+    const nextSchema = fieldSchemaOptions[0];
+    if (!nextSchema) {
+      setSelectedFieldSchemaType('');
+      setF((prev) => ({
+        ...prev,
+        name: '',
+        customFields: withoutFieldSchemaMeta(prev.customFields),
+      }));
+      return;
+    }
+    setSelectedFieldSchemaType(String(nextSchema.project_type));
+    const templateName = nextSchema.section_label;
     setF((prev) => ({
       ...prev,
+      name: templateName,
       customFields: {
         ...withoutFieldSchemaMeta(prev.customFields),
         [FIELD_SCHEMA_NAME_KEY]: templateName,
       },
     }));
-  }, [fieldSchemas, mode, open, projectType]);
+  }, [fieldSchemaOptions, mode, open, projectType]);
 
   useEffect(() => {
     if (!open || mode !== 'edit' || !initial) return;
-    const inferredType = inferFieldSchemaType(initial, fieldSchemas, projectType);
+    const inferredType = inferFieldSchemaType(
+      initial,
+      fieldSchemas,
+      selectedProject?.id ?? initial.project_id,
+      projectType,
+    );
     setSelectedFieldSchemaType(inferredType);
     setF((prev) => ({
       ...prev,
@@ -237,13 +258,20 @@ export default function TeamModal({
     setF((prev) => ({ ...prev, reviewerId: '' }));
   }, [availableAssigneeIds, f.reviewerId]);
 
+  const outsideProjectRange =
+    !!selectedProject &&
+    ((!!selectedProject.start_date && !!f.startDate && f.startDate < selectedProject.start_date) ||
+      (!!selectedProject.end_date && !!f.endDate && f.endDate > selectedProject.end_date));
+
   const invalid =
     !f.name.trim() ||
+    (mode === 'create' && fieldSchemaOptions.length === 0) ||
     !f.projectId ||
     f.assigneeIds.length === 0 ||
     !f.startDate ||
     !f.endDate ||
     f.endDate < f.startDate ||
+    outsideProjectRange ||
     requiredFieldMissing;
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -251,11 +279,13 @@ export default function TeamModal({
 
   const handleFieldSchemaTypeChange = (nextType: string) => {
     setSelectedFieldSchemaType(nextType);
+    const templateName = templateNameForType(nextType, fieldSchemas);
     setF((prev) => ({
       ...prev,
+      name: templateName,
       customFields: {
         ...withoutFieldSchemaMeta(prev.customFields),
-        [FIELD_SCHEMA_NAME_KEY]: templateNameForType(nextType, fieldSchemas),
+        [FIELD_SCHEMA_NAME_KEY]: templateName,
       },
     }));
   };
@@ -447,16 +477,21 @@ function getFieldValues(f: FormState): Record<string, string> {
 function inferFieldSchemaType(
   subproject: SubProject,
   fieldSchemas: Record<string, ProjectFieldSchema>,
+  projectId: number,
   fallbackType: string,
 ) {
+  const projectSchemas = orderedFieldSchemas(fieldSchemas, projectId);
   const savedName = subproject.custom_fields?.[FIELD_SCHEMA_NAME_KEY];
   if (typeof savedName === 'string' && savedName) {
-    const typeByName = typeForTemplateName(savedName, fieldSchemas);
+    const typeByName = typeForTemplateName(savedName, projectSchemas);
     if (typeByName) return typeByName;
   }
 
   const legacySavedType = subproject.custom_fields?.[LEGACY_FIELD_SCHEMA_TYPE_KEY];
-  if (typeof legacySavedType === 'string' && legacySavedType) {
+  if (
+    typeof legacySavedType === 'string' &&
+    projectSchemas.some((schema) => schema.project_type === legacySavedType)
+  ) {
     return legacySavedType;
   }
 
@@ -470,20 +505,19 @@ function inferFieldSchemaType(
       )
       .map(([key]) => key),
   );
-  if (populatedKeys.size === 0) return fallbackType;
+  if (populatedKeys.size === 0) {
+    return String(projectSchemas[0]?.project_type ?? fallbackType);
+  }
 
-  let bestType = fallbackType;
+  let bestType = String(projectSchemas[0]?.project_type ?? fallbackType);
   let bestScore = 0;
-  for (const type of schemaKeys(fieldSchemas)) {
-    const schema = effectiveFieldSchema(
-      fieldSchemas[type] ?? defaultFieldSchema(type),
-    );
+  for (const schema of projectSchemas) {
     const score = schema.fields.reduce(
       (sum, field) => sum + (populatedKeys.has(field.key) ? 1 : 0),
       0,
     );
     if (score > bestScore) {
-      bestType = type;
+      bestType = String(schema.project_type);
       bestScore = score;
     }
   }
@@ -502,18 +536,11 @@ function templateNameForType(
 
 function typeForTemplateName(
   templateName: string,
-  fieldSchemas: Record<string, ProjectFieldSchema>,
+  schemas: ProjectFieldSchema[],
 ) {
-  const matched = schemaKeys(fieldSchemas).find(
-    (type) => templateNameForType(type, fieldSchemas) === templateName,
-  );
-  return matched ?? null;
-}
-
-function schemaKeys(fieldSchemas: Record<string, ProjectFieldSchema>) {
-  return Object.keys(fieldSchemas).length > 0
-    ? Object.keys(fieldSchemas)
-    : DEFAULT_TEMPLATE_KEYS;
+  return String(
+    schemas.find((schema) => schema.section_label === templateName)?.project_type ?? '',
+  ) || null;
 }
 
 function withoutFieldSchemaMeta(fields: Record<string, string>) {
@@ -523,18 +550,26 @@ function withoutFieldSchemaMeta(fields: Record<string, string>) {
   return next;
 }
 
-function orderedFieldSchemas(fieldSchemas: Record<string, ProjectFieldSchema>) {
-  const keys = [
-    ...DEFAULT_TEMPLATE_KEYS,
-    ...Object.keys(fieldSchemas)
-      .filter((key) => !DEFAULT_TEMPLATE_KEYS.includes(key))
-      .sort((left, right) =>
-        templateNameForType(left, fieldSchemas).localeCompare(
-          templateNameForType(right, fieldSchemas),
-        ),
-      ),
-  ];
-  return keys.map((key) => fieldSchemas[key] ?? defaultFieldSchema(key));
+function emptyProjectTemplateSchema(projectId: number): ProjectFieldSchema {
+  return {
+    id: 0,
+    project_type: projectId ? `${projectTemplatePrefix(projectId)}empty` : '',
+    section_label: '템플릿 없음',
+    fields: [],
+    created_by: null,
+    updated_at: '',
+  };
+}
+
+function orderedFieldSchemas(
+  fieldSchemas: Record<string, ProjectFieldSchema>,
+  projectId: number,
+) {
+  return Object.values(fieldSchemas)
+    .filter((schema) => isTemplateForProject(schema, projectId))
+    .sort((left, right) =>
+      left.section_label.localeCompare(right.section_label, 'ko-KR'),
+    );
 }
 
 function setFieldOnDraft(draft: FormState, key: string, value: string) {

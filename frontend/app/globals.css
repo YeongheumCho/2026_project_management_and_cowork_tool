@@ -107,6 +107,12 @@ body {
   font-family: var(--font-sans);
 }
 
+/* 전역 키보드 포커스 인디케이터 — WCAG 2.1 SC 2.4.7 */
+*:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
+
 @utility input {
   width: 100%;
   border-radius: 0.5rem;
@@ -189,12 +195,12 @@ body {
 }
 
 @utility btn-danger {
-  background: #fcebeb;
-  color: #a32d2d;
-  border: 1px solid #f4c9c9;
+  background: var(--color-verify-fail-bg);
+  color: var(--color-verify-fail-fg);
+  border: 1px solid color-mix(in srgb, var(--color-verify-fail-fg) 20%, transparent);
 }
 .btn-danger:hover:not(:disabled) {
-  background: #f8dede;
+  background: color-mix(in srgb, var(--color-verify-fail-bg) 85%, var(--color-verify-fail-fg));
 }
 
 @utility card {

@@ -13,13 +13,14 @@ import {
 type Props = {
   candidates: SubProject[];
   projects?: Project[];
+  onChanged?: () => Promise<void> | void;
 };
 
 type PendingStart = {
   candidate: SubProject;
 };
 
-export default function TimerWidget({ candidates, projects }: Props) {
+export default function TimerWidget({ candidates, projects, onChanged }: Props) {
   const [logs, setLogs] = useState<WorkLog[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -122,6 +123,7 @@ export default function TimerWidget({ candidates, projects }: Props) {
         });
       }
       await loadLogs();
+      await onChanged?.();
     } catch (err) {
       setError((err as Error).message);
     } finally {

@@ -62,6 +62,8 @@ class WorkLogUserSummary(BaseModel):
 
 
 class RecommendationRequest(BaseModel):
+    project_id: int | None = None
+    subproject_id: int | None = None
     project_name: str = Field(min_length=1, max_length=200)
     project_type: str = Field(min_length=1, max_length=50)
     start_date: date
@@ -107,6 +109,8 @@ class RecommendationResponse(BaseModel):
 
 
 class AssignmentRequest(BaseModel):
+    project_id: int | None = None
+    subproject_id: int | None = None
     project_name: str = Field(min_length=1, max_length=200)
     project_type: str = Field(min_length=1, max_length=50)
     subproject_name: str = Field(min_length=1, max_length=200)

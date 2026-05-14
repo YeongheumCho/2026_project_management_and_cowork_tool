@@ -1,29 +1,37 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import AppShell from '../../components/AppShell';
-import { apiFetch, type Project } from '../../lib/api';
+import {
+  apiFetch,
+  type ProgressLog,
+  type Project,
+  type SubProject,
+} from '../../lib/api';
 import { toISODate } from '../../lib/calendar';
 import { useMe } from '../../lib/useMe';
 
-type ProgressLog = {
-  id: number;
-  project_id: number;
-  user_id: number;
-  progress_percent: number;
-  comment: string | null;
-  work_date: string;
-  created_at: string;
-};
-
 export default function ProjectDetailPage() {
+  return (
+    <Suspense fallback={<main className="p-8 text-text">불러오는 중...</main>}>
+      <ProjectDetailContent />
+    </Suspense>
+  );
+}
+
+function ProjectDetailContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const projectId = Number(params?.id);
+  const subprojectIdParam = searchParams.get('subprojectId');
+  const subprojectId = subprojectIdParam ? Number(subprojectIdParam) : null;
+  const isSubprojectMode = Number.isFinite(subprojectId);
   const { me, loading: meLoading } = useMe();
 
   const [project, setProject] = useState<Project | null>(null);
+  const [subprojects, setSubprojects] = useState<SubProject[]>([]);
   const [logs, setLogs] = useState<ProgressLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
@@ -32,16 +40,26 @@ export default function ProjectDetailPage() {
   const [comment, setComment] = useState('');
   const [workDate, setWorkDate] = useState(toISODate(new Date()));
 
+  const selectedSubproject = useMemo(
+    () => subprojects.find((item) => item.id === subprojectId) ?? null,
+    [subprojectId, subprojects],
+  );
+
   const load = useCallback(async () => {
     if (!Number.isFinite(projectId)) return;
     setLoading(true);
     try {
-      const [projects, fetchedLogs] = await Promise.all([
+      const progressPath = isSubprojectMode
+        ? `/subprojects/${subprojectId}/progress`
+        : `/projects/${projectId}/progress`;
+      const [projects, fetchedSubprojects, fetchedLogs] = await Promise.all([
         apiFetch<Project[]>('/projects'),
-        apiFetch<ProgressLog[]>(`/projects/${projectId}/progress`),
+        apiFetch<SubProject[]>(`/subprojects?project_id=${projectId}`),
+        apiFetch<ProgressLog[]>(progressPath),
       ]);
-      const found = projects.find((p) => p.id === projectId) ?? null;
+      const found = projects.find((item) => item.id === projectId) ?? null;
       setProject(found);
+      setSubprojects(fetchedSubprojects);
       setLogs(fetchedLogs);
       if (!found) setMessage('프로젝트를 찾을 수 없습니다.');
       else setMessage('');
@@ -50,22 +68,26 @@ export default function ProjectDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [isSubprojectMode, projectId, subprojectId]);
 
   useEffect(() => {
     if (me) void load();
   }, [me, load]);
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
     if (!Number.isFinite(projectId)) return;
     const n = Number(progressPercent);
     if (!Number.isFinite(n) || n < 0 || n > 100) {
       setMessage('진행률은 0~100 사이 숫자여야 합니다.');
       return;
     }
+
     try {
-      await apiFetch<ProgressLog>(`/projects/${projectId}/progress`, {
+      const progressPath = isSubprojectMode
+        ? `/subprojects/${subprojectId}/progress`
+        : `/projects/${projectId}/progress`;
+      await apiFetch<ProgressLog>(progressPath, {
         method: 'POST',
         body: JSON.stringify({
           progress_percent: n,
@@ -75,7 +97,11 @@ export default function ProjectDetailPage() {
       });
       setProgressPercent('');
       setComment('');
-      setMessage('진행 기록이 저장되었습니다.');
+      setMessage(
+        isSubprojectMode
+          ? '진행률 기록이 저장되고 하위 프로젝트 진행률에 반영되었습니다.'
+          : '진행률 기록이 저장되었습니다.',
+      );
       await load();
     } catch (err) {
       setMessage((err as Error).message);
@@ -86,27 +112,25 @@ export default function ProjectDetailPage() {
     return <main className="p-8 text-text">불러오는 중...</main>;
   }
 
+  const title = selectedSubproject?.name ?? project?.name ?? '진행률 기록';
+  const subtitle = selectedSubproject
+    ? `${project?.name ?? '프로젝트'} · ${selectedSubproject.start_date} ~ ${selectedSubproject.end_date} · 현재 ${Math.round(selectedSubproject.progress)}%`
+    : project
+      ? `${new Date(project.created_at).toLocaleDateString('ko-KR')} 생성 · 유형: ${project.project_type}`
+      : '프로젝트 정보를 표시할 수 없습니다.';
+
   return (
     <AppShell me={me}>
       <div className="mb-4">
-        <Link href="/projects" className="text-sm text-blue-600 hover:underline">
-          {'← 프로젝트 목록'}
+        <Link href="/projects" className="text-sm font-semibold text-brand hover:underline">
+          프로젝트 목록
         </Link>
       </div>
 
-      {project ? (
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">{project.name}</h1>
-          <p className="mt-1 text-xs text-text-subtle">
-            {'생성 '}{new Date(project.created_at).toLocaleDateString('ko-KR')}{' · 유형: '}
-            {project.project_type}
-          </p>
-        </div>
-      ) : (
-        <p className="mb-6 rounded-lg bg-surface-subtle px-3 py-2 text-sm text-text-subtle">
-          {loading ? '불러오는 중...' : '프로젝트 정보를 표시할 수 없습니다.'}
-        </p>
-      )}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-text">{title}</h1>
+        <p className="mt-1 text-xs text-text-subtle">{subtitle}</p>
+      </div>
 
       {message && (
         <p className="mb-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
@@ -116,70 +140,74 @@ export default function ProjectDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="flex flex-col rounded-2xl border border-border bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">{'진행률 기록 추가'}</h2>
+          <h2 className="text-lg font-semibold">진행률 기록 추가</h2>
           <p className="mt-1 text-xs text-text-subtle">
-            {'오늘 이 프로젝트에서 진행한 내용을 기록하세요.'}
+            {isSubprojectMode
+              ? '본인에게 배정된 하위 프로젝트의 현재 진행률을 기록합니다.'
+              : '프로젝트에서 수행한 업무 진행률과 메모를 기록합니다.'}
           </p>
 
           <form onSubmit={submit} className="mt-4 flex flex-1 flex-col gap-3">
             <label className="block">
-              <span className="text-xs font-medium text-text-muted">{'진행률 (%)'}</span>
+              <span className="text-xs font-medium text-text-muted">진행률 (%)</span>
               <input
                 type="number"
                 min={0}
                 max={100}
                 value={progressPercent}
-                onChange={(e) => setProgressPercent(e.target.value)}
+                onChange={(event) => setProgressPercent(event.target.value)}
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
                 required
               />
             </label>
 
             <label className="block">
-              <span className="text-xs font-medium text-text-muted">{'날짜'}</span>
+              <span className="text-xs font-medium text-text-muted">날짜</span>
               <input
                 type="date"
                 value={workDate}
-                onChange={(e) => setWorkDate(e.target.value)}
+                onChange={(event) => setWorkDate(event.target.value)}
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
                 required
               />
             </label>
 
             <label className="block flex-1">
-              <span className="text-xs font-medium text-text-muted">{'메모'}</span>
+              <span className="text-xs font-medium text-text-muted">메모</span>
               <textarea
                 value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="오늘 한 일 / 이슈 / 다음 계획"
+                onChange={(event) => setComment(event.target.value)}
+                placeholder="오늘 한 일, 이슈, 다음 계획"
                 className="mt-1 min-h-[96px] w-full rounded-lg border border-border px-3 py-2 text-sm"
               />
             </label>
 
             <button
               type="submit"
-              className="self-start rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="self-start rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-strong"
             >
-              {'기록 저장'}
+              기록 저장
             </button>
           </form>
         </section>
 
         <section className="flex flex-col rounded-2xl border border-border bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">{'수행 이력'}</h2>
+          <h2 className="text-lg font-semibold">수행 이력</h2>
           <p className="mt-1 text-xs text-text-subtle">
-            {'이 프로젝트에서 남긴 진행 기록입니다.'}
+            {isSubprojectMode
+              ? '선택한 하위 프로젝트의 진행률 기록입니다.'
+              : '이 프로젝트에서 남긴 진행률 기록입니다.'}
           </p>
 
           <div className="mt-4 flex-1 space-y-2 overflow-y-auto">
             {loading && (
               <p className="py-6 text-center text-sm text-text-faint">
-                {'불러오는 중...'}
+                불러오는 중...
               </p>
             )}
             {!loading && logs.length === 0 && (
               <p className="py-6 text-center text-sm text-text-faint">
-                {'아직 진행 기록이 없습니다.'}
+                아직 진행 기록이 없습니다.
               </p>
             )}
             {logs.map((log) => (

@@ -14,30 +14,30 @@ export const SUBPROJECT_STATUS_LABEL: Record<Status, string> = {
 
 /** 칩(rounded-pill) 형태 배지 — 본문에 임베드 */
 export const SUBPROJECT_STATUS_BADGE: Record<Status, string> = {
-  planned: 'bg-surface-subtle text-text-muted',
-  in_progress: 'bg-blue-100 text-blue-700',
-  completed: 'bg-emerald-100 text-emerald-700',
+  planned:     'bg-verify-idle-bg text-verify-idle-fg',
+  in_progress: 'bg-verify-info-bg text-verify-info-fg',
+  completed:   'bg-verify-pass-bg text-verify-pass-fg',
 };
 
 /** 단색 배경(캘린더 일자 셀의 일정 바) */
 export const SUBPROJECT_STATUS_BG: Record<Status, string> = {
-  planned: 'bg-slate-300 text-text',
-  in_progress: 'bg-blue-500 text-white',
-  completed: 'bg-emerald-500 text-white',
+  planned:     'bg-surface-subtle text-text-muted',
+  in_progress: 'bg-verify-info-fg text-white',
+  completed:   'bg-verify-pass-fg text-white',
 };
 
 /** 닷(legend·간단 표식) */
 export const SUBPROJECT_STATUS_DOT: Record<Status, string> = {
-  planned: 'bg-slate-400',
-  in_progress: 'bg-blue-500',
-  completed: 'bg-emerald-500',
+  planned:     'bg-text-faint',
+  in_progress: 'bg-verify-info-fg',
+  completed:   'bg-verify-pass-fg',
 };
 
 /** ProgressBar 진행률 색상 */
 export const SUBPROJECT_STATUS_BAR: Record<Status, string> = {
-  planned: 'bg-slate-300',
-  in_progress: 'bg-blue-500',
-  completed: 'bg-emerald-500',
+  planned:     'bg-surface-subtle',
+  in_progress: 'bg-verify-info-fg',
+  completed:   'bg-verify-pass-fg',
 };
 
 export function getSubprojectStatusLabel(status: Status): string {

@@ -21,6 +21,7 @@ type Props = {
   onToggle: (projectId: number) => void;
   onAddSub: (projectId: number) => void;
   onCsvImport: (projectId: number) => void;
+  onOpenSubProgress: (sp: SubProject) => void;
   onEditSub: (sp: SubProject) => void;
   onEditProject: (project: Project) => void;
   onDeleteProject: (project: Project) => void;
@@ -36,6 +37,7 @@ export default function ProjectCard({
   onToggle,
   onAddSub,
   onCsvImport,
+  onOpenSubProgress,
   onEditSub,
   onEditProject,
   onDeleteProject,
@@ -224,7 +226,13 @@ export default function ProjectCard({
           ) : (
             <ul className="space-y-3">
               {subprojects.map((sp) => (
-                <SubProjectListItem key={sp.id} sp={sp} onClick={onEditSub} />
+                <SubProjectListItem
+                  key={sp.id}
+                  sp={sp}
+                  onClick={onOpenSubProgress}
+                  canEdit={isAdmin}
+                  onEdit={onEditSub}
+                />
               ))}
             </ul>
           )}

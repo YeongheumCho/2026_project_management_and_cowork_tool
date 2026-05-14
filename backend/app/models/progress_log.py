@@ -20,6 +20,9 @@ class ProgressLog(Base):
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    subproject_id: Mapped[int | None] = mapped_column(
+        ForeignKey("subprojects.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
@@ -33,3 +36,4 @@ class ProgressLog(Base):
     )
 
     project = relationship("Project", back_populates="progress_logs")
+    subproject = relationship("SubProject")

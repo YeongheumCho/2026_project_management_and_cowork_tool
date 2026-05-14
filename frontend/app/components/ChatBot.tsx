@@ -227,8 +227,10 @@ export default function ChatBot() {
                 style={{ maxHeight: '80px' }}
               />
               <button
+                type="button"
                 onClick={sendMessage}
                 disabled={!input.trim() || isLoading}
+                aria-label="메시지 전송"
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition-all hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
               >
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
