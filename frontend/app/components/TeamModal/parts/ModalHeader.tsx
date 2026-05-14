@@ -26,14 +26,14 @@ export default function ModalHeader({
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
-        <p className="text-nano font-bold uppercase tracking-[1px] text-[#888780]">
+        <p className="text-nano font-bold uppercase tracking-[1px] text-text-subtle">
           {TEXT.detail}
         </p>
-        <h3 className="mt-2 text-[19px] font-bold text-[#1A1A1A]">
+        <h3 className="mt-2 text-[19px] font-bold text-text">
           {mode === 'create' ? TEXT.create : TEXT.edit}
         </h3>
         {selectedProject && (
-          <p className="mt-1 text-micro text-[#888780]">
+          <p className="mt-1 text-micro text-text-subtle">
             {selectedProject.name}
             {TEXT.separator}
             {PROJECT_TYPE_LABEL[selectedProject.project_type] ??
@@ -46,7 +46,7 @@ export default function ModalHeader({
         <button
           type="button"
           onClick={onDelete}
-          className="rounded-lg border border-[#F4C9C9] px-3 py-1.5 text-micro font-bold text-[#A32D2D] hover:bg-[#FCEBEB]"
+          className="rounded-lg border border-verify-fail-bg px-3 py-1.5 text-micro font-bold text-verify-fail-fg hover:bg-verify-fail-bg"
         >
           {TEXT.delete}
         </button>

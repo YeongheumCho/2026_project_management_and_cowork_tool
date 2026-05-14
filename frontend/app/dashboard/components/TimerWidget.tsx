@@ -478,7 +478,7 @@ const BUTTON_TONE = {
   emerald: 'bg-emerald-600 text-white hover:bg-emerald-700',
   amber: 'bg-amber-100 text-amber-800 hover:bg-amber-200',
   rose: 'bg-rose-100 text-rose-700 hover:bg-rose-200',
-  slate: 'bg-surface-subtle text-text hover:bg-slate-200',
+  slate: 'bg-surface-subtle text-text hover:bg-border-strong',
 };
 
 const STATUS_LABEL = {
@@ -490,7 +490,7 @@ const STATUS_LABEL = {
 const STATUS_BADGE = {
   running: 'bg-emerald-100 text-emerald-700',
   paused: 'bg-amber-100 text-amber-700',
-  completed: 'bg-slate-200 text-text',
+  completed: 'bg-border-strong text-text',
 };
 
 function getElapsedSeconds(log: WorkLog, now: number) {

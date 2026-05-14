@@ -7,10 +7,9 @@ import { useMe } from '../lib/useMe';
 import AdminOrgScopeTree from './components/AdminOrgScopeTree';
 import MajorProjectManager from './components/MajorProjectManager';
 import ProjectDeletionManager from './components/ProjectDeletionManager';
-import StopwatchSummaryManager from './components/StopwatchSummaryManager';
 import TemplateManager from './components/TemplateManager';
 import UserTable from './components/UserTable';
-import WorkHistoryManager from './components/WorkHistoryManager';
+import WorkStatusManager from './components/WorkStatusManager';
 import { useAdminUsers } from './hooks/useAdminUsers';
 
 type AdminTab = 'users' | 'major-projects' | 'templates' | 'work-history';
@@ -63,7 +62,7 @@ export default function AdminPage() {
   if (!isAdmin) {
     return (
       <AppShell me={me}>
-        <div className="rounded-2xl border border-[#F4D6D6] bg-[#FFF7F7] p-6 text-sm text-[#A32D2D]">
+        <div className="rounded-2xl border border-verify-fail-bg bg-verify-fail-bg p-6 text-sm text-verify-fail-fg">
           관리자만 접근할 수 있는 페이지입니다.
         </div>
       </AppShell>
@@ -77,15 +76,15 @@ export default function AdminPage() {
   return (
     <AppShell me={me}>
       <div className="mb-6">
-        <h1 className="text-xl font-bold tracking-[-0.3px] text-[#1A1A1A]">
+        <h1 className="text-xl font-bold tracking-[-0.3px] text-text">
           관리자 설정
         </h1>
-        <p className="mt-1 text-small text-[#888780]">
+        <p className="mt-1 text-small text-text-subtle">
           사용자 권한과 프로젝트, 템플릿, 업무 이력을 관리합니다.
         </p>
       </div>
 
-      <div className="mb-6 flex gap-1 rounded-2xl border border-[#EAEAE4] bg-[#FAFAFA] p-1">
+      <div className="mb-6 flex gap-1 rounded-2xl border border-border bg-surface-muted p-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -93,8 +92,8 @@ export default function AdminPage() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 rounded-xl px-4 py-2.5 text-body font-semibold transition ${
               activeTab === tab.id
-                ? 'bg-white text-[#534AB7] shadow-sm'
-                : 'text-[#888780] hover:text-[#1A1A1A]'
+                ? 'bg-white text-brand shadow-sm'
+                : 'text-text-subtle hover:text-text'
             }`}
           >
             {tab.label}
@@ -136,30 +135,30 @@ export default function AdminPage() {
             selectedIds={selectedOrgUserIds}
             onSelect={setSelectedOrgUserIds}
           />
-          <section className="rounded-2xl border border-[#EAEAE4] bg-white p-4">
+          <section className="rounded-2xl border border-border bg-white p-4">
             <div className="mb-3">
-              <h3 className="text-md font-bold text-[#1A1A1A]">조회 기간</h3>
-              <p className="mt-1 text-small text-[#888780]">
+              <h3 className="text-md font-bold text-text">조회 기간</h3>
+              <p className="mt-1 text-small text-text-subtle">
                 선택한 담당자의 스톱워치 시간 현황과 업무 이력 현황에 함께 적용됩니다.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
-              <label className="block text-small font-semibold text-[#888780]">
+              <label className="block text-small font-semibold text-text-subtle">
                 시작일
                 <input
                   type="date"
-                  className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-body text-[#1A1A1A]"
+                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
                   value={workRange.from}
                   onChange={(event) =>
                     setWorkRange((prev) => ({ ...prev, from: event.target.value }))
                   }
                 />
               </label>
-              <label className="block text-small font-semibold text-[#888780]">
+              <label className="block text-small font-semibold text-text-subtle">
                 종료일
                 <input
                   type="date"
-                  className="mt-1 w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-body text-[#1A1A1A]"
+                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
                   value={workRange.to}
                   onChange={(event) =>
                     setWorkRange((prev) => ({ ...prev, to: event.target.value }))
@@ -170,19 +169,14 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setWorkRange({ from: '', to: '' })}
-                  className="w-full rounded-lg border border-[#EAEAE4] px-4 py-2 text-body font-semibold text-[#534AB7] transition hover:bg-[#FAFAFA] md:w-auto"
+                  className="w-full rounded-lg border border-border px-4 py-2 text-body font-semibold text-brand transition hover:bg-surface-muted md:w-auto"
                 >
                   기간 초기화
                 </button>
               </div>
             </div>
           </section>
-          <StopwatchSummaryManager
-            enabled={isAdmin}
-            selectedUserIds={selectedOrgUserIds}
-            dateRange={workRange}
-          />
-          <WorkHistoryManager
+          <WorkStatusManager
             enabled={isAdmin}
             users={users}
             selectedUserIds={selectedOrgUserIds}

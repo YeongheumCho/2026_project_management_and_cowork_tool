@@ -10,14 +10,12 @@ import {
   type MajorProject,
   type Project,
   type ProjectType,
-  type UserBrief,
 } from '../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 
 type Props = {
   open: boolean;
   project: Project | null;
-  users: UserBrief[];
   majorProjects: MajorProject[];
   onClose: () => void;
   onSaved: () => Promise<void> | void;
@@ -27,7 +25,6 @@ type Props = {
 export default function ProjectManageModal({
   open,
   project,
-  users,
   majorProjects,
   onClose,
   onSaved,

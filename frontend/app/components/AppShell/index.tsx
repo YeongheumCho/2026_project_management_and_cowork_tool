@@ -1,8 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import type { MajorProject, Me, Project, SubProject, UserBrief } from '../../lib/api';
+import ProgressLogModal from '../../projects/components/ProgressLogModal';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { useSidebarData } from './useSidebarData';
@@ -16,6 +17,7 @@ type Props = {
   selectedMemberId?: number | null;
   onProjectSelect?: (projectId: number) => void;
   onMemberSelect?: (memberId: number) => void;
+  onSubprojectSelect?: (subproject: SubProject) => void;
   sidebarProjects?: Project[];
   sidebarMajorProjects?: MajorProject[];
   sidebarSubprojects?: SubProject[];
@@ -47,6 +49,7 @@ export default function AppShell({
   selectedMemberId,
   onProjectSelect,
   onMemberSelect,
+  onSubprojectSelect,
   sidebarProjects,
   sidebarMajorProjects,
   sidebarSubprojects,
@@ -54,6 +57,8 @@ export default function AppShell({
 }: Props) {
   const router = useRouter();
   const { majorProjects, projects, subprojects, users } = useSidebarData();
+  const [shellProgressTarget, setShellProgressTarget] = useState<SubProject | null>(null);
+  const handleSubprojectSelect = onSubprojectSelect ?? setShellProgressTarget;
 
   const handleLogout = () => {
     window.localStorage.removeItem('access_token');
@@ -74,11 +79,20 @@ export default function AppShell({
           selectedMemberId={selectedMemberId}
           onProjectSelect={onProjectSelect}
           onMemberSelect={onMemberSelect}
+          onSubprojectSelect={handleSubprojectSelect}
         />
         <section className="flex-1 overflow-y-auto px-8 py-6">
           {children}
         </section>
       </div>
+      {!onSubprojectSelect && (
+        <ProgressLogModal
+          open={shellProgressTarget !== null}
+          subproject={shellProgressTarget}
+          onClose={() => setShellProgressTarget(null)}
+          onSaved={() => {}}
+        />
+      )}
     </main>
   );
 }

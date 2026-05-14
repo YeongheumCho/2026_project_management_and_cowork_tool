@@ -515,11 +515,22 @@ def _sync_subproject_execution_history(
         history.keyword_text = _build_history_keywords(project, subproject)
 
 
-def _serialize_history_entry(history: ProjectExecutionHistory, user: User | None) -> ProjectHistoryEntry:
+def _serialize_history_entry(
+    history: ProjectExecutionHistory,
+    user: User | None,
+    project: Project | None = None,
+    major_project: MajorProject | None = None,
+) -> ProjectHistoryEntry:
+    history_project = project or history.project
+    history_major_project = major_project or (
+        history_project.major_project if history_project else None
+    )
     return ProjectHistoryEntry(
         id=history.id,
         user_id=history.user_id,
         user_name=user.name if user else "",
+        major_project_id=history_major_project.id if history_major_project else None,
+        major_project_name=history_major_project.name if history_major_project else None,
         project_id=history.project_id,
         project_name=history.project_name,
         subproject_id=history.subproject_id,
@@ -1131,11 +1142,6 @@ def delete_subproject(
     admin: User = Depends(require_admin),
 ):
     sp = _load_subproject(db, subproject_id)
-    if sp.status == STATUS_COMPLETED:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?꾨즺???쇱젙? ??젣?????놁뒿?덈떎.",
-        )
     db.delete(sp)
     db.commit()
     return None
@@ -1187,6 +1193,7 @@ def update_subtask(
 
 @router.get("/projects/history", response_model=list[ProjectHistoryEntry])
 def list_project_execution_history(
+    major_project_id: Optional[int] = Query(default=None),
     project_id: Optional[int] = Query(default=None),
     user_id: Optional[int] = Query(default=None),
     start_date: Optional[date] = Query(default=None),
@@ -1198,8 +1205,10 @@ def list_project_execution_history(
     if current_user.role != "admin" and not visible_project_ids:
         return []
     stmt = (
-        select(ProjectExecutionHistory, User)
+        select(ProjectExecutionHistory, User, Project, MajorProject)
         .join(User, ProjectExecutionHistory.user_id == User.id)
+        .outerjoin(Project, ProjectExecutionHistory.project_id == Project.id)
+        .outerjoin(MajorProject, Project.major_project_id == MajorProject.id)
         .order_by(
             ProjectExecutionHistory.ended_on.desc(),
             ProjectExecutionHistory.recorded_at.desc(),
@@ -1210,6 +1219,8 @@ def list_project_execution_history(
             ProjectExecutionHistory.project_id.in_(visible_project_ids),
             ProjectExecutionHistory.user_id == current_user.id,
         )
+    if major_project_id is not None:
+        stmt = stmt.where(Project.major_project_id == major_project_id)
     if project_id is not None:
         stmt = stmt.where(ProjectExecutionHistory.project_id == project_id)
     if user_id is not None and current_user.role == "admin":
@@ -1220,7 +1231,10 @@ def list_project_execution_history(
         stmt = stmt.where(ProjectExecutionHistory.ended_on <= end_date)
 
     rows = db.execute(stmt).all()
-    return [_serialize_history_entry(history, user) for history, user in rows]
+    return [
+        _serialize_history_entry(history, user, project, major_project)
+        for history, user, project, major_project in rows
+    ]
 
 
 @router.post(

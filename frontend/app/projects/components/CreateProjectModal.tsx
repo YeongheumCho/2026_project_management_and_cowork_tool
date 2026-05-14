@@ -10,13 +10,11 @@ import {
   type MajorProject,
   type Project,
   type ProjectType,
-  type UserBrief,
 } from '../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 
 type Props = {
   open: boolean;
-  users: UserBrief[];
   defaultDate?: string;
   onClose: () => void;
   onCreated: (project: Project) => Promise<void> | void;
@@ -25,7 +23,6 @@ type Props = {
 
 export default function CreateProjectModal({
   open,
-  users,
   defaultDate,
   onClose,
   onCreated,
@@ -79,7 +76,7 @@ export default function CreateProjectModal({
         setMajorProjectId((current) => current || items[0]?.id || '');
       })
       .catch((error) => onError((error as Error).message));
-  }, [defaultDate, open]);
+  }, [defaultDate, onError, open]);
 
   function reset() {
     setName('');

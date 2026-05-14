@@ -115,7 +115,7 @@ function FieldInput({
               checked={value === 'true'}
               onChange={(event) => onChange(event.target.checked ? 'true' : 'false')}
               disabled={disabled}
-              className="h-4 w-4 accent-[#534AB7]"
+              className="h-4 w-4 accent-brand"
             />
             <span className="text-sm text-text">{field.label}</span>
           </label>

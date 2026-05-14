@@ -196,6 +196,8 @@ class ProjectHistoryEntry(BaseModel):
     id: int
     user_id: int
     user_name: str
+    major_project_id: int | None = None
+    major_project_name: str | None = None
     project_id: int | None = None
     project_name: str
     subproject_id: int | None = None

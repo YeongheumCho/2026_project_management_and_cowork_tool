@@ -541,9 +541,17 @@ def _sync_completed_subproject_history(
     db: Session,
     project: Project,
     subproject: SubProject,
+    completed_user_ids: set[int] | None = None,
 ) -> None:
     assignee_ids = sorted(_subproject_assignee_ids(subproject))
     if not assignee_ids:
+        return
+    target_user_ids = (
+        sorted(set(assignee_ids) & completed_user_ids)
+        if completed_user_ids is not None
+        else assignee_ids
+    )
+    if not target_user_ids:
         return
 
     existing_rows = db.scalars(
@@ -554,13 +562,17 @@ def _sync_completed_subproject_history(
     auto_by_user = {
         row.user_id: row for row in existing_rows if not row.manual_override
     }
+    for row in auto_by_user.values():
+        if row.user_id not in target_user_ids:
+            db.delete(row)
+
     fallback_minutes = (
         subproject.total_minutes
         or subproject.avg_expected_minutes
         or max(1, (subproject.end_date - subproject.start_date).days + 1) * 60
     )
 
-    for assignee_id in assignee_ids:
+    for assignee_id in target_user_ids:
         history = auto_by_user.get(assignee_id)
         if history is None:
             history = ProjectExecutionHistory(
@@ -589,6 +601,7 @@ def _complete_linked_subproject(
     db: Session,
     subproject_id: int | None,
     completed_at: datetime,
+    completed_user_ids: set[int],
 ) -> None:
     if subproject_id is None:
         return
@@ -601,22 +614,28 @@ def _complete_linked_subproject(
         )
         .where(SubProject.id == subproject_id)
     )
-    if subproject is None or subproject.status == STATUS_COMPLETED:
+    if subproject is None:
         return
 
-    for task in subproject.subtasks:
-        task.is_done = True
-        if task.done_at is None:
-            task.done_at = completed_at
+    if subproject.status != STATUS_COMPLETED:
+        for task in subproject.subtasks:
+            task.is_done = True
+            if task.done_at is None:
+                task.done_at = completed_at
 
-    subproject.progress = 100
-    subproject.status = STATUS_COMPLETED
-    if subproject.completed_on is None:
-        subproject.completed_on = completed_at.date()
+        subproject.progress = 100
+        subproject.status = STATUS_COMPLETED
+        if subproject.completed_on is None:
+            subproject.completed_on = completed_at.date()
 
     project = db.get(Project, subproject.project_id)
     if project is not None:
-        _sync_completed_subproject_history(db, project, subproject)
+        _sync_completed_subproject_history(
+            db,
+            project,
+            subproject,
+            completed_user_ids=completed_user_ids,
+        )
 
 
 @router.post("/work-logs/{log_id}/complete", response_model=WorkLogResponse)
@@ -636,7 +655,9 @@ def complete_work_log(
     log.current_started_at = None
     log.ended_at = now
     log.status = WORKLOG_COMPLETED
-    completed_subproject_ids = {log.subproject_id}
+    completed_subproject_user_ids: dict[int | None, set[int]] = {
+        log.subproject_id: {current_user.id}
+    }
 
     for archive_id in payload.archived_ids:
         archived = db.get(WorkLog, archive_id)
@@ -649,10 +670,12 @@ def complete_work_log(
         archived.current_started_at = None
         archived.ended_at = now
         archived.status = WORKLOG_COMPLETED
-        completed_subproject_ids.add(archived.subproject_id)
+        completed_subproject_user_ids.setdefault(archived.subproject_id, set()).add(
+            current_user.id
+        )
 
-    for subproject_id in completed_subproject_ids:
-        _complete_linked_subproject(db, subproject_id, now)
+    for subproject_id, user_ids in completed_subproject_user_ids.items():
+        _complete_linked_subproject(db, subproject_id, now, user_ids)
 
     db.commit()
     db.refresh(log)

@@ -87,8 +87,8 @@ export default function TeamMemberFilter({
           onClick={() => onSelect(null)}
           className={`rounded-full border px-[9px] py-1 text-micro ${
             selectedId === null
-              ? 'border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]'
-              : 'border-[#EAEAE4] text-[#888780]'
+              ? 'border-brand bg-brand-soft text-brand'
+              : 'border-border text-text-subtle'
           }`}
         >
           {allLabel}
@@ -279,8 +279,8 @@ function GroupButton({
       aria-expanded={isOpen}
       className={`inline-flex items-center gap-1.5 rounded-full border px-[9px] py-1 text-micro ${
         isActive
-          ? 'border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]'
-          : 'border-[#EAEAE4] text-[#888780] hover:bg-[#FAFAFA]'
+          ? 'border-brand bg-brand-soft text-brand'
+          : 'border-border text-text-subtle hover:bg-surface-muted'
       }`}
     >
       <span
@@ -318,7 +318,7 @@ function MemberChips({
             className={`inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full border px-[9px] py-1 text-micro ${
               active
                 ? `${softColorForPosition(user.position)} ${textColorForPosition(user.position)} border-transparent`
-                : 'border-[#EAEAE4] text-[#888780] hover:bg-[#FAFAFA]'
+                : 'border-border text-text-subtle hover:bg-surface-muted'
             }`}
           >
             <span className={`h-[6px] w-[6px] rounded-full ${colorForPosition(user.position)}`} />

@@ -74,10 +74,10 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8F8F5] px-6 py-12 text-[#1A1A1A]">
-      <div className="mx-auto max-w-lg rounded-[28px] border border-[#EAEAE4] bg-white p-8 shadow-sm">
+    <main className="min-h-screen bg-background px-6 py-12 text-text">
+      <div className="mx-auto max-w-lg rounded-[28px] border border-border bg-white p-8 shadow-sm">
         <div className="mb-8">
-          <p className="text-tiny font-bold uppercase tracking-[1px] text-[#888780]">
+          <p className="text-tiny font-bold uppercase tracking-[1px] text-text-subtle">
             WorkFlow AI
           </p>
           <h1 className="mt-2 text-3xl font-bold">회원가입</h1>
@@ -139,14 +139,14 @@ export default function SignupPage() {
             />
           </div>
 
-          <label className="flex items-start gap-3 rounded-xl border border-[#EAEAE4] bg-[#FAFAFA] px-4 py-3">
+          <label className="flex items-start gap-3 rounded-xl border border-border bg-surface-muted px-4 py-3">
             <input
               type="checkbox"
               checked={termsAccepted}
               onChange={(event) => setTermsAccepted(event.target.checked)}
-              className="mt-0.5 h-4 w-4 accent-[#534AB7]"
+              className="mt-0.5 h-4 w-4 accent-brand"
             />
-            <span className="text-sm text-[#5F5E5A]">
+            <span className="text-sm text-text-muted">
               서비스 이용약관 및 개인정보 처리방침에 동의합니다.
             </span>
           </label>
@@ -155,8 +155,8 @@ export default function SignupPage() {
             <p
               className={`rounded-xl px-4 py-3 text-sm ${
                 message.includes('완료')
-                  ? 'bg-[#EEEDFE] text-[#534AB7]'
-                  : 'bg-[#FCEBEB] text-[#A32D2D]'
+                  ? 'bg-brand-soft text-brand'
+                  : 'bg-verify-fail-bg text-verify-fail-fg'
               }`}
             >
               {message}
@@ -166,15 +166,15 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-[#534AB7] px-5 py-3 text-sm font-bold text-white disabled:opacity-50"
+            className="w-full rounded-xl bg-brand px-5 py-3 text-sm font-bold text-white disabled:opacity-50"
           >
             {loading ? '가입 처리 중...' : '회원가입'}
           </button>
         </form>
 
-        <p className="mt-6 text-sm text-[#888780]">
+        <p className="mt-6 text-sm text-text-subtle">
           이미 계정이 있다면{' '}
-          <Link href="/login" className="font-semibold text-[#534AB7] underline">
+          <Link href="/login" className="font-semibold text-brand underline">
             로그인
           </Link>
         </p>
@@ -192,7 +192,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
+      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-text-subtle">
         {label}
       </span>
       {children}
@@ -217,12 +217,12 @@ function RoleButton({
       onClick={onClick}
       className={`rounded-xl border px-4 py-3 text-left transition ${
         selected
-          ? 'border-[#534AB7] bg-[#EEEDFE]'
-          : 'border-[#EAEAE4] bg-white hover:bg-[#FAFAFA]'
+          ? 'border-brand bg-brand-soft'
+          : 'border-border bg-white hover:bg-surface-muted'
       }`}
     >
-      <p className="text-sm font-bold text-[#1A1A1A]">{title}</p>
-      <p className="mt-1 text-xs text-[#888780]">{description}</p>
+      <p className="text-sm font-bold text-text">{title}</p>
+      <p className="mt-1 text-xs text-text-subtle">{description}</p>
     </button>
   );
 }

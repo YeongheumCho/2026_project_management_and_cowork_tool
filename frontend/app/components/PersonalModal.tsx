@@ -67,10 +67,10 @@ export default function PersonalModal({
   const isAllDone = tasks.length > 0 && tasks.every((task) => task.is_done);
   const accentSurface = accentUserId
     ? softColorForId(accentUserId)
-    : 'bg-[#F1EFE8]';
+    : 'bg-surface-subtle';
   const accentText = accentUserId
     ? textColorForId(accentUserId)
-    : 'text-[#5F5E5A]';
+    : 'text-text-muted';
 
   async function toggle(task: SubTask) {
     if (!canEdit || busy !== null) return;
@@ -93,13 +93,13 @@ export default function PersonalModal({
     <Modal open={open} onClose={onClose} size="lg" ariaLabel={subproject.name}>
       <div className="space-y-5">
         <div>
-          <p className="text-nano font-bold uppercase tracking-[1px] text-[#888780]">
+          <p className="text-nano font-bold uppercase tracking-[1px] text-text-subtle">
             {TEXT.title}
           </p>
-          <h3 className="mt-2 text-[19px] font-bold text-[#1A1A1A]">
+          <h3 className="mt-2 text-[19px] font-bold text-text">
             {subproject.name}
           </h3>
-          <p className="mt-2 text-micro text-[#888780]">
+          <p className="mt-2 text-micro text-text-subtle">
             {subproject.start_date} - {subproject.end_date}
           </p>
         </div>
@@ -128,23 +128,23 @@ export default function PersonalModal({
         </div>
 
         {!canEdit && (
-          <p className="rounded-xl bg-[#FAEEDA] px-4 py-3 text-sm text-[#854F0B]">
+          <p className="rounded-xl bg-verify-warn-bg px-4 py-3 text-sm text-verify-warn-fg">
             {TEXT.assigneeOnly}
           </p>
         )}
 
         <div className="space-y-4">
           {tasks.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-[#D3D1C7] bg-[#FAFAFA] px-4 py-6 text-center text-sm text-[#888780]">
+            <p className="rounded-xl border border-dashed border-border-strong bg-surface-muted px-4 py-6 text-center text-sm text-text-subtle">
               {TEXT.emptyTasks}
             </p>
           ) : (
-            <div className="rounded-xl border border-[#EAEAE4] bg-white p-4">
-              <div className="mb-3 flex items-center justify-between border-b border-[#EAEAE4] pb-2 pl-6">
-                <span className="text-nano font-bold uppercase tracking-[0.8px] text-[#888780]">
+            <div className="rounded-xl border border-border bg-white p-4">
+              <div className="mb-3 flex items-center justify-between border-b border-border pb-2 pl-6">
+                <span className="text-nano font-bold uppercase tracking-[0.8px] text-text-subtle">
                   {TEXT.detailTasks}
                 </span>
-                <span className="text-nano font-bold uppercase tracking-[0.8px] text-[#888780]">
+                <span className="text-nano font-bold uppercase tracking-[0.8px] text-text-subtle">
                   {TEXT.weight}
                 </span>
               </div>
@@ -155,7 +155,7 @@ export default function PersonalModal({
                   return (
                     <li
                       key={task.id}
-                      className="flex items-center gap-3 border-b border-[#F1EFE8] py-2 last:border-b-0"
+                      className="flex items-center gap-3 border-b border-surface-subtle py-2 last:border-b-0"
                     >
                       <button
                         type="button"
@@ -163,10 +163,10 @@ export default function PersonalModal({
                         onClick={() => void toggle(task)}
                         className={`flex h-[15px] w-[15px] items-center justify-center rounded-[4px] border text-nano ${
                           task.is_done
-                            ? 'border-[#22C55E] bg-[#22C55E] text-white'
+                            ? 'border-verify-pass-fg bg-verify-pass-fg text-white'
                             : isCurrent
-                              ? 'border-[#534AB7] bg-white text-[#534AB7]'
-                              : 'border-[#D3D1C7] bg-white text-transparent'
+                              ? 'border-brand bg-white text-brand'
+                              : 'border-border-strong bg-white text-transparent'
                         }`}
                       >
                         {TEXT.check}
@@ -175,10 +175,10 @@ export default function PersonalModal({
                       <span
                         className={`flex-1 text-small ${
                           task.is_done
-                            ? 'text-[#B4B2A9] line-through'
+                            ? 'text-text-faint line-through'
                             : isCurrent
-                              ? 'font-bold text-[#534AB7]'
-                              : 'text-[#1A1A1A]'
+                              ? 'font-bold text-brand'
+                              : 'text-text'
                         }`}
                       >
                         {isCurrent && !task.is_done ? TEXT.current : ''}
@@ -188,10 +188,10 @@ export default function PersonalModal({
                       <span
                         className={`min-w-[32px] text-right text-micro font-semibold ${
                           task.is_done
-                            ? 'text-[#22C55E]'
+                            ? 'text-verify-pass-fg'
                             : isCurrent
-                              ? 'text-[#534AB7]'
-                              : 'text-[#888780]'
+                              ? 'text-brand'
+                              : 'text-text-subtle'
                         }`}
                       >
                         {Number(task.weight).toFixed(0)}%
@@ -205,22 +205,22 @@ export default function PersonalModal({
         </div>
 
         {isAllDone && (
-          <p className="rounded-xl bg-[#EAF3DE] px-4 py-3 text-sm text-[#3B6D11]">
+          <p className="rounded-xl bg-verify-pass-bg px-4 py-3 text-sm text-verify-pass-fg">
             {TEXT.allDone}
           </p>
         )}
 
         {error && (
-          <p className="rounded-xl bg-[#FCEBEB] px-4 py-3 text-sm text-[#A32D2D]">
+          <p className="rounded-xl bg-verify-fail-bg px-4 py-3 text-sm text-verify-fail-fg">
             {error}
           </p>
         )}
 
-        <div className="flex justify-end border-t border-[#EAEAE4] pt-4">
+        <div className="flex justify-end border-t border-border pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-[#D3D1C7] px-4 py-2 text-micro font-bold text-[#5F5E5A] hover:bg-[#F8F8F5]"
+            className="rounded-lg border border-border-strong px-4 py-2 text-micro font-bold text-text-muted hover:bg-background"
           >
             {TEXT.close}
           </button>

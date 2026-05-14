@@ -215,10 +215,10 @@ export default function TeamCalendarPage() {
       )}
 
       <div className="mb-6">
-        <h1 className="text-xl font-bold tracking-[-0.3px] text-[#1A1A1A]">
+        <h1 className="text-xl font-bold tracking-[-0.3px] text-text">
           팀 캘린더
         </h1>
-        <p className="mt-1 text-small text-[#888780]">
+        <p className="mt-1 text-small text-text-subtle">
           전체 일정과 담당자별 프로젝트 진행 현황을 한 화면에서 확인할 수 있습니다.
         </p>
       </div>
@@ -255,7 +255,7 @@ export default function TeamCalendarPage() {
               filterSlot={
                 <div className="flex flex-col items-start gap-1.5">
                   {/* ?댁뒋6: ?대떦???덉씠釉?蹂쇰뱶 */}
-                  <span className="text-tiny font-bold text-[#1A1A1A]">담당자</span>
+                  <span className="text-tiny font-bold text-text">담당자</span>
                   <TeamMemberFilter
                     users={users}
                     selectedId={selectedMemberId ?? null}
@@ -291,7 +291,6 @@ export default function TeamCalendarPage() {
 
       <CreateProjectModal
         open={projectModalOpen}
-        users={users}
         defaultDate={projectModalDate}
         onClose={() => {
           setProjectModalOpen(false);
@@ -325,9 +324,9 @@ function SelectedMemberProjectBoard({
 }) {
   if (!member) {
     return (
-      <section className="rounded-2xl border border-dashed border-[#D8D4C8] bg-[#FCFBF8] p-5">
-        <h2 className="text-heading font-bold text-[#1A1A1A]">담당자 프로젝트 보기</h2>
-        <p className="mt-2 text-small leading-6 text-[#6F6D66]">
+      <section className="rounded-2xl border border-dashed border-border-strong bg-surface-muted p-5">
+        <h2 className="text-heading font-bold text-text">담당자 프로젝트 보기</h2>
+        <p className="mt-2 text-small leading-6 text-text-muted">
           드롭다운에서 담당자를 선택하면 해당 담당자의 프로젝트 흐름과 진행 이력을 볼 수 있습니다.
         </p>
       </section>
@@ -335,8 +334,8 @@ function SelectedMemberProjectBoard({
   }
 
   return (
-    <section className="rounded-2xl border border-[#EAEAE4] bg-white p-5 shadow-sm">
-      <div className="flex flex-col gap-4 border-b border-[#F1EFE8] pb-4 lg:flex-row lg:items-start lg:justify-between">
+    <section className="rounded-2xl border border-border bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-4 border-b border-surface-subtle pb-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <span
@@ -345,12 +344,12 @@ function SelectedMemberProjectBoard({
               {member.name}
             </span>
             {member.position && (
-              <span className="whitespace-nowrap rounded-full border border-[#EAEAE4] px-2.5 py-1 text-tiny font-semibold text-[#66645C]">
+              <span className="whitespace-nowrap rounded-full border border-border px-2.5 py-1 text-tiny font-semibold text-text-muted">
                 {compactPosition(member.position)}
               </span>
             )}
           </div>
-          <h2 className="mt-3 text-heading font-bold text-[#1A1A1A]">
+          <h2 className="mt-3 text-heading font-bold text-text">
             {member.name} 담당 프로젝트 보기
           </h2>
         </div>
@@ -366,11 +365,11 @@ function SelectedMemberProjectBoard({
 
       <div className="mt-4 space-y-3">
         {groups.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-[#D8D4C8] bg-[#FCFBF8] px-4 py-6 text-center">
-            <p className="text-body font-semibold text-[#1A1A1A]">
+          <div className="rounded-2xl border border-dashed border-border-strong bg-surface-muted px-4 py-6 text-center">
+            <p className="text-body font-semibold text-text">
               아직 배정된 프로젝트 이력이 없습니다
             </p>
-            <p className="mt-1 text-micro text-[#888780]">
+            <p className="mt-1 text-micro text-text-subtle">
               이 담당자에게 일정이 배정되면 여기에서 프로젝트별 진행 카드를 확인할 수 있습니다.
             </p>
           </div>
@@ -379,13 +378,13 @@ function SelectedMemberProjectBoard({
         {groups.map((group) => (
           <article
             key={`${member.id}-${group.project.id}`}
-            className="rounded-2xl border border-[#EAEAE4] bg-[#FFFEFC] p-4"
+            className="rounded-2xl border border-border bg-surface p-4"
           >
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`h-2.5 w-2.5 rounded-full ${colorForId(group.project.id)}`} />
-                  <h3 className="min-w-0 truncate text-md font-bold text-[#1A1A1A]">
+                  <h3 className="min-w-0 truncate text-md font-bold text-text">
                     {group.project.name}
                   </h3>
                   <StatusChip
@@ -394,13 +393,13 @@ function SelectedMemberProjectBoard({
                     plannedCount={group.plannedCount}
                   />
                 </div>
-                <p className="mt-1 truncate text-micro text-[#888780]">
+                <p className="mt-1 truncate text-micro text-text-subtle">
                   {group.startDate} ~ {group.endDate} | 진행 중인 일정 {group.subprojects.length}건
                 </p>
               </div>
 
               <div className="w-full max-w-[240px]">
-                <div className="mb-1 flex items-center justify-between text-micro text-[#66645C]">
+                <div className="mb-1 flex items-center justify-between text-micro text-text-muted">
                   <span>프로젝트 진행률</span>
                   <span>{Math.round(group.progress)}%</span>
                 </div>
@@ -414,7 +413,7 @@ function SelectedMemberProjectBoard({
                   key={subproject.id}
                   type="button"
                   onClick={() => onOpenSubproject(subproject)}
-                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-[#F1EFE8] bg-white px-3 py-3 text-left transition hover:border-[#D6D2C5] hover:bg-[#FAFAF7]"
+                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-surface-subtle bg-white px-3 py-3 text-left transition hover:border-border-strong hover:bg-surface-muted"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -423,17 +422,17 @@ function SelectedMemberProjectBoard({
                       >
                         {statusLabel(subproject.status)}
                       </span>
-                      <span className="truncate text-body font-semibold text-[#1A1A1A]">
+                      <span className="truncate text-body font-semibold text-text">
                         {subproject.name}
                       </span>
                     </div>
-                    <p className="mt-1 text-micro text-[#888780]">
+                    <p className="mt-1 text-micro text-text-subtle">
                       {subproject.start_date} to {subproject.end_date}
                     </p>
                   </div>
 
                   <div className="w-[78px] shrink-0">
-                    <div className="text-right text-micro font-semibold text-[#1A1A1A]">
+                    <div className="text-right text-micro font-semibold text-text">
                       {Math.round(subproject.progress)}%
                     </div>
                     <ProgressBar value={subproject.progress} className="mt-2 h-1.5" />
@@ -451,11 +450,11 @@ function SelectedMemberProjectBoard({
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     /* ?댁뒋1: flex-col justify-between?쇰줈 ?덉씠釉?媛믪씠 ??긽 媛숈? ?꾩튂??怨좎젙 */
-    <div className="flex min-w-0 flex-col justify-between rounded-xl border border-[#EAEAE4] bg-[#FAFAF7] px-3 py-2">
-      <div className="whitespace-nowrap text-tiny font-semibold uppercase tracking-[0.04em] text-[#888780]">
+    <div className="flex min-w-0 flex-col justify-between rounded-xl border border-border bg-surface-muted px-3 py-2">
+      <div className="whitespace-nowrap text-tiny font-semibold uppercase tracking-[0.04em] text-text-subtle">
         {label}
       </div>
-      <div className="mt-1 whitespace-nowrap text-body font-bold text-[#1A1A1A]">{value}</div>
+      <div className="mt-1 whitespace-nowrap text-body font-bold text-text">{value}</div>
     </div>
   );
 }
@@ -470,14 +469,14 @@ function StatusChip({
   plannedCount: number;
 }) {
   let label = '예정';
-  let classes = 'bg-[#FAEEDA] text-[#854F0B]';
+  let classes = 'bg-verify-warn-bg text-verify-warn-fg';
 
   if (inProgressCount > 0) {
     label = '진행 중';
-    classes = 'bg-[#E6F1FB] text-[#185FA5]';
+    classes = 'bg-verify-info-bg text-verify-info-fg';
   } else if (completedCount > 0 && plannedCount === 0) {
     label = '완료';
-    classes = 'bg-[#E1F5EE] text-[#0F6E56]';
+    classes = 'bg-verify-pass-bg text-verify-pass-fg';
   }
 
   return (

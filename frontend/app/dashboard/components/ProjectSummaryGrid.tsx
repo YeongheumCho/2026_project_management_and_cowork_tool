@@ -35,27 +35,27 @@ export default function ProjectSummaryGrid({
     <section className="mt-6">
       <div className="mb-3 flex items-end justify-between">
         <div>
-          <h2 className="text-heading font-bold text-[#1A1A1A]">
+          <h2 className="text-heading font-bold text-text">
             등록된 프로젝트
           </h2>
-          <p className="mt-0.5 text-micro text-[#888780]">
+          <p className="mt-0.5 text-micro text-text-subtle">
             카드를 클릭하면 프로젝트별 상세로 이동합니다.
           </p>
         </div>
         <Link
           href="/projects"
-          className="text-micro font-semibold text-[#534AB7] hover:underline"
+          className="text-micro font-semibold text-brand hover:underline"
         >
           전체 보기 →
         </Link>
       </div>
 
       {loading ? (
-        <p className="rounded-2xl border border-[#EAEAE4] bg-white p-8 text-center text-small text-[#888780]">
+        <p className="rounded-2xl border border-border bg-white p-8 text-center text-small text-text-subtle">
           불러오는 중...
         </p>
       ) : projects.length === 0 ? (
-        <p className="rounded-2xl border border-[#EAEAE4] bg-white p-8 text-center text-small text-[#888780]">
+        <p className="rounded-2xl border border-border bg-white p-8 text-center text-small text-text-subtle">
           등록된 프로젝트가 없습니다.
         </p>
       ) : (
@@ -83,47 +83,47 @@ export default function ProjectSummaryGrid({
               <Link
                 key={project.id}
                 href={`/projects`}
-                className="group flex flex-col gap-2 rounded-2xl border border-[#EAEAE4] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#D3D1C7] hover:shadow-md"
+                className="group flex flex-col gap-2 rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md"
               >
                 <div className="flex items-start gap-2">
                   <span
                     className={`mt-1 h-[9px] w-[9px] shrink-0 rounded-full ${colorForId(project.id)}`}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-body font-semibold text-[#1A1A1A] group-hover:text-[#534AB7]">
+                    <p className="truncate text-body font-semibold text-text group-hover:text-brand">
                       {project.name}
                     </p>
-                    <p className="mt-0.5 text-tiny text-[#888780]">
+                    <p className="mt-0.5 text-tiny text-text-subtle">
                       {typeLabel}
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-1">
-                  <div className="flex items-center justify-between text-tiny text-[#888780]">
+                  <div className="flex items-center justify-between text-tiny text-text-subtle">
                     <span>진행률</span>
-                    <span className="font-semibold text-[#1A1A1A]">
+                    <span className="font-semibold text-text">
                       {avgProgress}%
                     </span>
                   </div>
                   <ProgressBar value={avgProgress} className="mt-1 h-1.5" />
                 </div>
 
-                <div className="mt-auto flex items-center gap-3 pt-2 text-tiny text-[#888780]">
+                <div className="mt-auto flex items-center gap-3 pt-2 text-tiny text-text-subtle">
                   <span className="inline-flex items-center gap-1">
-                    <span className="font-semibold text-[#1A1A1A]">
+                    <span className="font-semibold text-text">
                       {subprojectCount}
                     </span>
                     소프로젝트
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <span className="font-semibold text-[#1A1A1A]">
+                    <span className="font-semibold text-text">
                       {doneCount}
                     </span>
                     완료
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <span className="font-semibold text-[#1A1A1A]">
+                    <span className="font-semibold text-text">
                       {assigneeIds.size}
                     </span>
                     명 담당

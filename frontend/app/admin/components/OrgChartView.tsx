@@ -47,7 +47,7 @@ export default function OrgChartView({
 
   if (users.length === 0) {
     return (
-      <p className="py-8 text-center text-small text-[#888780]">
+      <p className="py-8 text-center text-small text-text-subtle">
         등록된 사용자가 없습니다.
       </p>
     );
@@ -100,20 +100,20 @@ function CenterNode({ center, expanded, onToggle, canEdit, savingId, deletingId,
     );
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#EAEAE4] bg-white">
+    <div className="overflow-hidden rounded-xl border border-border bg-white">
       <button
         type="button"
         onClick={() => onToggle(center.key)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-[#FAFAFA]"
+        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-surface-muted"
       >
         <span className="flex items-center gap-2">
-          <span className="text-small text-[#888780]">{isOpen ? '▾' : '▸'}</span>
-          <span className="text-md font-bold text-[#1A1A1A]">{center.label}</span>
-          <span className="text-micro text-[#888780]">총 {totalMembers}명</span>
+          <span className="text-small text-text-subtle">{isOpen ? '▾' : '▸'}</span>
+          <span className="text-md font-bold text-text">{center.label}</span>
+          <span className="text-micro text-text-subtle">총 {totalMembers}명</span>
         </span>
       </button>
       {isOpen && (
-        <div className="space-y-2 border-t border-[#F1EFE8] bg-[#FAFAFA] px-3 py-3">
+        <div className="space-y-2 border-t border-surface-subtle bg-surface-muted px-3 py-3">
           {center.members.length > 0 && (
             <MembersBlock members={center.members} canEdit={canEdit} savingId={savingId} deletingId={deletingId} onRoleChange={onRoleChange} onRoleSave={onRoleSave} onDelete={onDelete} onOpenHistory={onOpenHistory} onPasswordReset={onPasswordReset} />
           )}
@@ -145,20 +145,20 @@ function OfficeNode({ office, expanded, onToggle, canEdit, savingId, deletingId,
   const totalMembers = office.members.length + office.teams.reduce((acc, team) => acc + team.members.length, 0);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[#EAEAE4] bg-white">
+    <div className="overflow-hidden rounded-lg border border-border bg-white">
       <button
         type="button"
         onClick={() => onToggle(office.key)}
-        className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-[#FAFAFA]"
+        className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-surface-muted"
       >
         <span className="flex items-center gap-2">
-          <span className="text-micro text-[#888780]">{isOpen ? '▾' : '▸'}</span>
-          <span className="text-body font-semibold text-[#1A1A1A]">{office.label}</span>
-          <span className="text-micro text-[#888780]">총 {totalMembers}명</span>
+          <span className="text-micro text-text-subtle">{isOpen ? '▾' : '▸'}</span>
+          <span className="text-body font-semibold text-text">{office.label}</span>
+          <span className="text-micro text-text-subtle">총 {totalMembers}명</span>
         </span>
       </button>
       {isOpen && (
-        <div className="space-y-2 border-t border-[#F1EFE8] px-3 py-2">
+        <div className="space-y-2 border-t border-surface-subtle px-3 py-2">
           {office.members.length > 0 && (
             <MembersBlock members={office.members} canEdit={canEdit} savingId={savingId} deletingId={deletingId} onRoleChange={onRoleChange} onRoleSave={onRoleSave} onDelete={onDelete} onOpenHistory={onOpenHistory} onPasswordReset={onPasswordReset} />
           )}
@@ -189,20 +189,20 @@ function TeamNode({ team, expanded, onToggle, canEdit, savingId, deletingId, onR
   const isOpen = expanded.has(team.key);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[#EAEAE4] bg-[#FAFAFA]">
+    <div className="overflow-hidden rounded-lg border border-border bg-surface-muted">
       <button
         type="button"
         onClick={() => onToggle(team.key)}
         className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-white"
       >
         <span className="flex items-center gap-2">
-          <span className="text-micro text-[#888780]">{isOpen ? '▾' : '▸'}</span>
-          <span className="text-small font-semibold text-[#1A1A1A]">{team.label}</span>
-          <span className="text-micro text-[#888780]">총 {team.members.length}명</span>
+          <span className="text-micro text-text-subtle">{isOpen ? '▾' : '▸'}</span>
+          <span className="text-small font-semibold text-text">{team.label}</span>
+          <span className="text-micro text-text-subtle">총 {team.members.length}명</span>
         </span>
       </button>
       {isOpen && (
-        <div className="border-t border-[#F1EFE8] bg-white px-2 py-2">
+        <div className="border-t border-surface-subtle bg-white px-2 py-2">
           <MembersBlock members={team.members} canEdit={canEdit} savingId={savingId} deletingId={deletingId} onRoleChange={onRoleChange} onRoleSave={onRoleSave} onDelete={onDelete} onOpenHistory={onOpenHistory} onPasswordReset={onPasswordReset} />
         </div>
       )}

@@ -54,20 +54,20 @@ export default function ProjectListRow({
       />
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-body font-semibold text-[#1A1A1A]">
+        <p className="truncate text-body font-semibold text-text">
           {project.name}
         </p>
-        <p className="mt-0.5 truncate text-micro text-[#888780]">{summary}</p>
+        <p className="mt-0.5 truncate text-micro text-text-subtle">{summary}</p>
       </div>
 
       <div className="hidden w-[90px] shrink-0 md:block">
-        <div className="h-1 overflow-hidden rounded-full bg-[#F1EFE8]">
+        <div className="h-1 overflow-hidden rounded-full bg-surface-subtle">
           <div
             className={`h-full rounded-full ${colorForId(project.id)}`}
             style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
           />
         </div>
-        <div className="mt-[3px] text-right text-tiny text-[#888780]">
+        <div className="mt-[3px] text-right text-tiny text-text-subtle">
           {Math.round(progress)}%
         </div>
       </div>
@@ -85,7 +85,7 @@ export default function ProjectListRow({
         ))}
       </div>
 
-      <span className="rounded-[10px] bg-[#E6F1FB] px-[9px] py-[3px] text-tiny font-bold uppercase tracking-[0.5px] text-[#185FA5]">
+      <span className="rounded-[10px] bg-verify-info-bg px-[9px] py-[3px] text-tiny font-bold uppercase tracking-[0.5px] text-verify-info-fg">
         {progress >= 100 ? '완료' : '진행중'}
       </span>
     </>
@@ -93,8 +93,8 @@ export default function ProjectListRow({
 
   const containerClass = `flex w-full items-center gap-[14px] rounded-xl border px-4 py-[13px] text-left transition ${
     selected
-      ? 'border-[#D3D1C7] bg-[#FAFAFA]'
-      : 'border-[#EAEAE4] bg-white hover:border-[#D3D1C7] hover:bg-[#FAFAFA]'
+      ? 'border-border-strong bg-surface-muted'
+      : 'border-border bg-white hover:border-border-strong hover:bg-surface-muted'
   }`;
 
   if (onSelect) {

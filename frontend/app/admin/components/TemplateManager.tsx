@@ -354,37 +354,37 @@ export default function TemplateManager() {
   }
 
   return (
-    <section className="rounded-3xl border border-[#EAEAE4] bg-white p-6 shadow-sm">
+    <section className="rounded-3xl border border-border bg-white p-6 shadow-sm">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-xl font-bold text-[#1A1A1A]">템플릿 필드 구성 관리</h3>
-          <p className="mt-1 text-sm text-[#888780]">
+          <h3 className="text-xl font-bold text-text">템플릿 필드 구성 관리</h3>
+          <p className="mt-1 text-sm text-text-subtle">
             프로젝트별로 하위 프로젝트 생성에 사용할 템플릿을 관리합니다.
           </p>
         </div>
       </div>
 
       {error && (
-        <p className="mb-4 rounded-xl bg-[#FCEBEB] px-4 py-3 text-sm text-[#A32D2D]">
+        <p className="mb-4 rounded-xl bg-verify-fail-bg px-4 py-3 text-sm text-verify-fail-fg">
           {error}
         </p>
       )}
       {message && (
-        <p className="mb-4 rounded-xl bg-[#EAF3DE] px-4 py-3 text-sm text-[#3B6D11]">
+        <p className="mb-4 rounded-xl bg-verify-pass-bg px-4 py-3 text-sm text-verify-pass-fg">
           {message}
         </p>
       )}
 
       {loading ? (
-        <p className="py-8 text-center text-sm text-[#888780]">불러오는 중...</p>
+        <p className="py-8 text-center text-sm text-text-subtle">불러오는 중...</p>
       ) : projects.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-[#D3D1C7] px-4 py-8 text-center text-sm text-[#888780]">
+        <p className="rounded-xl border border-dashed border-border-strong px-4 py-8 text-center text-sm text-text-subtle">
           등록된 프로젝트가 없습니다.
         </p>
       ) : (
         <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="rounded-2xl border border-[#EAEAE4] bg-[#FAFAFA] p-3">
-            <p className="mb-2 px-2 text-xs font-bold text-[#888780]">프로젝트</p>
+          <aside className="rounded-2xl border border-border bg-surface-muted p-3">
+            <p className="mb-2 px-2 text-xs font-bold text-text-subtle">프로젝트</p>
             <div className="max-h-[620px] space-y-1 overflow-y-auto pr-1">
               {projects.map((project) => {
                 const count = Object.values(schemas).filter((schema) =>
@@ -397,8 +397,8 @@ export default function TemplateManager() {
                     onClick={() => setActiveProjectId(project.id)}
                     className={`w-full rounded-xl px-3 py-2 text-left text-xs font-bold transition ${
                       activeProjectId === project.id
-                        ? 'bg-[#534AB7] text-white'
-                        : 'text-[#5F5E5A] hover:bg-white'
+                        ? 'bg-brand text-white'
+                        : 'text-text-muted hover:bg-white'
                     }`}
                   >
                     <span className="block truncate">{project.name}</span>
@@ -412,11 +412,11 @@ export default function TemplateManager() {
           </aside>
 
           <div className="space-y-5">
-            <div className="rounded-2xl border border-[#EAEAE4] bg-white p-4">
+            <div className="rounded-2xl border border-border bg-white p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold text-[#888780]">선택 프로젝트</p>
-                  <h4 className="text-lg font-bold text-[#1A1A1A]">
+                  <p className="text-xs font-bold text-text-subtle">선택 프로젝트</p>
+                  <h4 className="text-lg font-bold text-text">
                     {activeProject?.name}
                   </h4>
                 </div>
@@ -425,7 +425,7 @@ export default function TemplateManager() {
                     <button
                       type="button"
                       onClick={() => void handleDelete()}
-                      className="rounded-lg border border-[#F4C9C9] px-3 py-2 text-xs font-bold text-[#A32D2D] hover:bg-[#FFF7F7]"
+                      className="rounded-lg border border-verify-fail-bg px-3 py-2 text-xs font-bold text-verify-fail-fg hover:bg-verify-fail-bg"
                     >
                       템플릿 삭제
                     </button>
@@ -433,16 +433,16 @@ export default function TemplateManager() {
                   <button
                     type="button"
                     onClick={handleAddTemplate}
-                    className="rounded-lg border border-[#D8D3F2] px-3 py-2 text-xs font-bold text-[#534AB7]"
+                    className="rounded-lg border border-brand-soft px-3 py-2 text-xs font-bold text-brand"
                   >
                     템플릿 추가
                   </button>
                 </div>
               </div>
 
-              <div className="mb-3 flex flex-wrap items-end gap-2 rounded-xl border border-[#EAEAE4] bg-[#FAFAFA] p-3">
+              <div className="mb-3 flex flex-wrap items-end gap-2 rounded-xl border border-border bg-surface-muted p-3">
                 <label className="min-w-[220px] flex-1">
-                  <span className="mb-1 block text-xs font-bold text-[#888780]">
+                  <span className="mb-1 block text-xs font-bold text-text-subtle">
                     저장된 템플릿 재사용
                   </span>
                   <select
@@ -462,7 +462,7 @@ export default function TemplateManager() {
                   type="button"
                   onClick={handleReuseTemplate}
                   disabled={!reuseSourceKey || !activeProject}
-                  className="rounded-lg border border-[#D8D3F2] px-3 py-2 text-xs font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-lg border border-brand-soft px-3 py-2 text-xs font-bold text-brand disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   선택 템플릿 복사
                 </button>
@@ -470,7 +470,7 @@ export default function TemplateManager() {
 
               <div className="flex flex-wrap gap-2">
                 {projectTemplates.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-[#D3D1C7] px-4 py-4 text-sm text-[#888780]">
+                  <p className="rounded-xl border border-dashed border-border-strong px-4 py-4 text-sm text-text-subtle">
                     이 프로젝트에 할당된 템플릿이 없습니다. 템플릿을 추가해주세요.
                   </p>
                 ) : (
@@ -481,8 +481,8 @@ export default function TemplateManager() {
                       onClick={() => setActiveKey(String(schema.project_type))}
                       className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
                         activeKey === schema.project_type
-                          ? 'bg-[#534AB7] text-white'
-                          : 'border border-[#D3D1C7] text-[#5F5E5A] hover:bg-[#F5F5F0]'
+                          ? 'bg-brand text-white'
+                          : 'border border-border-strong text-text-muted hover:bg-surface-muted'
                       }`}
                     >
                       {schema.section_label}
@@ -504,7 +504,7 @@ export default function TemplateManager() {
                   <div className="flex flex-wrap items-end justify-between gap-3">
                     <div className="flex flex-wrap gap-3 flex-1">
                       <label className="block min-w-[240px] max-w-sm flex-1">
-                        <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
+                        <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-text-subtle">
                           템플릿 이름 <span className="text-red-500">*</span>
                         </span>
                         <input
@@ -515,7 +515,7 @@ export default function TemplateManager() {
                         />
                       </label>
                       <label className="block w-[130px]">
-                        <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
+                        <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-text-subtle">
                           가중치 (1~10) <span className="text-red-500">*</span>
                         </span>
                         <select
@@ -532,7 +532,7 @@ export default function TemplateManager() {
                     <button
                       type="button"
                       onClick={resetToProjectDefault}
-                      className="rounded-lg border border-[#D3D1C7] px-4 py-2 text-xs font-bold text-[#5F5E5A]"
+                      className="rounded-lg border border-border-strong px-4 py-2 text-xs font-bold text-text-muted"
                     >
                       프로젝트 기본 구성 불러오기
                     </button>
@@ -540,7 +540,7 @@ export default function TemplateManager() {
 
                   <div className="space-y-3">
                     {fields.length === 0 && (
-                      <p className="rounded-xl border border-dashed border-[#D3D1C7] px-4 py-6 text-center text-sm text-[#B4B2A9]">
+                      <p className="rounded-xl border border-dashed border-border-strong px-4 py-6 text-center text-sm text-text-faint">
                         아직 정의된 필드가 없습니다.
                       </p>
                     )}
@@ -573,7 +573,7 @@ export default function TemplateManager() {
                     onClick={() =>
                       setFields((current) => [...current, newField(current.length)])
                     }
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#534AB7]/40 py-3 text-sm font-bold text-[#534AB7] hover:border-[#534AB7] hover:bg-[#EEEDFE]/30"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand/40 py-3 text-sm font-bold text-brand hover:border-brand hover:bg-brand-soft/30"
                   >
                     + 필드 추가
                   </button>
@@ -583,7 +583,7 @@ export default function TemplateManager() {
                       type="button"
                       onClick={() => void handleSave()}
                       disabled={saving}
-                      className="rounded-lg bg-[#534AB7] px-5 py-2 text-xs font-bold text-white disabled:opacity-50 hover:bg-[#433A9A]"
+                      className="rounded-lg bg-brand px-5 py-2 text-xs font-bold text-white disabled:opacity-50 hover:bg-brand-hover"
                     >
                       {saving ? '저장 중...' : '저장'}
                     </button>
@@ -593,7 +593,7 @@ export default function TemplateManager() {
                 <TemplatePreview templateName={templateName} fields={sortedFields} />
               </div>
             ) : (
-              <p className="rounded-xl border border-dashed border-[#D3D1C7] px-4 py-8 text-center text-sm text-[#888780]">
+              <p className="rounded-xl border border-dashed border-border-strong px-4 py-8 text-center text-sm text-text-subtle">
                 선택한 프로젝트에 템플릿을 추가하면 필드 구성을 편집할 수 있습니다.
               </p>
             )}
@@ -631,9 +631,9 @@ function FieldEditor({
   onRemoveOption,
 }: FieldEditorProps) {
   return (
-    <div className="rounded-2xl border border-[#EAEAE4] bg-white p-4">
+    <div className="rounded-2xl border border-border bg-white p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="text-xs font-bold text-[#B4B2A9]">
+        <span className="text-xs font-bold text-text-faint">
           필드 #{index + 1}
         </span>
         <div className="flex gap-1">
@@ -641,7 +641,7 @@ function FieldEditor({
             type="button"
             onClick={() => onMove(-1)}
             disabled={index === 0}
-            className="rounded px-2 py-1 text-xs text-[#888780] hover:bg-[#F5F5F0] disabled:opacity-30"
+            className="rounded px-2 py-1 text-xs text-text-subtle hover:bg-surface-muted disabled:opacity-30"
           >
             위
           </button>
@@ -649,14 +649,14 @@ function FieldEditor({
             type="button"
             onClick={() => onMove(1)}
             disabled={index === total - 1}
-            className="rounded px-2 py-1 text-xs text-[#888780] hover:bg-[#F5F5F0] disabled:opacity-30"
+            className="rounded px-2 py-1 text-xs text-text-subtle hover:bg-surface-muted disabled:opacity-30"
           >
             아래
           </button>
           <button
             type="button"
             onClick={onRemove}
-            className="ml-1 rounded px-2 py-1 text-xs font-bold text-[#A32D2D] hover:bg-[#FCEBEB]"
+            className="ml-1 rounded px-2 py-1 text-xs font-bold text-verify-fail-fg hover:bg-verify-fail-bg"
           >
             삭제
           </button>
@@ -705,16 +705,16 @@ function FieldEditor({
               type="checkbox"
               checked={field.required}
               onChange={(event) => onChange('required', event.target.checked)}
-              className="h-4 w-4 accent-[#534AB7]"
+              className="h-4 w-4 accent-brand"
             />
-            <span className="text-sm text-[#1A1A1A]">필수 입력</span>
+            <span className="text-sm text-text">필수 입력</span>
           </label>
         </SmallField>
       </div>
 
       {field.field_type === 'select' && (
-        <div className="mt-3 rounded-xl border border-[#EAEAE4] bg-[#FAFAFA] p-3">
-          <p className="mb-2 text-xs font-bold text-[#888780]">선택지</p>
+        <div className="mt-3 rounded-xl border border-border bg-surface-muted p-3">
+          <p className="mb-2 text-xs font-bold text-text-subtle">선택지</p>
           <div className="space-y-2">
             {field.options.map((option, optionIndex) => (
               <div key={optionIndex} className="flex gap-2">
@@ -737,7 +737,7 @@ function FieldEditor({
                 <button
                   type="button"
                   onClick={() => onRemoveOption(optionIndex)}
-                  className="shrink-0 rounded-lg border border-[#F4C9C9] px-2 py-1 text-xs font-bold text-[#A32D2D]"
+                  className="shrink-0 rounded-lg border border-verify-fail-bg px-2 py-1 text-xs font-bold text-verify-fail-fg"
                 >
                   삭제
                 </button>
@@ -747,7 +747,7 @@ function FieldEditor({
           <button
             type="button"
             onClick={onAddOption}
-            className="mt-2 text-xs font-bold text-[#534AB7] hover:underline"
+            className="mt-2 text-xs font-bold text-brand hover:underline"
           >
             + 선택지 추가
           </button>
@@ -765,18 +765,18 @@ function TemplatePreview({
   fields: FieldDefinition[];
 }) {
   return (
-    <aside className="rounded-2xl border border-[#EAEAE4] bg-[#FCFCFA] p-4 xl:sticky xl:top-4 xl:self-start">
+    <aside className="rounded-2xl border border-border bg-surface-muted p-4 xl:sticky xl:top-4 xl:self-start">
       <div className="mb-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#888780]">
+        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-subtle">
           미리보기
         </p>
-        <h4 className="mt-1 text-lg font-bold text-[#1A1A1A]">
+        <h4 className="mt-1 text-lg font-bold text-text">
           {templateName || '템플릿 이름'}
         </h4>
       </div>
 
       {fields.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#D3D1C7] px-4 py-8 text-center text-sm text-[#B4B2A9]">
+        <div className="rounded-xl border border-dashed border-border-strong px-4 py-8 text-center text-sm text-text-faint">
           추가한 필드가 없습니다.
         </div>
       ) : (
@@ -793,7 +793,7 @@ function TemplatePreview({
 function PreviewField({ field }: { field: FieldDefinition }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-bold text-[#66645C]">
+      <span className="mb-1.5 block text-xs font-bold text-text-muted">
         {field.label || '필드 이름'}
         {field.required && <span className="ml-0.5 text-red-500">*</span>}
       </span>
@@ -834,7 +834,7 @@ function SmallField({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
+      <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.8px] text-text-subtle">
         {label}
       </span>
       {children}

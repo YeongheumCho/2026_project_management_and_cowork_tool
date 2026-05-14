@@ -121,7 +121,7 @@ export default function OrganizationMemberPicker({
   if (groups.length === 0) {
     return (
       <div
-        className={`rounded-xl border border-dashed border-[#D3D1C7] bg-[#FAFAFA] px-4 py-3 text-sm text-[#888780] ${className ?? ''}`}
+        className={`rounded-xl border border-dashed border-border-strong bg-surface-muted px-4 py-3 text-sm text-text-subtle ${className ?? ''}`}
       >
         {emptyLabel}
       </div>
@@ -136,7 +136,7 @@ export default function OrganizationMemberPicker({
             type="button"
             onClick={selectAll}
             disabled={disabled || selectedIds.length === users.length}
-            className="rounded-full border border-[#D8D3FF] bg-[#F5F3FF] px-3 py-1 text-micro font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-brand-soft bg-brand-soft px-3 py-1 text-micro font-bold text-brand disabled:cursor-not-allowed disabled:opacity-50"
           >
             전체 선택
           </button>
@@ -144,11 +144,11 @@ export default function OrganizationMemberPicker({
             type="button"
             onClick={clearAll}
             disabled={disabled || selectedIds.length === 0}
-            className="rounded-full border border-[#EAEAE4] bg-white px-3 py-1 text-micro font-bold text-[#66645C] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-border bg-white px-3 py-1 text-micro font-bold text-text-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             전체 해제
           </button>
-          <span className="text-micro text-[#888780]">
+          <span className="text-micro text-text-subtle">
             {selectedIds.length}/{users.length}명 선택
           </span>
         </div>
@@ -374,7 +374,7 @@ function TeamPickerGroup({
             type="button"
             onClick={() => onToggleMembers(teamMemberIds)}
             disabled={disabled || teamMemberIds.length === 0}
-            className="rounded-full border border-[#D8D3FF] px-[9px] py-1 text-micro font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-brand-soft px-[9px] py-1 text-micro font-bold text-brand disabled:cursor-not-allowed disabled:opacity-50"
           >
             {allSelected ? '팀 해제' : '팀 선택'}
           </button>
@@ -418,7 +418,7 @@ function GroupSelectButton({
       type="button"
       onClick={() => onToggleMembers(uniqueIds)}
       disabled={disabled || uniqueIds.length === 0}
-      className="rounded-full border border-[#D8D3FF] px-[9px] py-1 text-micro font-bold text-[#534AB7] disabled:cursor-not-allowed disabled:opacity-50"
+      className="rounded-full border border-brand-soft px-[9px] py-1 text-micro font-bold text-brand disabled:cursor-not-allowed disabled:opacity-50"
     >
       {allSelected ? `${label} 해제` : label}
     </button>
@@ -448,8 +448,8 @@ function GroupButton({
       disabled={disabled}
       className={`inline-flex items-center gap-1.5 rounded-full border px-[9px] py-1 text-micro ${
         isActive
-          ? 'border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]'
-          : 'border-[#EAEAE4] text-[#888780] hover:bg-[#FAFAFA]'
+          ? 'border-brand bg-brand-soft text-brand'
+          : 'border-border text-text-subtle hover:bg-surface-muted'
       } disabled:cursor-not-allowed disabled:opacity-60`}
     >
       <span
@@ -490,7 +490,7 @@ function MemberChips({
             className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-[9px] py-1 text-micro ${
               active
                 ? `${softColorForPosition(user.position)} ${textColorForPosition(user.position)} border-transparent`
-                : 'border-[#EAEAE4] text-[#888780] hover:bg-[#FAFAFA]'
+                : 'border-border text-text-subtle hover:bg-surface-muted'
             } disabled:cursor-not-allowed disabled:opacity-60`}
           >
             <span className={`h-[6px] w-[6px] rounded-full ${colorForPosition(user.position)}`} />

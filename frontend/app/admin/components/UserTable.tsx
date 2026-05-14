@@ -65,16 +65,16 @@ function ComboBox({
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-small focus:border-[#534AB7] focus:outline-none"
+        className="w-full rounded-lg border border-border bg-white px-3 py-2 text-small focus:border-brand focus:outline-none"
       />
       {open && filtered.length > 0 && (
-        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-[#EAEAE4] bg-white shadow-lg">
+        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border bg-white shadow-lg">
           {filtered.map((opt) => (
             <li
               key={opt}
               onMouseDown={() => handleSelect(opt)}
-              className={`cursor-pointer px-3 py-2 text-small hover:bg-[#EEEDFE] hover:text-[#534AB7] ${
-                opt === inputVal ? 'bg-[#EEEDFE] font-semibold text-[#534AB7]' : 'text-[#1A1A1A]'
+              className={`cursor-pointer px-3 py-2 text-small hover:bg-brand-soft hover:text-brand ${
+                opt === inputVal ? 'bg-brand-soft font-semibold text-brand' : 'text-text'
               }`}
             >
               {opt}
@@ -91,17 +91,17 @@ function ErrorModal({ message, onClose }: { message: string; onClose: () => void
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="w-[320px] rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-3 flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFF4F4] text-base">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-verify-fail-bg text-base">
             ⚠️
           </span>
-          <h4 className="text-md font-bold text-[#1A1A1A]">입력 오류</h4>
+          <h4 className="text-md font-bold text-text">입력 오류</h4>
         </div>
-        <p className="mb-5 whitespace-pre-line text-body text-[#5F5E5A]">{message}</p>
+        <p className="mb-5 whitespace-pre-line text-body text-text-muted">{message}</p>
         <div className="flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg bg-[#534AB7] px-5 py-2 text-small font-semibold text-white hover:bg-[#43399C]"
+            className="rounded-lg bg-brand px-5 py-2 text-small font-semibold text-white hover:bg-brand-hover"
           >
             확인
           </button>
@@ -198,16 +198,16 @@ export default function UserTable({
   };
 
   return (
-    <div className="rounded-2xl border border-[#EAEAE4] bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="text-heading font-bold text-[#1A1A1A]">사용자 권한 관리</h3>
-          <p className="mt-0.5 text-micro text-[#888780]">
+          <h3 className="text-heading font-bold text-text">사용자 권한 관리</h3>
+          <p className="mt-0.5 text-micro text-text-subtle">
             전체 {users.length}명 중 관리자 {adminCount}명
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-full border border-[#EAEAE4] bg-[#FAFAFA] p-0.5">
+          <div className="flex items-center gap-1 rounded-full border border-border bg-surface-muted p-0.5">
             {(['table', 'org'] as ViewMode[]).map((v) => (
               <button
                 key={v}
@@ -215,15 +215,15 @@ export default function UserTable({
                 onClick={() => setViewMode(v)}
                 className={`rounded-full px-3 py-1 text-micro font-semibold transition ${
                   viewMode === v
-                    ? 'bg-white text-[#534AB7] shadow-sm'
-                    : 'text-[#888780] hover:text-[#1A1A1A]'
+                    ? 'bg-white text-brand shadow-sm'
+                    : 'text-text-subtle hover:text-text'
                 }`}
               >
                 {v === 'table' ? '테이블' : '조직도'}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-1 rounded-full border border-[#EAEAE4] bg-[#FAFAFA] p-0.5">
+          <div className="flex items-center gap-1 rounded-full border border-border bg-surface-muted p-0.5">
             {(['all', 'admin', 'member'] as RoleFilter[]).map((v) => (
               <button
                 key={v}
@@ -231,8 +231,8 @@ export default function UserTable({
                 onClick={() => setRoleFilter(v)}
                 className={`rounded-full px-3 py-1 text-micro font-semibold transition ${
                   roleFilter === v
-                    ? 'bg-white text-[#534AB7] shadow-sm'
-                    : 'text-[#888780] hover:text-[#1A1A1A]'
+                    ? 'bg-white text-brand shadow-sm'
+                    : 'text-text-subtle hover:text-text'
                 }`}
               >
                 {v === 'all' ? '전체' : v === 'admin' ? '관리자' : '일반'}
@@ -244,7 +244,7 @@ export default function UserTable({
             placeholder="이름, 사번, 소속 검색"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-[220px] rounded-lg border border-[#EAEAE4] px-3 py-1.5 text-small text-[#1A1A1A] placeholder:text-[#B4B2A9] focus:border-[#534AB7] focus:outline-none"
+            className="w-[220px] rounded-lg border border-border px-3 py-1.5 text-small text-text placeholder:text-text-faint focus:border-brand focus:outline-none"
           />
         </div>
       </div>
@@ -252,7 +252,7 @@ export default function UserTable({
       <CreateUserPanel onCreate={onUserCreate} />
 
       {message && (
-        <p className="mt-3 rounded-lg bg-[#EEEDFE] px-3 py-2 text-small text-[#534AB7]">
+        <p className="mt-3 rounded-lg bg-brand-soft px-3 py-2 text-small text-brand">
           {message}
         </p>
       )}
@@ -261,7 +261,7 @@ export default function UserTable({
         {viewMode === 'table' ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-small">
-              <thead className="border-b border-[#EAEAE4] text-tiny font-bold uppercase tracking-[1px] text-[#888780]">
+              <thead className="border-b border-border text-tiny font-bold uppercase tracking-[1px] text-text-subtle">
                 <tr>
                   <th className="py-2 pr-4">이름</th>
                   <th className="py-2 pr-4">사번</th>
@@ -289,7 +289,7 @@ export default function UserTable({
               </tbody>
             </table>
             {filtered.length === 0 && (
-              <p className="py-8 text-center text-small text-[#888780]">
+              <p className="py-8 text-center text-small text-text-subtle">
                 {users.length === 0 ? '등록된 사용자가 없습니다.' : '검색 조건에 맞는 사용자가 없습니다.'}
               </p>
             )}
@@ -379,10 +379,10 @@ function CreateUserPanel({ onCreate }: { onCreate: (payload: UserCreatePayload) 
   return (
     <>
       {errorModal && <ErrorModal message={errorModal} onClose={() => setErrorModal(null)} />}
-      <div className="mt-4 rounded-2xl border border-[#EAEAE4] bg-[#FAFAFA] p-4">
+      <div className="mt-4 rounded-2xl border border-border bg-surface-muted p-4">
         <div className="mb-3">
-          <h4 className="text-body font-bold text-[#1A1A1A]">사용자 추가</h4>
-          <p className="mt-1 text-micro text-[#888780]">
+          <h4 className="text-body font-bold text-text">사용자 추가</h4>
+          <p className="mt-1 text-micro text-text-subtle">
             사번, 이름, 비밀번호를 입력하고 필요하면 조직 정보를 함께 설정하세요.
           </p>
         </div>
@@ -394,30 +394,30 @@ function CreateUserPanel({ onCreate }: { onCreate: (payload: UserCreatePayload) 
               placeholder="사번 (9자리 이하)"
               maxLength={20}
               className={`rounded-lg border bg-white px-3 py-2 text-small focus:outline-none ${
-                isIdnumInvalid ? 'border-[#E05C5C] focus:border-[#E05C5C]' : 'border-[#EAEAE4] focus:border-[#534AB7]'
+                isIdnumInvalid ? 'border-verify-fail-fg focus:border-verify-fail-fg' : 'border-border focus:border-brand'
               }`}
             />
             {isIdnumInvalid && (
-              <span className="text-micro text-[#E05C5C]">사번 기입이 잘못되었습니다.</span>
+              <span className="text-micro text-verify-fail-fg">사번 기입이 잘못되었습니다.</span>
             )}
           </div>
           <input
             value={form.name}
             onChange={(e) => updateField('name', e.target.value)}
             placeholder="이름"
-            className="rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-small focus:border-[#534AB7] focus:outline-none"
+            className="rounded-lg border border-border bg-white px-3 py-2 text-small focus:border-brand focus:outline-none"
           />
           <input
             value={form.password}
             onChange={(e) => updateField('password', e.target.value)}
             placeholder="초기 비밀번호"
             type="password"
-            className="rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-small focus:border-[#534AB7] focus:outline-none"
+            className="rounded-lg border border-border bg-white px-3 py-2 text-small focus:border-brand focus:outline-none"
           />
           <select
             value={form.role}
             onChange={(e) => updateField('role', e.target.value)}
-            className="rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-small focus:border-[#534AB7] focus:outline-none"
+            className="rounded-lg border border-border bg-white px-3 py-2 text-small focus:border-brand focus:outline-none"
           >
             <option value="member">일반</option>
             <option value="admin">관리자</option>
@@ -450,13 +450,13 @@ function CreateUserPanel({ onCreate }: { onCreate: (payload: UserCreatePayload) 
             value={form.email ?? ''}
             onChange={(e) => updateField('email', e.target.value)}
             placeholder="이메일"
-            className="rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-small focus:border-[#534AB7] focus:outline-none"
+            className="rounded-lg border border-border bg-white px-3 py-2 text-small focus:border-brand focus:outline-none"
           />
           <input
             value={form.phone ?? ''}
             onChange={(e) => updateField('phone', e.target.value)}
             placeholder="전화번호"
-            className="rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-small focus:border-[#534AB7] focus:outline-none"
+            className="rounded-lg border border-border bg-white px-3 py-2 text-small focus:border-brand focus:outline-none"
           />
         </div>
         <div className="mt-3 flex justify-end">
@@ -464,7 +464,7 @@ function CreateUserPanel({ onCreate }: { onCreate: (payload: UserCreatePayload) 
             type="button"
             onClick={() => void handleSubmit()}
             disabled={submitting || !form.idnum.trim() || !form.name.trim() || !form.password.trim() || isIdnumInvalid}
-            className="rounded-lg bg-[#534AB7] px-4 py-2 text-small font-semibold text-white transition hover:bg-[#43399C] disabled:cursor-not-allowed disabled:bg-[#D3D1C7]"
+            className="rounded-lg bg-brand px-4 py-2 text-small font-semibold text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-border-strong"
           >
             {submitting ? '추가 중...' : '사용자 추가'}
           </button>
@@ -492,39 +492,39 @@ function UserHistoryPanel({
   onClose: () => void;
 }) {
   return (
-    <div className="mt-4 rounded-2xl border border-[#EAEAE4] bg-white p-5 shadow-sm">
+    <div className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h4 className="text-heading font-bold text-[#1A1A1A]">{user.name}님 수행 업무 이력</h4>
-          <p className="mt-1 text-micro text-[#888780]">
+          <h4 className="text-heading font-bold text-text">{user.name}님 수행 업무 이력</h4>
+          <p className="mt-1 text-micro text-text-subtle">
             {user.center || '미지정'} / {user.office || '미지정'} / {user.team || '미지정'}
           </p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg border border-[#D3D1C7] px-3 py-1.5 text-micro font-semibold text-[#5F5E5A]"
+          className="rounded-lg border border-border-strong px-3 py-1.5 text-micro font-semibold text-text-muted"
         >
           닫기
         </button>
       </div>
       {loading && (
-        <p className="mt-4 rounded-xl bg-[#FAFAFA] px-4 py-6 text-center text-small text-[#888780]">
+        <p className="mt-4 rounded-xl bg-surface-muted px-4 py-6 text-center text-small text-text-subtle">
           수행 이력을 불러오는 중입니다.
         </p>
       )}
       {!loading && error && (
-        <p className="mt-4 rounded-xl bg-[#FFF4F4] px-4 py-3 text-small text-[#A32D2D]">{error}</p>
+        <p className="mt-4 rounded-xl bg-verify-fail-bg px-4 py-3 text-small text-verify-fail-fg">{error}</p>
       )}
       {!loading && !error && items.length === 0 && (
-        <p className="mt-4 rounded-xl bg-[#FAFAFA] px-4 py-6 text-center text-small text-[#888780]">
+        <p className="mt-4 rounded-xl bg-surface-muted px-4 py-6 text-center text-small text-text-subtle">
           아직 기록된 수행 이력이 없습니다.
         </p>
       )}
       {!loading && !error && items.length > 0 && (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-small">
-            <thead className="border-b border-[#EAEAE4] text-tiny font-bold uppercase tracking-[1px] text-[#888780]">
+            <thead className="border-b border-border text-tiny font-bold uppercase tracking-[1px] text-text-subtle">
               <tr>
                 <th className="py-2 pr-4">프로젝트</th>
                 <th className="py-2 pr-4">소프로젝트</th>
@@ -536,13 +536,13 @@ function UserHistoryPanel({
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className="border-b border-[#F1EFE8]">
-                  <td className="py-3 pr-4 text-[#1A1A1A]">{item.project_name}</td>
-                  <td className="py-3 pr-4 text-[#5F5E5A]">{item.subproject_name}</td>
-                  <td className="py-3 pr-4 text-[#5F5E5A]">{item.project_type}</td>
-                  <td className="py-3 pr-4 text-[#5F5E5A]">{formatMinutes(item.worked_minutes)}</td>
-                  <td className="py-3 pr-4 text-[#5F5E5A]">{item.completion_rate}%</td>
-                  <td className="py-3 text-[#5F5E5A]">{item.ended_on ?? '—'}</td>
+                <tr key={item.id} className="border-b border-surface-subtle">
+                  <td className="py-3 pr-4 text-text">{item.project_name}</td>
+                  <td className="py-3 pr-4 text-text-muted">{item.subproject_name}</td>
+                  <td className="py-3 pr-4 text-text-muted">{item.project_type}</td>
+                  <td className="py-3 pr-4 text-text-muted">{formatMinutes(item.worked_minutes)}</td>
+                  <td className="py-3 pr-4 text-text-muted">{item.completion_rate}%</td>
+                  <td className="py-3 text-text-muted">{item.ended_on ?? '—'}</td>
                 </tr>
               ))}
             </tbody>

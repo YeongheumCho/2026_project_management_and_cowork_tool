@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import type { MajorProject, Project, SubProject, UserBrief } from '../../lib/api';
-import { colorForId, colorForPosition } from './colors';
+import { colorForPosition } from './colors';
 import { compactPosition } from '../../lib/display';
 import {
   expandedKeysForMember,
@@ -24,6 +24,7 @@ type Props = {
   selectedMemberId?: number | null;
   onProjectSelect?: (projectId: number) => void;
   onMemberSelect?: (memberId: number) => void;
+  onSubprojectSelect?: (subproject: SubProject) => void;
 };
 
 export default function Sidebar({
@@ -36,6 +37,7 @@ export default function Sidebar({
   selectedMemberId,
   onProjectSelect,
   onMemberSelect,
+  onSubprojectSelect,
 }: Props) {
   const groups = useMemo(() => groupUsersByTeam(users), [users]);
   const subprojectsByProject = useMemo(() => {
@@ -202,6 +204,7 @@ export default function Sidebar({
                     selectedProjectId={selectedProjectId}
                     onToggleMajor={() => toggleMajorProject(majorProject.id)}
                     onToggleProject={toggleProject}
+                    onSubprojectSelect={onSubprojectSelect}
                   />
                 </li>
               ))}
@@ -393,12 +396,14 @@ function HierarchyButton({
   count,
   expanded,
   onClick,
+  active = false,
   className = '',
 }: {
   label: string;
   count: number;
   expanded: boolean;
   onClick: () => void;
+  active?: boolean;
   className?: string;
 }) {
   return (
@@ -406,7 +411,9 @@ function HierarchyButton({
       type="button"
       onClick={onClick}
       aria-expanded={expanded}
-      className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left font-semibold text-text-muted transition hover:bg-surface-muted ${className}`}
+      className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left font-semibold transition hover:bg-surface-muted ${
+        active ? 'bg-surface-subtle text-text' : 'text-text-muted'
+      } ${className}`}
     >
       <span
         className={`inline-block text-nano text-text-subtle transition-transform ${
@@ -483,6 +490,7 @@ function MajorProjectItem({
   selectedProjectId,
   onToggleMajor,
   onToggleProject,
+  onSubprojectSelect,
 }: {
   majorProject: MajorProject;
   projects: Project[];
@@ -492,6 +500,7 @@ function MajorProjectItem({
   selectedProjectId?: number | null;
   onToggleMajor: () => void;
   onToggleProject: (projectId: number) => void;
+  onSubprojectSelect?: (subproject: SubProject) => void;
 }) {
   const expanded = expandedMajorProjects.has(majorProject.id);
   const subprojectCount = projects.reduce(
@@ -501,23 +510,14 @@ function MajorProjectItem({
 
   return (
     <div>
-      <button type="button" onClick={onToggleMajor} className={itemClass(expanded)}>
-        <span
-          className={`inline-block text-nano text-text-subtle transition-transform ${
-            expanded ? 'rotate-90' : ''
-          }`}
-          aria-hidden
-        >
-          ??
-        </span>
-        <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(majorProject.id)}`} />
-        <span className="truncate">{majorProject.name}</span>
-        <span className="ml-auto shrink-0 text-tiny text-text-faint">
-          {projects.length}/{subprojectCount}
-        </span>
-      </button>
+      <HierarchyButton
+        label={majorProject.name}
+        count={subprojectCount || projects.length}
+        expanded={expanded}
+        onClick={onToggleMajor}
+      />
       {expanded && (
-        <ul className="ml-3 mt-0.5 space-y-0.5 border-l border-border-subtle pl-2">
+        <ul className="mt-0.5 space-y-0.5 pl-4">
           {projects.map((project) => (
             <li key={project.id}>
               <ProjectItem
@@ -526,6 +526,7 @@ function MajorProjectItem({
                 expanded={expandedProjects.has(project.id)}
                 selected={selectedProjectId === project.id}
                 onToggle={() => onToggleProject(project.id)}
+                onSubprojectSelect={onSubprojectSelect}
               />
             </li>
           ))}
@@ -541,33 +542,29 @@ function ProjectItem({
   expanded,
   selected,
   onToggle,
+  onSubprojectSelect,
 }: {
   project: Project;
   subprojects: SubProject[];
   expanded: boolean;
   selected: boolean;
   onToggle: () => void;
+  onSubprojectSelect?: (subproject: SubProject) => void;
 }) {
   return (
     <div>
-      <button type="button" onClick={onToggle} className={itemClass(selected || expanded)}>
-        <span
-          className={`inline-block text-nano text-text-subtle transition-transform ${
-            expanded ? 'rotate-90' : ''
-          }`}
-          aria-hidden
-        >
-          ›
-        </span>
-        <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(project.id)}`} />
-        <span className="truncate">{project.name}</span>
-        <span className="ml-auto shrink-0 text-tiny text-text-faint">
-          {subprojects.length}
-        </span>
-      </button>
+      <HierarchyButton
+        label={project.name}
+        count={subprojects.length}
+        expanded={expanded}
+        onClick={onToggle}
+        active={selected}
+        className="text-[10.5px]"
+      />
       {expanded && (
         <SidebarSubprojectList
           subprojects={subprojects}
+          onSubprojectSelect={onSubprojectSelect}
           emptyText="하위 프로젝트가 없습니다."
         />
       )}
@@ -578,9 +575,11 @@ function ProjectItem({
 function SidebarSubprojectList({
   subprojects,
   emptyText,
+  onSubprojectSelect,
 }: {
   subprojects: SubProject[];
   emptyText: string;
+  onSubprojectSelect?: (subproject: SubProject) => void;
 }) {
   if (subprojects.length === 0) {
     return <p className="ml-7 mt-0.5 text-tiny text-text-faint">{emptyText}</p>;
@@ -590,19 +589,37 @@ function SidebarSubprojectList({
     <ul className="ml-7 mt-0.5 max-h-[180px] space-y-0.5 overflow-y-auto pr-1">
       {subprojects.map((subproject) => (
         <li key={subproject.id}>
-          <Link
-            href={`/projects/${subproject.project_id}`}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-micro font-medium text-text-muted hover:bg-surface-muted"
-          >
-            <span className={`h-[6px] w-[6px] shrink-0 rounded-full ${statusDotClass(subproject.status)}`} />
-            <span className="truncate">{subproject.name}</span>
-            <span className="ml-auto shrink-0 text-tiny text-text-faint">
-              {Math.round(subproject.progress)}%
-            </span>
-          </Link>
+          {onSubprojectSelect ? (
+            <button
+              type="button"
+              onClick={() => onSubprojectSelect(subproject)}
+              className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-micro font-medium text-text-muted hover:bg-surface-muted"
+            >
+              <SubprojectRowContent subproject={subproject} />
+            </button>
+          ) : (
+            <Link
+              href={`/projects/${subproject.project_id}?subprojectId=${subproject.id}`}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-micro font-medium text-text-muted hover:bg-surface-muted"
+            >
+              <SubprojectRowContent subproject={subproject} />
+            </Link>
+          )}
         </li>
       ))}
     </ul>
+  );
+}
+
+function SubprojectRowContent({ subproject }: { subproject: SubProject }) {
+  return (
+    <>
+      <span className={`h-[6px] w-[6px] shrink-0 rounded-full ${statusDotClass(subproject.status)}`} />
+      <span className="truncate">{subproject.name}</span>
+      <span className="ml-auto shrink-0 text-tiny text-text-faint">
+        {Math.round(subproject.progress)}%
+      </span>
+    </>
   );
 }
 

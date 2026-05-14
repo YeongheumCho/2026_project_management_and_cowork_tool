@@ -159,10 +159,10 @@ export default function MajorProjectManager({ users }: Props) {
   }
 
   return (
-    <section className="rounded-2xl border border-[#EAEAE4] bg-white p-4">
+    <section className="rounded-2xl border border-border bg-white p-4">
       <div className="mb-4">
-        <h2 className="text-lg font-bold text-[#1A1A1A]">대프로젝트 관리</h2>
-        <p className="mt-1 text-small text-[#888780]">
+        <h2 className="text-lg font-bold text-text">대프로젝트 관리</h2>
+        <p className="mt-1 text-small text-text-subtle">
           계약 단위의 대프로젝트와 참여 인원, 생성 가능한 프로젝트 유형을 관리합니다.
         </p>
       </div>
@@ -176,11 +176,11 @@ export default function MajorProjectManager({ users }: Props) {
       <form onSubmit={submit} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="grid gap-3 md:grid-cols-2">
           <label className="block md:col-span-2">
-            <span className="text-small font-semibold text-[#888780]">대프로젝트명</span>
+            <span className="text-small font-semibold text-text-subtle">대프로젝트명</span>
             <input
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              className="mt-1 w-full rounded-lg border border-[#EAEAE4] px-3 py-2 text-body"
+              className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-body"
             />
           </label>
           <DateField
@@ -194,8 +194,8 @@ export default function MajorProjectManager({ users }: Props) {
             onChange={(value) => setForm((prev) => ({ ...prev, end_date: value }))}
           />
 
-          <div className="md:col-span-2 rounded-xl border border-[#EAEAE4] bg-[#FAFAFA] p-3">
-            <p className="text-small font-bold text-[#1A1A1A]">프로젝트 유형</p>
+          <div className="md:col-span-2 rounded-xl border border-border bg-surface-muted p-3">
+            <p className="text-small font-bold text-text">프로젝트 유형</p>
             <div className="mt-2 flex gap-2">
               <input
                 value={typeDraft}
@@ -206,12 +206,12 @@ export default function MajorProjectManager({ users }: Props) {
                   addProjectType();
                 }}
                 placeholder="예: 고객 검증, 양산 대응"
-                className="min-w-0 flex-1 rounded-lg border border-[#EAEAE4] bg-white px-3 py-2 text-small text-[#1A1A1A]"
+                className="min-w-0 flex-1 rounded-lg border border-border bg-white px-3 py-2 text-small text-text"
               />
               <button
                 type="button"
                 onClick={addProjectType}
-                className="rounded-lg bg-[#534AB7] px-3 py-2 text-small font-bold text-white"
+                className="rounded-lg bg-brand px-3 py-2 text-small font-bold text-white"
               >
                 추가
               </button>
@@ -220,14 +220,14 @@ export default function MajorProjectManager({ users }: Props) {
               {form.project_types.map((type) => (
                 <span
                   key={type}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#D8D3FF] bg-white px-3 py-1.5 text-small font-semibold text-[#534AB7]"
+                  className="inline-flex items-center gap-2 rounded-full border border-brand-soft bg-white px-3 py-1.5 text-small font-semibold text-brand"
                 >
                   {typeLabel(type)}
                   <button
                     type="button"
                     onClick={() => removeProjectType(type)}
                     disabled={form.project_types.length <= 1}
-                    className="text-[#888780] transition hover:text-[#A32D2D] disabled:cursor-not-allowed disabled:opacity-40"
+                    className="text-text-subtle transition hover:text-verify-fail-fg disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label={`${typeLabel(type)} 삭제`}
                   >
                     x
@@ -240,7 +240,7 @@ export default function MajorProjectManager({ users }: Props) {
           <div className="flex items-end gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-[#534AB7] px-4 py-2 text-small font-bold text-white"
+              className="rounded-lg bg-brand px-4 py-2 text-small font-bold text-white"
             >
               {editing ? '대프로젝트 저장' : '대프로젝트 추가'}
             </button>
@@ -248,7 +248,7 @@ export default function MajorProjectManager({ users }: Props) {
               <button
                 type="button"
                 onClick={reset}
-                className="rounded-lg border border-[#EAEAE4] px-4 py-2 text-small font-bold text-[#534AB7]"
+                className="rounded-lg border border-border px-4 py-2 text-small font-bold text-brand"
               >
                 취소
               </button>
@@ -256,10 +256,10 @@ export default function MajorProjectManager({ users }: Props) {
           </div>
         </div>
 
-        <div className="min-h-[260px] overflow-hidden rounded-2xl border border-[#EAEAE4] bg-[#FAFAFA] p-3">
+        <div className="min-h-[260px] overflow-hidden rounded-2xl border border-border bg-surface-muted p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-small font-bold text-[#1A1A1A]">참여 인원</p>
-            <span className="text-small text-[#888780]">
+            <p className="text-small font-bold text-text">참여 인원</p>
+            <span className="text-small text-text-subtle">
               {form.member_ids.length}/{users.length}명
             </span>
           </div>
@@ -274,30 +274,30 @@ export default function MajorProjectManager({ users }: Props) {
       </form>
 
       <div className="mt-5 space-y-2">
-        {loading && <p className="text-small text-[#888780]">불러오는 중...</p>}
+        {loading && <p className="text-small text-text-subtle">불러오는 중...</p>}
         {!loading &&
           items.map((item) => (
             <div
               key={item.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#EAEAE4] bg-[#FAFAFA] px-4 py-3"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-muted px-4 py-3"
             >
               <div className="min-w-0">
-                <p className="font-bold text-[#1A1A1A]">
+                <p className="font-bold text-text">
                   {item.name}
                   {item.is_default && (
-                    <span className="ml-2 rounded-full bg-[#EEEDFE] px-2 py-0.5 text-tiny text-[#534AB7]">
+                    <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-tiny text-brand">
                       기본
                     </span>
                   )}
                 </p>
-                <p className="mt-1 text-small text-[#888780]">
+                <p className="mt-1 text-small text-text-subtle">
                   {item.start_date ?? '-'} ~ {item.end_date ?? '-'} · 참여 {item.members.length}명 · 중프로젝트 {item.project_count}건
                 </p>
                 <div className="mt-2 flex max-h-[68px] flex-wrap gap-1.5 overflow-y-auto pr-1">
                   {(item.project_types?.length ? item.project_types : PROJECT_TYPE_OPTIONS).map((type) => (
                     <span
                       key={type}
-                      className="rounded-full bg-white px-2 py-0.5 text-tiny font-semibold text-[#5F5E5A]"
+                      className="rounded-full bg-white px-2 py-0.5 text-tiny font-semibold text-text-muted"
                     >
                       {typeLabel(type)}
                     </span>
@@ -308,7 +308,7 @@ export default function MajorProjectManager({ users }: Props) {
                 <button
                   type="button"
                   onClick={() => startEdit(item)}
-                  className="rounded-lg border border-[#D8D3FF] bg-white px-3 py-1.5 text-small font-bold text-[#534AB7]"
+                  className="rounded-lg border border-brand-soft bg-white px-3 py-1.5 text-small font-bold text-brand"
                 >
                   수정
                 </button>
@@ -316,7 +316,7 @@ export default function MajorProjectManager({ users }: Props) {
                   type="button"
                   onClick={() => remove(item)}
                   disabled={item.is_default || item.project_count > 0}
-                  className="rounded-lg border border-[#F4C9C9] bg-white px-3 py-1.5 text-small font-bold text-[#A32D2D] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-lg border border-verify-fail-bg bg-white px-3 py-1.5 text-small font-bold text-verify-fail-fg disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   삭제
                 </button>
@@ -339,7 +339,7 @@ function DateField({
 }) {
   return (
     <label className="block">
-      <span className="text-small font-semibold text-[#888780]">{label}</span>
+      <span className="text-small font-semibold text-text-subtle">{label}</span>
       <input
         type="date"
         value={value}
@@ -348,7 +348,7 @@ function DateField({
           event.currentTarget.value = clampDateYear(event.currentTarget.value);
         }}
         onChange={(event) => onChange(clampDateYear(event.target.value))}
-        className="mt-1 w-full rounded-lg border border-[#EAEAE4] px-3 py-2 text-body"
+        className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-body"
       />
     </label>
   );
