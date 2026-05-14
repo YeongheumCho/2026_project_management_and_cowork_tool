@@ -90,6 +90,7 @@ _KEFICO_COPY_FIELDS = (
     "inreview_status", "inreview_setup_min", "inreview_aud_min", "inreview_feedback_min",
     "cr_no", "ip_addr", "change_feedback_min", "change_revalidate_min", "lin_std_hold_note",
     "etc_category", "etc_month", "etc_days", "etc_note",
+    "weight",
 )
 
 
@@ -545,20 +546,25 @@ def _apply_kefico_fields(sp: SubProject, payload) -> None:
         sp.custom_fields = None
 
 
-def _subproject_weight_minutes(subproject: SubProject) -> int:
-    return max(
-        1,
-        subproject.total_minutes
-        or subproject.avg_expected_minutes
-        or max(1, (subproject.end_date - subproject.start_date).days + 1) * 60,
+def _subproject_effective_weight(subproject: SubProject) -> float:
+    """가중치가 명시된 경우 그 값을 사용, 없으면 소요 시간 기반으로 fallback."""
+    if subproject.weight is not None:
+        return float(subproject.weight)
+    return float(
+        max(
+            1,
+            subproject.total_minutes
+            or subproject.avg_expected_minutes
+            or max(1, (subproject.end_date - subproject.start_date).days + 1) * 60,
+        )
     )
 
 
 def _serialize_project_response(project: Project) -> ProjectResponse:
     subprojects = list(project.subprojects or [])
-    total_weight = sum(_subproject_weight_minutes(subproject) for subproject in subprojects)
+    total_weight = sum(_subproject_effective_weight(subproject) for subproject in subprojects)
     weighted_progress = (
-        sum(float(subproject.progress) * _subproject_weight_minutes(subproject) for subproject in subprojects)
+        sum(float(subproject.progress) * _subproject_effective_weight(subproject) for subproject in subprojects)
         / total_weight
         if total_weight > 0
         else 0.0

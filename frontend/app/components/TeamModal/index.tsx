@@ -199,9 +199,11 @@ export default function TeamModal({
     }
     setSelectedFieldSchemaType(String(nextSchema.project_type));
     const templateName = nextSchema.section_label;
+    const templateWeight = nextSchema.weight ?? 5;
     setF((prev) => ({
       ...prev,
       name: templateName,
+      weight: templateWeight,
       customFields: {
         ...withoutFieldSchemaMeta(prev.customFields),
         [FIELD_SCHEMA_NAME_KEY]: templateName,
@@ -280,9 +282,11 @@ export default function TeamModal({
   const handleFieldSchemaTypeChange = (nextType: string) => {
     setSelectedFieldSchemaType(nextType);
     const templateName = templateNameForType(nextType, fieldSchemas);
+    const templateWeight = fieldSchemas[nextType]?.weight ?? 5;
     setF((prev) => ({
       ...prev,
       name: templateName,
+      weight: templateWeight,
       customFields: {
         ...withoutFieldSchemaMeta(prev.customFields),
         [FIELD_SCHEMA_NAME_KEY]: templateName,
@@ -556,6 +560,7 @@ function emptyProjectTemplateSchema(projectId: number): ProjectFieldSchema {
     project_type: projectId ? `${projectTemplatePrefix(projectId)}empty` : '',
     section_label: '템플릿 없음',
     fields: [],
+    weight: 5,
     created_by: null,
     updated_at: '',
   };

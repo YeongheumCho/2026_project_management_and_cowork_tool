@@ -236,6 +236,9 @@ class SubProject(Base):
     etc_days: Mapped[float] = mapped_column(Numeric(5, 2), nullable=True)       # 소요일
     etc_note: Mapped[str] = mapped_column(Text, nullable=True)                  # 비고/상세
 
+    # ---------- 가중치 (1~10, 템플릿 기반 진척도 계산) ----------
+    weight: Mapped[int] = mapped_column(Integer, nullable=True)                 # 1~10, 없으면 시간 기반 fallback
+
     # ---------- 커스텀 필드 (자유 형식 JSON) ----------
     custom_fields: Mapped[str] = mapped_column(Text, nullable=True)             # dict[str, Any] as JSON
 

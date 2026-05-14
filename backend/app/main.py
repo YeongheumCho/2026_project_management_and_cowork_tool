@@ -32,6 +32,8 @@ def _ensure_additive_schema_updates() -> None:
     }
     if "custom_fields" not in subproject_columns:
         statements.append("ALTER TABLE subprojects ADD COLUMN custom_fields TEXT")
+    if "weight" not in subproject_columns:
+        statements.append("ALTER TABLE subprojects ADD COLUMN weight INTEGER")
 
     if "projects" in table_names:
         project_columns = {
@@ -45,6 +47,15 @@ def _ensure_additive_schema_updates() -> None:
             statements.append("ALTER TABLE projects ADD COLUMN start_date DATE")
         if "end_date" not in project_columns:
             statements.append("ALTER TABLE projects ADD COLUMN end_date DATE")
+
+    if "project_field_schemas" in table_names:
+        field_schema_columns = {
+            column["name"] for column in inspector.get_columns("project_field_schemas")
+        }
+        if "weight" not in field_schema_columns:
+            statements.append(
+                "ALTER TABLE project_field_schemas ADD COLUMN weight INTEGER NOT NULL DEFAULT 5"
+            )
 
     if "major_projects" in table_names:
         major_project_columns = {
