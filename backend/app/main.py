@@ -7,6 +7,7 @@ from app.db import engine
 
 # models 패키지 import 시 User / Project / SubProject / SubTask 가 모두 등록된다.
 from app.models import Base  # noqa: F401
+from app.models.project import DEFAULT_PROJECT_TYPES_JSON
 from app.routers.auth import router as auth_router
 from app.routers.field_schemas import router as field_schemas_router
 from app.routers.projects import router as projects_router
@@ -44,6 +45,13 @@ def _ensure_additive_schema_updates() -> None:
             statements.append("ALTER TABLE projects ADD COLUMN start_date DATE")
         if "end_date" not in project_columns:
             statements.append("ALTER TABLE projects ADD COLUMN end_date DATE")
+
+    if "major_projects" in table_names:
+        major_project_columns = {
+            column["name"] for column in inspector.get_columns("major_projects")
+        }
+        if "project_types" not in major_project_columns:
+            statements.append("ALTER TABLE major_projects ADD COLUMN project_types TEXT")
 
     if "project_execution_history" in table_names:
         history_columns = {
@@ -90,13 +98,24 @@ def _ensure_additive_schema_updates() -> None:
             connection.execute(
                 text(
                     """
-                    INSERT INTO major_projects (name, is_default)
-                    SELECT '미분류/기본 대프로젝트', TRUE
+                    INSERT INTO major_projects (name, project_types, is_default)
+                    SELECT '미분류/기본 대프로젝트', :project_types, TRUE
                     WHERE NOT EXISTS (
                         SELECT 1 FROM major_projects WHERE is_default = TRUE
                     )
                     """
-                )
+                ),
+                {"project_types": DEFAULT_PROJECT_TYPES_JSON},
+            )
+            connection.execute(
+                text(
+                    """
+                    UPDATE major_projects
+                    SET project_types = :project_types
+                    WHERE project_types IS NULL OR project_types = ''
+                    """
+                ),
+                {"project_types": DEFAULT_PROJECT_TYPES_JSON},
             )
             connection.execute(
                 text(

@@ -63,13 +63,15 @@ STATUS_IN_PROGRESS = "in_progress"
 STATUS_COMPLETED = "completed"
 
 # 프로젝트 유형
-PROJECT_TYPES = {
-    "general",
+DEFAULT_PROJECT_TYPES = (
     "official_inspection",
     "regular_inspection",
     "change_inspection",
     "etc_task",
-}
+    "general",
+)
+DEFAULT_PROJECT_TYPES_JSON = '["official_inspection","regular_inspection","change_inspection","etc_task","general"]'
+PROJECT_TYPES = set(DEFAULT_PROJECT_TYPES)
 
 # 검증 세부 상태 (1차 검증 / InReview 공용)
 VERIFY_STATES = {
@@ -98,6 +100,11 @@ class MajorProject(Base):
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     kickoff_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    project_types: Mapped[str] = mapped_column(
+        Text,
+        default=DEFAULT_PROJECT_TYPES_JSON,
+        nullable=False,
+    )
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

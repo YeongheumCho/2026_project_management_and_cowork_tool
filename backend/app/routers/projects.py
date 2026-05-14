@@ -26,6 +26,8 @@ from sqlalchemy.orm import Session, selectinload
 from app.dependencies import get_current_user, get_db, require_admin
 from app.models.project import (
     DEFAULT_SUBTASK_TEMPLATE,
+    DEFAULT_PROJECT_TYPES,
+    DEFAULT_PROJECT_TYPES_JSON,
     ETC_SUBTASK_TEMPLATE,
     INSPECTION_SUBTASK_TEMPLATE,
     MajorProject,
@@ -237,11 +239,32 @@ def _serialize_major_project_response(major_project: MajorProject) -> MajorProje
         start_date=major_project.start_date,
         end_date=major_project.end_date,
         kickoff_date=major_project.kickoff_date,
+        project_types=_major_project_project_types(major_project),
         is_default=bool(major_project.is_default),
         created_at=major_project.created_at,
         members=list(major_project.members or []),
         project_count=len(major_project.projects or []),
     )
+
+
+def _major_project_project_types(major_project: MajorProject) -> list[str]:
+    raw = major_project.project_types or DEFAULT_PROJECT_TYPES_JSON
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return list(DEFAULT_PROJECT_TYPES)
+    if not isinstance(parsed, list):
+        return list(DEFAULT_PROJECT_TYPES)
+    values = [value.strip() for value in parsed if isinstance(value, str) and value.strip()]
+    return list(dict.fromkeys(values)) or list(DEFAULT_PROJECT_TYPES)
+
+
+def _ensure_project_type_allowed(major_project: MajorProject, project_type: str) -> None:
+    if project_type not in _major_project_project_types(major_project):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="선택한 대프로젝트에서 사용할 수 없는 프로젝트 유형입니다.",
+        )
 
 
 def _load_major_project_for_user(
@@ -594,6 +617,7 @@ def create_major_project(
         start_date=payload.start_date,
         end_date=payload.end_date,
         kickoff_date=payload.kickoff_date,
+        project_types=json.dumps(payload.project_types, ensure_ascii=False),
         is_default=False,
     )
     major_project.members = members
@@ -631,6 +655,17 @@ def update_major_project(
 
     members = _load_major_project_members(db, payload.member_ids)
     member_ids = {user.id for user in members}
+    next_project_types = list(dict.fromkeys(payload.project_types))
+    project_types_in_use = {
+        project.project_type
+        for project in major_project.projects
+    }
+    removed_types_in_use = sorted(project_types_in_use - set(next_project_types))
+    if removed_types_in_use:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이미 해당 유형의 프로젝트가 있어 유형을 삭제할 수 없습니다.",
+        )
     invalid_projects = [
         project.name
         for project in major_project.projects
@@ -649,6 +684,7 @@ def update_major_project(
     major_project.start_date = payload.start_date
     major_project.end_date = payload.end_date
     major_project.kickoff_date = payload.kickoff_date
+    major_project.project_types = json.dumps(next_project_types, ensure_ascii=False)
     major_project.members = members
     db.commit()
     major_project = db.scalar(
@@ -703,6 +739,7 @@ def create_project(
     current_user: User = Depends(get_current_user),
 ):
     major_project = _load_major_project_for_user(db, payload.major_project_id, current_user)
+    _ensure_project_type_allowed(major_project, payload.project_type)
     participants = _load_project_participants_for_major(db, major_project, payload.participant_ids)
 
     project = Project(
@@ -773,6 +810,7 @@ def update_project(
         )
 
     major_project = _load_major_project_for_user(db, payload.major_project_id, _)
+    _ensure_project_type_allowed(major_project, payload.project_type)
     participants = _load_project_participants_for_major(db, major_project, payload.participant_ids)
 
     participant_id_set = {user.id for user in participants}

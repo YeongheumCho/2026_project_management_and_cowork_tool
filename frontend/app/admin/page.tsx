@@ -13,13 +13,12 @@ import UserTable from './components/UserTable';
 import WorkHistoryManager from './components/WorkHistoryManager';
 import { useAdminUsers } from './hooks/useAdminUsers';
 
-type AdminTab = 'users' | 'major-projects' | 'projects' | 'templates' | 'work-history';
+type AdminTab = 'users' | 'major-projects' | 'templates' | 'work-history';
 type DateRange = { from: string; to: string };
 
 const TABS: { id: AdminTab; label: string }[] = [
   { id: 'users', label: '사용자 권한 관리' },
-  { id: 'projects', label: '프로젝트 삭제 관리' },
-  { id: 'major-projects', label: '대프로젝트 관리' },
+  { id: 'major-projects', label: '프로젝트 관리' },
   { id: 'templates', label: '템플릿 필드 구성 관리' },
   { id: 'work-history', label: '업무 이력 관리' },
 ];
@@ -120,10 +119,10 @@ export default function AdminPage() {
 
 
       {activeTab === 'major-projects' && (
-        <MajorProjectManager users={users as UserBrief[]} />
-      )}
-      {activeTab === 'projects' && (
-        <ProjectDeletionManager enabled={isAdmin} />
+        <div className="space-y-4">
+          <MajorProjectManager users={users as UserBrief[]} />
+          <ProjectDeletionManager enabled={isAdmin} />
+        </div>
       )}
 
       {activeTab === 'templates' && (

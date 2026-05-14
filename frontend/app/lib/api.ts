@@ -35,12 +35,15 @@ export type SubTask = {
   done_at: string | null;
 };
 
-export type ProjectType =
-  | 'general'
-  | 'official_inspection'
-  | 'regular_inspection'
-  | 'change_inspection'
-  | 'etc_task';
+export type ProjectType = string;
+
+export const PROJECT_TYPE_OPTIONS: ProjectType[] = [
+  'official_inspection',
+  'regular_inspection',
+  'change_inspection',
+  'etc_task',
+  'general',
+];
 
 export type VerifyState =
   | 'not_started'
@@ -158,6 +161,7 @@ export type MajorProjectBrief = {
   start_date?: string | null;
   end_date?: string | null;
   kickoff_date?: string | null;
+  project_types: string[];
   is_default: boolean;
 };
 
