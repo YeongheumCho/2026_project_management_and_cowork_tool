@@ -32,11 +32,11 @@ export default function AdminOrgScopeTree({
   })) as UserBrief[];
 
   return (
-    <section className="rounded-2xl border border-[#EAEAE4] bg-white p-4">
+    <section className="rounded-2xl border border-border bg-white p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-md font-bold text-[#1A1A1A]">담당자</h3>
-          <p className="mt-1 text-small text-[#888780]">
+          <h3 className="text-md font-bold text-text">담당자</h3>
+          <p className="mt-1 text-small text-text-subtle">
             선택 범위: {selectedIds ? `${selectedIds.size}명` : '전체'}
           </p>
         </div>
@@ -45,8 +45,8 @@ export default function AdminOrgScopeTree({
           onClick={() => onSelect(null)}
           className={`rounded-full border px-3 py-1 text-micro font-bold ${
             selectedIds === null
-              ? 'border-[#534AB7] bg-[#EEEDFE] text-[#534AB7]'
-              : 'border-[#EAEAE4] bg-white text-[#66645C] hover:bg-[#FAFAFA]'
+              ? 'border-brand bg-brand-soft text-brand'
+              : 'border-border bg-white text-text-muted hover:bg-surface-muted'
           }`}
         >
           전체 보기

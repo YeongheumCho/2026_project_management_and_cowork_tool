@@ -155,10 +155,6 @@ function parseCsv(text: string, assigneeOptions: UserBrief[]): ParsedRow[] {
   });
 }
 
-function formatPerson(user: UserBrief): string {
-  return [user.name, user.position, user.team].filter(Boolean).join(' · ');
-}
-
 export default function CsvImportModal({
   open,
   project,
@@ -280,21 +276,21 @@ export default function CsvImportModal({
     <Modal open={open} onClose={handleClose} size="lg">
       <div className="space-y-4">
         <div>
-          <h2 className="text-heading font-bold tracking-[-0.2px] text-[#1A1A1A]">
+          <h2 className="text-heading font-bold tracking-[-0.2px] text-text">
             CSV로 검증 기능 일괄 등록
           </h2>
-          <p className="mt-1 text-micro text-[#888780]">
+          <p className="mt-1 text-micro text-text-subtle">
             CSV에는 검증할 기능명, 평균 소요 시간, 담당자, Lv를 입력하고 기간은 아래 기본값으로 일괄 적용합니다.
           </p>
         </div>
 
-        <div className="grid gap-3 rounded-[14px] border border-[#EAEAE4] bg-[#FAFAF7] p-4 md:grid-cols-2">
+        <div className="grid gap-3 rounded-[14px] border border-border bg-surface-muted p-4 md:grid-cols-2">
           <DateField label="기본 시작일" value={startDate} onChange={setStartDate} />
           <DateField label="기본 종료일" value={endDate} onChange={setEndDate} />
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-[12px] border border-[#DDDAD0] bg-white px-4 py-2 text-small font-semibold text-[#1A1A1A] hover:bg-[#FAFAF7]">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-[12px] border border-border-strong bg-white px-4 py-2 text-small font-semibold text-text hover:bg-surface-muted">
             CSV 파일 선택
             <input
               ref={fileRef}
@@ -307,19 +303,19 @@ export default function CsvImportModal({
           <button
             type="button"
             onClick={downloadSample}
-            className="text-micro font-medium text-[#534AB7] underline underline-offset-2 hover:text-[#473EA7]"
+            className="text-micro font-medium text-brand underline underline-offset-2 hover:text-brand-hover"
           >
             양식 다운로드
           </button>
-          <p className="text-micro text-[#888780]">
+          <p className="text-micro text-text-subtle">
             컬럼: 기능명 / 평균소요시간(분) / 담당자 / Lv
           </p>
         </div>
 
-        {fileError && <p className="text-small text-[#A32D2D]">{fileError}</p>}
+        {fileError && <p className="text-small text-verify-fail-fg">{fileError}</p>}
 
         {hasInvalidDefaults && (
-          <p className="rounded-[12px] bg-[#FFF7E8] px-4 py-2 text-micro text-[#9A6400]">
+          <p className="rounded-[12px] bg-verify-warn-bg px-4 py-2 text-micro text-verify-warn-fg">
             시작일과 종료일을 확인해야 일괄 등록할 수 있습니다.
           </p>
         )}
@@ -338,7 +334,7 @@ export default function CsvImportModal({
                   type="button"
                   onClick={() => void handleImport()}
                   disabled={!canImport}
-                  className="rounded-[12px] bg-[#534AB7] px-5 py-2 text-small font-bold text-white shadow-[0_4px_12px_rgba(83,74,183,0.24)] hover:bg-[#473EA7] disabled:opacity-50"
+                  className="rounded-[12px] bg-brand px-5 py-2 text-small font-bold text-white shadow-[0_4px_12px_rgba(83,74,183,0.24)] hover:bg-brand-hover disabled:opacity-50"
                 >
                   {importing ? '등록 중...' : `${validRows.length}건 일괄 등록`}
                 </button>
@@ -355,7 +351,7 @@ export default function CsvImportModal({
               <button
                 type="button"
                 onClick={handleClose}
-                className="rounded-[12px] bg-[#534AB7] px-5 py-2 text-small font-bold text-white hover:bg-[#473EA7]"
+                className="rounded-[12px] bg-brand px-5 py-2 text-small font-bold text-white hover:bg-brand-hover"
               >
                 닫기
               </button>
@@ -364,7 +360,7 @@ export default function CsvImportModal({
         )}
 
         {rows.length === 0 && !fileError && (
-          <p className="rounded-[14px] border border-dashed border-[#D7D4CA] px-5 py-8 text-center text-small text-[#8B897F]">
+          <p className="rounded-[14px] border border-dashed border-border-strong px-5 py-8 text-center text-small text-text-subtle">
             CSV 파일을 선택하면 검증 기능 목록을 미리볼 수 있습니다.
           </p>
         )}
@@ -383,14 +379,14 @@ function DateField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block text-micro font-semibold text-[#5F5E5A]">
+    <label className="block text-micro font-semibold text-text-muted">
       {label}
       <input
         type="date"
         value={value}
         max={MAX_DATE_VALUE}
         onChange={(event) => onChange(clampDateYear(event.target.value))}
-        className="mt-1 h-9 w-full rounded-[10px] border border-[#DDDAD0] bg-white px-3 text-small text-[#1A1A1A] outline-none focus:border-[#534AB7]"
+        className="mt-1 h-9 w-full rounded-[10px] border border-border-strong bg-white px-3 text-small text-text outline-none focus:border-brand"
       />
     </label>
   );
@@ -398,9 +394,9 @@ function DateField({
 
 function ImportSummary({ total, valid, invalid }: { total: number; valid: number; invalid: number }) {
   return (
-    <div className="rounded-[14px] border border-[#EAEAE4] bg-[#FAFAF7] px-4 py-2.5 text-micro text-[#5F5E5A]">
-      총 <strong>{total}</strong>개 행 · <span className="text-[#0F6E56]">유효 {valid}건</span>
-      {invalid > 0 && <span className="ml-2 text-[#A32D2D]">오류 {invalid}건</span>}
+    <div className="rounded-[14px] border border-border bg-surface-muted px-4 py-2.5 text-micro text-text-muted">
+      총 <strong>{total}</strong>개 행 · <span className="text-verify-pass-fg">유효 {valid}건</span>
+      {invalid > 0 && <span className="ml-2 text-verify-fail-fg">오류 {invalid}건</span>}
     </div>
   );
 }
@@ -413,9 +409,9 @@ function PreviewTable({
   period: string;
 }) {
   return (
-    <div className="max-h-[280px] overflow-auto rounded-[14px] border border-[#EAEAE4]">
+    <div className="max-h-[280px] overflow-auto rounded-[14px] border border-border">
       <table className="w-full text-left text-micro">
-        <thead className="sticky top-0 bg-[#F4F4F0]">
+        <thead className="sticky top-0 bg-surface-subtle">
           <tr>
             <TableHead>#</TableHead>
             <TableHead>검증 기능</TableHead>
@@ -426,9 +422,9 @@ function PreviewTable({
             <TableHead>상태</TableHead>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#F0EEE7] bg-white">
+        <tbody className="divide-y divide-border-subtle bg-white">
           {rows.map((row, index) => (
-            <tr key={`${row.function_name}-${index}`} className={row.error ? 'bg-[#FFF7F7]' : ''}>
+            <tr key={`${row.function_name}-${index}`} className={row.error ? 'bg-verify-fail-bg' : ''}>
               <TableCell muted>{index + 1}</TableCell>
               <TableCell strong>{row.function_name || '-'}</TableCell>
               <TableCell>{row.avg_expected_minutes ?? '-'}</TableCell>
@@ -437,9 +433,9 @@ function PreviewTable({
               <TableCell>{period}</TableCell>
               <TableCell>
                 {row.error ? (
-                  <span className="text-[#A32D2D]">{row.error}</span>
+                  <span className="text-verify-fail-fg">{row.error}</span>
                 ) : (
-                  <span className="text-[#0F6E56]">정상</span>
+                  <span className="text-verify-pass-fg">정상</span>
                 )}
               </TableCell>
             </tr>
@@ -454,18 +450,18 @@ function ResultSummary({ results }: { results: ResultRow[] }) {
   const ok = results.filter((row) => row.status === 'ok').length;
   const failed = results.length - ok;
   return (
-    <div className="rounded-[14px] border border-[#EAEAE4] bg-[#FAFAF7] px-4 py-2.5 text-micro text-[#5F5E5A]">
-      등록 완료: <span className="text-[#0F6E56]">{ok}건</span>
-      {failed > 0 && <span className="text-[#A32D2D]"> / 실패 {failed}건</span>}
+    <div className="rounded-[14px] border border-border bg-surface-muted px-4 py-2.5 text-micro text-text-muted">
+      등록 완료: <span className="text-verify-pass-fg">{ok}건</span>
+      {failed > 0 && <span className="text-verify-fail-fg"> / 실패 {failed}건</span>}
     </div>
   );
 }
 
 function ResultTable({ results }: { results: ResultRow[] }) {
   return (
-    <div className="max-h-[280px] overflow-auto rounded-[14px] border border-[#EAEAE4]">
+    <div className="max-h-[280px] overflow-auto rounded-[14px] border border-border">
       <table className="w-full text-left text-micro">
-        <thead className="sticky top-0 bg-[#F4F4F0]">
+        <thead className="sticky top-0 bg-surface-subtle">
           <tr>
             <TableHead>#</TableHead>
             <TableHead>검증 기능</TableHead>
@@ -475,9 +471,9 @@ function ResultTable({ results }: { results: ResultRow[] }) {
             <TableHead>결과</TableHead>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#F0EEE7] bg-white">
+        <tbody className="divide-y divide-border-subtle bg-white">
           {results.map((row, index) => (
-            <tr key={`${row.function_name}-${index}`} className={row.status === 'error' ? 'bg-[#FFF7F7]' : ''}>
+            <tr key={`${row.function_name}-${index}`} className={row.status === 'error' ? 'bg-verify-fail-bg' : ''}>
               <TableCell muted>{index + 1}</TableCell>
               <TableCell strong>{row.function_name || '-'}</TableCell>
               <TableCell>{row.avg_expected_minutes ?? '-'}</TableCell>
@@ -485,9 +481,9 @@ function ResultTable({ results }: { results: ResultRow[] }) {
               <TableCell>{row.verification_level ?? '-'}</TableCell>
               <TableCell>
                 {row.status === 'ok' ? (
-                  <span className="text-[#0F6E56]">{row.detail}</span>
+                  <span className="text-verify-pass-fg">{row.detail}</span>
                 ) : (
-                  <span className="text-[#A32D2D]">{row.detail}</span>
+                  <span className="text-verify-fail-fg">{row.detail}</span>
                 )}
               </TableCell>
             </tr>
@@ -499,7 +495,7 @@ function ResultTable({ results }: { results: ResultRow[] }) {
 }
 
 function TableHead({ children }: { children: ReactNode }) {
-  return <th className="px-3 py-2 font-semibold text-[#5F5E5A]">{children}</th>;
+  return <th className="px-3 py-2 font-semibold text-text-muted">{children}</th>;
 }
 
 function TableCell({
@@ -512,10 +508,10 @@ function TableCell({
   muted?: boolean;
 }) {
   const cls = strong
-    ? 'px-3 py-2 font-medium text-[#1A1A1A]'
+    ? 'px-3 py-2 font-medium text-text'
     : muted
-      ? 'px-3 py-2 text-[#888780]'
-      : 'px-3 py-2 text-[#5F5E5A]';
+      ? 'px-3 py-2 text-text-subtle'
+      : 'px-3 py-2 text-text-muted';
   return <td className={cls}>{children}</td>;
 }
 
@@ -530,7 +526,7 @@ function SecondaryButton({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-[12px] border border-[#DDDAD0] px-4 py-2 text-small font-semibold text-[#5F5E5A] hover:bg-[#F4F4F0]"
+      className="rounded-[12px] border border-border-strong px-4 py-2 text-small font-semibold text-text-muted hover:bg-surface-subtle"
     >
       {children}
     </button>

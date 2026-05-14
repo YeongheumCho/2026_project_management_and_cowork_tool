@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   apiFetch,
   PROJECT_TYPE_LABEL,
+  type MajorProject,
   type Project,
   type ProjectHistoryCreate,
   type ProjectHistoryEntry,
@@ -160,11 +161,14 @@ export default function WorkHistoryManager({
   onDateRangeChange,
 }: Props) {
   const [entries, setEntries] = useState<ProjectHistoryEntry[]>([]);
+  const [majorProjects, setMajorProjects] = useState<MajorProject[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [subprojects, setSubprojects] = useState<SubProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [majorProjectId, setMajorProjectId] = useState<number | ''>('');
   const [projectId, setProjectId] = useState<number | ''>('');
+  const [createMajorProjectId, setCreateMajorProjectId] = useState<number | ''>('');
   const [createDraft, setCreateDraft] = useState<CreateDraft>(DEFAULT_CREATE_DRAFT);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -181,14 +185,18 @@ export default function WorkHistoryManager({
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      if (majorProjectId !== '') params.set('major_project_id', String(majorProjectId));
       if (projectId !== '') params.set('project_id', String(projectId));
       if (dateRange.from) params.set('start_date', dateRange.from);
       if (dateRange.to) params.set('end_date', dateRange.to);
       const qs = params.toString();
-      const [historyRows, projectRows, subprojectRows] = await Promise.all([
+      const [historyRows, majorProjectRows, projectRows, subprojectRows] = await Promise.all([
         apiFetch<ProjectHistoryEntry[]>(
           `/projects/history${qs ? `?${qs}` : ''}`,
         ),
+        majorProjects.length === 0
+          ? apiFetch<MajorProject[]>('/major-projects')
+          : Promise.resolve(majorProjects),
         projects.length === 0
           ? apiFetch<Project[]>('/projects')
           : Promise.resolve(projects),
@@ -197,6 +205,7 @@ export default function WorkHistoryManager({
           : Promise.resolve(subprojects),
       ]);
       setEntries(historyRows);
+      if (majorProjects.length === 0) setMajorProjects(majorProjectRows);
       if (projects.length === 0) setProjects(projectRows);
       if (subprojects.length === 0) setSubprojects(subprojectRows);
       setMessage('');
@@ -206,7 +215,7 @@ export default function WorkHistoryManager({
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateRange.from, dateRange.to, enabled, projectId]);
+  }, [dateRange.from, dateRange.to, enabled, majorProjectId, projectId]);
 
   useEffect(() => {
     void load();
@@ -239,6 +248,8 @@ export default function WorkHistoryManager({
         id: -(index + 1),
         user_id: user.id,
         user_name: user.name,
+        major_project_id: null,
+        major_project_name: null,
         project_id: null,
         project_name: ['과거 IVI 검증', 'HPC 통합 점검', 'OTA 회귀 검증', '진단 통신 평가', '제어기 릴리즈 지원'][index % 5],
         subproject_id: null,
@@ -263,9 +274,10 @@ export default function WorkHistoryManager({
   const exportRows = () => {
     downloadExcel(
       `업무_이력_현황_${dateRange.from || '전체'}_${dateRange.to || '전체'}.xls`,
-      ['담당자', '프로젝트', '하위 프로젝트', '유형', '시작일', '종료일', '소요 시간', '기록 구분'],
+      ['담당자', '대프로젝트', '프로젝트', '하위 프로젝트', '유형', '시작일', '종료일', '소요 시간', '기록 구분'],
       displayRows.map((row) => [
         row.user_name,
+        row.major_project_name ?? '대프로젝트 미지정',
         row.project_name,
         row.subproject_name,
         PROJECT_TYPE_LABEL[row.project_type] ?? row.project_type,
@@ -281,24 +293,91 @@ export default function WorkHistoryManager({
     () => [...users].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')),
     [users],
   );
-  const sortedProjects = useMemo(
+  const sortedMajorProjects = useMemo(
     () =>
-      [...projects].sort((a, b) =>
+      [...majorProjects].sort((a, b) =>
         a.name.localeCompare(b.name, 'ko-KR'),
       ),
-    [projects],
+    [majorProjects],
+  );
+  const projectMajorId = useCallback(
+    (project: Project) => project.major_project_id ?? project.major_project?.id ?? null,
+    [],
+  );
+  const majorFilteredProjects = useMemo(
+    () =>
+      projects.filter(
+        (project) => majorProjectId === '' || projectMajorId(project) === majorProjectId,
+      ),
+    [majorProjectId, projectMajorId, projects],
+  );
+  const createMajorFilteredProjects = useMemo(
+    () =>
+      projects.filter(
+        (project) =>
+          createMajorProjectId === '' || projectMajorId(project) === createMajorProjectId,
+      ),
+    [createMajorProjectId, projectMajorId, projects],
+  );
+  const sortedProjects = useMemo(
+    () =>
+      [...majorFilteredProjects].sort((a, b) =>
+        a.name.localeCompare(b.name, 'ko-KR'),
+      ),
+    [majorFilteredProjects],
+  );
+  const majorFilteredProjectIds = useMemo(
+    () => new Set(majorFilteredProjects.map((project) => project.id)),
+    [majorFilteredProjects],
+  );
+  const sortedCreateProjects = useMemo(
+    () =>
+      [...createMajorFilteredProjects].sort((a, b) =>
+        a.name.localeCompare(b.name, 'ko-KR'),
+      ),
+    [createMajorFilteredProjects],
+  );
+  const createMajorFilteredProjectIds = useMemo(
+    () => new Set(createMajorFilteredProjects.map((project) => project.id)),
+    [createMajorFilteredProjects],
   );
   const createSubprojectOptions = useMemo(
     () =>
       subprojects
         .filter((sp) =>
           createDraft.project_id === ''
-            ? true
+            ? createMajorProjectId === '' || createMajorFilteredProjectIds.has(sp.project_id)
             : sp.project_id === createDraft.project_id,
         )
         .sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')),
-    [createDraft.project_id, subprojects],
+    [createDraft.project_id, createMajorFilteredProjectIds, createMajorProjectId, subprojects],
   );
+
+  useEffect(() => {
+    if (majorProjectId === '') return;
+    if (projectId !== '' && !majorFilteredProjectIds.has(projectId)) {
+      setProjectId('');
+    }
+  }, [majorFilteredProjectIds, majorProjectId, projectId]);
+
+  useEffect(() => {
+    if (createMajorProjectId === '') return;
+    if (
+      createDraft.project_id !== '' &&
+      !createMajorFilteredProjectIds.has(createDraft.project_id)
+    ) {
+      setCreateDraft((prev) => ({
+        ...prev,
+        project_id: '',
+        project_name: '',
+        project_type: 'manual',
+        subproject_id: '',
+        subproject_name: '',
+        started_on: '',
+        ended_on: '',
+      }));
+    }
+  }, [createDraft.project_id, createMajorFilteredProjectIds, createMajorProjectId]);
 
   function openEdit(row: ProjectHistoryEntry) {
     setEditingRow(row);
@@ -489,6 +568,25 @@ export default function WorkHistoryManager({
           </div>
           <div>
             <label className="block text-small font-semibold text-text-subtle">
+              대프로젝트
+            </label>
+            <select
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
+              value={createMajorProjectId}
+              onChange={(e) => {
+                setCreateMajorProjectId(e.target.value === '' ? '' : Number(e.target.value));
+              }}
+            >
+              <option value="">전체</option>
+              {sortedMajorProjects.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-small font-semibold text-text-subtle">
               프로젝트
             </label>
             <select
@@ -502,7 +600,7 @@ export default function WorkHistoryManager({
               }
             >
               <option value="">전체</option>
-              {sortedProjects.map((p) => (
+              {sortedCreateProjects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
@@ -636,6 +734,26 @@ export default function WorkHistoryManager({
         <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           <div>
             <label className="block text-small font-semibold text-text-subtle">
+              대프로젝트 필터
+            </label>
+            <select
+              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
+              value={majorProjectId}
+              onChange={(e) => {
+                setMajorProjectId(e.target.value === '' ? '' : Number(e.target.value));
+                setProjectId('');
+              }}
+            >
+              <option value="">전체</option>
+              {sortedMajorProjects.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-small font-semibold text-text-subtle">
               프로젝트 필터
             </label>
             <select
@@ -720,6 +838,7 @@ export default function WorkHistoryManager({
           <thead className="bg-surface-muted text-left text-small text-text-subtle">
             <tr>
               <th className="px-4 py-3 font-semibold">담당자</th>
+              <th className="px-4 py-3 font-semibold">대프로젝트</th>
               <th className="px-4 py-3 font-semibold">프로젝트</th>
               <th className="px-4 py-3 font-semibold">소프로젝트</th>
               <th className="px-4 py-3 font-semibold">유형</th>
@@ -732,7 +851,7 @@ export default function WorkHistoryManager({
           <tbody>
             {displayRows.length === 0 && !loading && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-small text-text-subtle">
+                <td colSpan={9} className="px-4 py-8 text-center text-small text-text-subtle">
                   표시할 업무 이력이 없습니다.
                 </td>
               </tr>
@@ -740,6 +859,9 @@ export default function WorkHistoryManager({
             {displayRows.map((row) => (
               <tr key={row.id} className="border-t border-border text-text">
                 <td className="px-4 py-3">{row.user_name}</td>
+                <td className="px-4 py-3">
+                  {row.major_project_name ?? '대프로젝트 미지정'}
+                </td>
                 <td className="px-4 py-3">{row.project_name}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">

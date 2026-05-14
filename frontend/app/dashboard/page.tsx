@@ -149,7 +149,6 @@ export default function DashboardPage() {
 
       <CreateProjectModal
         open={createOpen}
-        users={users}
         onClose={() => {
           setModalError('');
           setCreateOpen(false);

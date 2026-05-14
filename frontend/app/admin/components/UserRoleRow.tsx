@@ -67,20 +67,20 @@ export default function UserRoleRow({
   return (
     <>
       <tr
-        className="cursor-pointer border-b border-[#F1EFE8] hover:bg-[#FAFAFA]"
+        className="cursor-pointer border-b border-surface-subtle hover:bg-surface-muted"
         onClick={() => onOpenHistory?.(member)}
       >
-        <td className="py-3 pr-4 text-body font-semibold text-[#1A1A1A]">
-          <span className="transition hover:text-[#534AB7]">{member.name}</span>
+        <td className="py-3 pr-4 text-body font-semibold text-text">
+          <span className="transition hover:text-brand">{member.name}</span>
           {member.position && (
-            <span className="ml-1.5 text-micro font-medium text-[#888780]">
+            <span className="ml-1.5 text-micro font-medium text-text-subtle">
               {member.position}
             </span>
           )}
         </td>
-        <td className="py-3 pr-4 text-small text-[#5F5E5A]">{member.idnum}</td>
-        <td className="py-3 pr-4 text-small text-[#5F5E5A]">
-          {affiliation || <span className="text-[#B4B2A9]">—</span>}
+        <td className="py-3 pr-4 text-small text-text-muted">{member.idnum}</td>
+        <td className="py-3 pr-4 text-small text-text-muted">
+          {affiliation || <span className="text-text-faint">—</span>}
         </td>
         <td className="py-3 pr-4">
           <select
@@ -88,7 +88,7 @@ export default function UserRoleRow({
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => onRoleChange(member.idnum, e.target.value)}
             disabled={disabled}
-            className="rounded-lg border border-[#EAEAE4] bg-white px-2.5 py-1.5 text-small text-[#1A1A1A] focus:border-[#534AB7] focus:outline-none disabled:bg-[#FAFAFA] disabled:text-[#888780]"
+            className="rounded-lg border border-border bg-white px-2.5 py-1.5 text-small text-text focus:border-brand focus:outline-none disabled:bg-surface-muted disabled:text-text-subtle"
           >
             <option value="member">일반</option>
             <option value="admin">관리자</option>
@@ -96,11 +96,11 @@ export default function UserRoleRow({
         </td>
         <td className="py-3 pr-4">
           {member.is_active ? (
-            <span className="rounded-full bg-[#E8F5ED] px-2 py-1 text-tiny font-semibold text-[#1F7A3A]">
+            <span className="rounded-full bg-verify-pass-bg px-2 py-1 text-tiny font-semibold text-verify-pass-fg">
               활성
             </span>
           ) : (
-            <span className="rounded-full bg-[#F1EFE8] px-2 py-1 text-tiny font-semibold text-[#888780]">
+            <span className="rounded-full bg-surface-subtle px-2 py-1 text-tiny font-semibold text-text-subtle">
               비활성
             </span>
           )}
@@ -111,7 +111,7 @@ export default function UserRoleRow({
               type="button"
               onClick={(e) => { e.stopPropagation(); onRoleSave(member); }}
               disabled={disabled}
-              className="rounded-lg bg-[#534AB7] px-3 py-1.5 text-micro font-semibold text-white transition hover:bg-[#43399C] disabled:cursor-not-allowed disabled:bg-[#D3D1C7]"
+              className="rounded-lg bg-brand px-3 py-1.5 text-micro font-semibold text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-border-strong"
             >
               {isSaving ? '저장 중...' : '저장'}
             </button>
@@ -126,7 +126,7 @@ export default function UserRoleRow({
                   setResetError('');
                 }}
                 disabled={disabled}
-                className="rounded-lg border border-[#D0C9F5] bg-white px-3 py-1.5 text-micro font-semibold text-[#534AB7] transition hover:bg-[#EEEDFE] disabled:cursor-not-allowed disabled:border-[#E9E5E5] disabled:text-[#B4B2A9]"
+                className="rounded-lg border border-brand-soft bg-white px-3 py-1.5 text-micro font-semibold text-brand transition hover:bg-brand-soft disabled:cursor-not-allowed disabled:border-border disabled:text-text-faint"
               >
                 비밀번호 초기화
               </button>
@@ -136,7 +136,7 @@ export default function UserRoleRow({
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onDelete(member); }}
                 disabled={disabled}
-                className="rounded-lg border border-[#F4C9C9] bg-white px-3 py-1.5 text-micro font-semibold text-[#A32D2D] transition hover:bg-[#FFF4F4] disabled:cursor-not-allowed disabled:border-[#E9E5E5] disabled:text-[#B4B2A9]"
+                className="rounded-lg border border-verify-fail-bg bg-white px-3 py-1.5 text-micro font-semibold text-verify-fail-fg transition hover:bg-verify-fail-bg disabled:cursor-not-allowed disabled:border-border disabled:text-text-faint"
               >
                 {isDeleting ? '삭제 중...' : '삭제'}
               </button>
@@ -145,28 +145,28 @@ export default function UserRoleRow({
         </td>
       </tr>
       {showResetPanel && (
-        <tr className="border-b border-[#F1EFE8] bg-[#FAFAFA]">
+        <tr className="border-b border-surface-subtle bg-surface-muted">
           <td colSpan={6} className="px-4 py-3">
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-tiny font-semibold text-[#888780]">새 비밀번호</label>
+                <label className="text-tiny font-semibold text-text-subtle">새 비밀번호</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="8자 이상"
-                  className="w-[180px] rounded-lg border border-[#EAEAE4] bg-white px-3 py-1.5 text-small focus:border-[#534AB7] focus:outline-none"
+                  className="w-[180px] rounded-lg border border-border bg-white px-3 py-1.5 text-small focus:border-brand focus:outline-none"
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-tiny font-semibold text-[#888780]">비밀번호 확인</label>
+                <label className="text-tiny font-semibold text-text-subtle">비밀번호 확인</label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="동일하게 입력"
-                  className="w-[180px] rounded-lg border border-[#EAEAE4] bg-white px-3 py-1.5 text-small focus:border-[#534AB7] focus:outline-none"
+                  className="w-[180px] rounded-lg border border-border bg-white px-3 py-1.5 text-small focus:border-brand focus:outline-none"
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
@@ -175,7 +175,7 @@ export default function UserRoleRow({
                   type="button"
                   onClick={(e) => void handleResetSubmit(e)}
                   disabled={resetting || !newPassword || !confirmPassword}
-                  className="rounded-lg bg-[#534AB7] px-4 py-1.5 text-micro font-semibold text-white transition hover:bg-[#43399C] disabled:cursor-not-allowed disabled:bg-[#D3D1C7]"
+                  className="rounded-lg bg-brand px-4 py-1.5 text-micro font-semibold text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-border-strong"
                 >
                   {resetting ? '처리 중...' : '확인'}
                 </button>
@@ -188,13 +188,13 @@ export default function UserRoleRow({
                     setConfirmPassword('');
                     setResetError('');
                   }}
-                  className="rounded-lg border border-[#D3D1C7] px-4 py-1.5 text-micro font-semibold text-[#5F5E5A] transition hover:bg-[#F1EFE8]"
+                  className="rounded-lg border border-border-strong px-4 py-1.5 text-micro font-semibold text-text-muted transition hover:bg-surface-subtle"
                 >
                   취소
                 </button>
               </div>
               {resetError && (
-                <span className="text-micro text-[#E05C5C]">{resetError}</span>
+                <span className="text-micro text-verify-fail-fg">{resetError}</span>
               )}
             </div>
           </td>

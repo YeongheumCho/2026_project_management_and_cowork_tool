@@ -24,6 +24,7 @@ type Props = {
   selectedMemberId?: number | null;
   onProjectSelect?: (projectId: number) => void;
   onMemberSelect?: (memberId: number) => void;
+  onSubprojectSelect?: (subproject: SubProject) => void;
 };
 
 export default function Sidebar({
@@ -36,6 +37,7 @@ export default function Sidebar({
   selectedMemberId,
   onProjectSelect,
   onMemberSelect,
+  onSubprojectSelect,
 }: Props) {
   const groups = useMemo(() => groupUsersByTeam(users), [users]);
   const subprojectsByProject = useMemo(() => {
@@ -202,6 +204,7 @@ export default function Sidebar({
                     selectedProjectId={selectedProjectId}
                     onToggleMajor={() => toggleMajorProject(majorProject.id)}
                     onToggleProject={toggleProject}
+                    onSubprojectSelect={onSubprojectSelect}
                   />
                 </li>
               ))}
@@ -487,6 +490,7 @@ function MajorProjectItem({
   selectedProjectId,
   onToggleMajor,
   onToggleProject,
+  onSubprojectSelect,
 }: {
   majorProject: MajorProject;
   projects: Project[];
@@ -496,6 +500,7 @@ function MajorProjectItem({
   selectedProjectId?: number | null;
   onToggleMajor: () => void;
   onToggleProject: (projectId: number) => void;
+  onSubprojectSelect?: (subproject: SubProject) => void;
 }) {
   const expanded = expandedMajorProjects.has(majorProject.id);
   const subprojectCount = projects.reduce(
@@ -521,6 +526,7 @@ function MajorProjectItem({
                 expanded={expandedProjects.has(project.id)}
                 selected={selectedProjectId === project.id}
                 onToggle={() => onToggleProject(project.id)}
+                onSubprojectSelect={onSubprojectSelect}
               />
             </li>
           ))}
@@ -536,12 +542,14 @@ function ProjectItem({
   expanded,
   selected,
   onToggle,
+  onSubprojectSelect,
 }: {
   project: Project;
   subprojects: SubProject[];
   expanded: boolean;
   selected: boolean;
   onToggle: () => void;
+  onSubprojectSelect?: (subproject: SubProject) => void;
 }) {
   return (
     <div>
@@ -556,6 +564,7 @@ function ProjectItem({
       {expanded && (
         <SidebarSubprojectList
           subprojects={subprojects}
+          onSubprojectSelect={onSubprojectSelect}
           emptyText="하위 프로젝트가 없습니다."
         />
       )}
@@ -566,9 +575,11 @@ function ProjectItem({
 function SidebarSubprojectList({
   subprojects,
   emptyText,
+  onSubprojectSelect,
 }: {
   subprojects: SubProject[];
   emptyText: string;
+  onSubprojectSelect?: (subproject: SubProject) => void;
 }) {
   if (subprojects.length === 0) {
     return <p className="ml-7 mt-0.5 text-tiny text-text-faint">{emptyText}</p>;
@@ -578,19 +589,37 @@ function SidebarSubprojectList({
     <ul className="ml-7 mt-0.5 max-h-[180px] space-y-0.5 overflow-y-auto pr-1">
       {subprojects.map((subproject) => (
         <li key={subproject.id}>
-          <Link
-            href={`/projects/${subproject.project_id}`}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-micro font-medium text-text-muted hover:bg-surface-muted"
-          >
-            <span className={`h-[6px] w-[6px] shrink-0 rounded-full ${statusDotClass(subproject.status)}`} />
-            <span className="truncate">{subproject.name}</span>
-            <span className="ml-auto shrink-0 text-tiny text-text-faint">
-              {Math.round(subproject.progress)}%
-            </span>
-          </Link>
+          {onSubprojectSelect ? (
+            <button
+              type="button"
+              onClick={() => onSubprojectSelect(subproject)}
+              className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-micro font-medium text-text-muted hover:bg-surface-muted"
+            >
+              <SubprojectRowContent subproject={subproject} />
+            </button>
+          ) : (
+            <Link
+              href={`/projects/${subproject.project_id}?subprojectId=${subproject.id}`}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-micro font-medium text-text-muted hover:bg-surface-muted"
+            >
+              <SubprojectRowContent subproject={subproject} />
+            </Link>
+          )}
         </li>
       ))}
     </ul>
+  );
+}
+
+function SubprojectRowContent({ subproject }: { subproject: SubProject }) {
+  return (
+    <>
+      <span className={`h-[6px] w-[6px] shrink-0 rounded-full ${statusDotClass(subproject.status)}`} />
+      <span className="truncate">{subproject.name}</span>
+      <span className="ml-auto shrink-0 text-tiny text-text-faint">
+        {Math.round(subproject.progress)}%
+      </span>
+    </>
   );
 }
 

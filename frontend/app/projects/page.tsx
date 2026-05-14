@@ -107,7 +107,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <AppShell me={me}>
+    <AppShell me={me} onSubprojectSelect={setProgressTarget}>
       {error && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
           {error}
@@ -115,7 +115,6 @@ export default function ProjectsPage() {
       )}
 
       <CreateProjectForm
-        users={users}
         majorProjects={majorProjects}
         onCreated={async (created) => {
           await reload();
@@ -161,7 +160,6 @@ export default function ProjectsPage() {
       <ProjectManageModal
         open={projectModalOpen}
         project={projectInitial}
-        users={users}
         majorProjects={majorProjects}
         onClose={() => {
           setProjectModalOpen(false);

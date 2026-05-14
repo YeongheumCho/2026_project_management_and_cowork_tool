@@ -9,12 +9,10 @@ import {
   type MajorProject,
   type Project,
   type ProjectType,
-  type UserBrief,
 } from '../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 
 type Props = {
-  users: UserBrief[];
   majorProjects: MajorProject[];
   onCreated: (project: Project) => void;
   onError: (msg: string) => void;
@@ -23,7 +21,7 @@ type Props = {
 const controlClass =
   'mt-1 h-10 w-full rounded-lg border border-border px-3 py-2 text-sm';
 
-export default function CreateProjectForm({ users, majorProjects, onCreated, onError }: Props) {
+export default function CreateProjectForm({ majorProjects, onCreated, onError }: Props) {
   const initialMajorProjectId = majorProjects[0]?.id ?? '';
   const [majorProjectId, setMajorProjectId] = useState<number | ''>(initialMajorProjectId);
   const [name, setName] = useState('');

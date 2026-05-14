@@ -151,7 +151,7 @@ export default function TasksPage() {
       )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]">
-        <section className="rounded-3xl border border-[#EAEAE4] bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-border bg-white p-6 shadow-sm">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-text">AI 업무 배정</h1>
             <p className="mt-2 text-sm text-text-subtle">
@@ -206,20 +206,20 @@ export default function TasksPage() {
             </Field>
 
             {selectedSubproject && (
-              <div className="rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2 text-small font-semibold text-[#1D4ED8]">
+              <div className="rounded-lg border border-verify-info-bg bg-verify-info-bg px-3 py-2 text-small font-semibold text-verify-info-fg">
                 일정 {selectedSubproject.start_date} ~ {selectedSubproject.end_date}
               </div>
             )}
 
-            <div className="rounded-2xl border border-[#EAEAE4] bg-[#FAFAFA] p-4">
+            <div className="rounded-2xl border border-border bg-surface-muted p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-[#1A1A1A]">업무량 가중치</p>
-                  <p className="mt-1 text-xs text-[#888780]">
+                  <p className="text-sm font-semibold text-text">업무량 가중치</p>
+                  <p className="mt-1 text-xs text-text-subtle">
                     현재 업무량과 유사 업무 경험 중 무엇을 더 크게 반영할지 조정합니다.
                   </p>
                 </div>
-                <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-[#5F5E5A]">
+                <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-text-muted">
                   업무량 {availabilityWeight}% / 역량 {capabilityWeight}%
                 </span>
               </div>
@@ -238,14 +238,14 @@ export default function TasksPage() {
               type="button"
               onClick={handleRecommend}
               disabled={!canSubmit}
-              className="w-full rounded-lg bg-[#534AB7] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#433A9A] disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? '추천 분석 중...' : 'AI 추천 실행'}
             </button>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-[#EAEAE4] bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-border bg-white p-6 shadow-sm">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-text">추천 결과 TOP 3</h2>
@@ -257,14 +257,14 @@ export default function TasksPage() {
                   <span
                     className={`rounded-full px-3 py-1 text-micro font-semibold ${
                       recommendation.claude_used
-                        ? 'bg-[#EEEDFE] text-[#534AB7]'
-                        : 'bg-[#FFF4F4] text-[#A32D2D]'
+                        ? 'bg-brand-soft text-brand'
+                        : 'bg-verify-fail-bg text-verify-fail-fg'
                     }`}
                   >
                     {recommendation.claude_used ? 'Claude API 사용' : '규칙 기반 추천'}
                   </span>
                   {recommendation.claude_error && (
-                    <span className="text-micro text-[#A32D2D]">
+                    <span className="text-micro text-verify-fail-fg">
                       사유: {recommendation.claude_error}
                     </span>
                   )}
@@ -272,21 +272,21 @@ export default function TasksPage() {
               )}
             </div>
 
-            <div className="rounded-2xl bg-[#F8F8F5] px-4 py-3 text-right">
-              <p className="text-xs text-[#888780]">프로젝트 참여 인원</p>
-              <p className="text-2xl font-bold text-[#1A1A1A]">
+            <div className="rounded-2xl bg-background px-4 py-3 text-right">
+              <p className="text-xs text-text-subtle">프로젝트 참여 인원</p>
+              <p className="text-2xl font-bold text-text">
                 {loading ? '--' : participantCount}
               </p>
             </div>
           </div>
 
           {busy && (
-            <div className="rounded-2xl border border-[#AFA9EC] bg-[#EEEDFE] p-6 text-center">
-              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#D9D7FB] border-t-[#534AB7]" />
-              <p className="mt-4 text-sm font-medium text-[#26215C]">
+            <div className="rounded-2xl border border-brand bg-brand-soft p-6 text-center">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-brand-soft border-t-brand" />
+              <p className="mt-4 text-sm font-medium text-brand-hover">
                 업무 추천을 계산하는 중입니다
               </p>
-              <p className="mt-1 text-xs text-[#534AB7]">
+              <p className="mt-1 text-xs text-brand">
                 선택한 프로젝트 참여 인원의 업무량, 수행 이력, 프로젝트 유형 경험치를 반영합니다.
               </p>
             </div>
@@ -307,8 +307,8 @@ export default function TasksPage() {
                   key={candidate.user_id}
                   className={`rounded-xl border p-[13px] transition ${
                     candidate.rank === 1
-                      ? 'border-[#534AB7] bg-white'
-                      : 'border-[#AFA9EC] bg-white'
+                      ? 'border-brand bg-white'
+                      : 'border-brand bg-white'
                   }`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
@@ -317,29 +317,29 @@ export default function TasksPage() {
                         <div
                           className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-2 text-nano font-bold ${
                             candidate.rank === 1
-                              ? 'bg-[#534AB7] text-white'
-                              : 'bg-[#EEEDFE] text-[#534AB7]'
+                              ? 'bg-brand text-white'
+                              : 'bg-brand-soft text-brand'
                           }`}
                         >
                           {candidate.rank}
                         </div>
-                        <span className="rounded-full border border-[#D8D3FF] bg-[#F5F3FF] px-2.5 py-1 text-tiny font-bold text-[#534AB7]">
+                        <span className="rounded-full border border-brand-soft bg-brand-soft px-2.5 py-1 text-tiny font-bold text-brand">
                           {candidate.recommendation_source === 'claude'
                             ? 'Claude 추천'
                             : '규칙 기반'}
                         </span>
                       </div>
-                      <h3 className="text-body font-bold text-[#1A1A1A]">{candidate.name}</h3>
-                      <p className="mt-1 text-tiny text-[#888780]">
+                      <h3 className="text-body font-bold text-text">{candidate.name}</h3>
+                      <p className="mt-1 text-tiny text-text-subtle">
                         {candidate.position ? `${candidate.position} · ` : ''}
                         {candidate.role === 'admin' ? '관리자' : '구성원'} · 유사 업무{' '}
                         {candidate.keyword_experience_count}건 · 수행 이력{' '}
                         {candidate.history_experience_count}건
                       </p>
                     </div>
-                    <div className="rounded-2xl bg-[#FAFAFA] px-4 py-3 text-right">
-                      <p className="text-xs text-[#888780]">종합점수</p>
-                      <p className="text-2xl font-bold text-[#534AB7]">
+                    <div className="rounded-2xl bg-surface-muted px-4 py-3 text-right">
+                      <p className="text-xs text-text-subtle">종합점수</p>
+                      <p className="text-2xl font-bold text-brand">
                         {Math.round(candidate.score)}
                       </p>
                     </div>
@@ -351,16 +351,16 @@ export default function TasksPage() {
                     <MetricCard label="잔여 업무" value={`${candidate.remaining_minutes}분`} />
                   </div>
 
-                  <div className="mt-4 rounded-2xl bg-[#FAFAFA] p-4">
+                  <div className="mt-4 rounded-2xl bg-surface-muted p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-[#1A1A1A]">추천 이유</p>
-                      <span className="text-micro text-[#888780]">
+                      <p className="text-sm font-semibold text-text">추천 이유</p>
+                      <span className="text-micro text-text-subtle">
                         {candidate.recommendation_source === 'claude'
                           ? 'AI 생성 추천 이유'
                           : '규칙 기반 추천 이유'}
                       </span>
                     </div>
-                    <ul className="mt-2 space-y-2 text-micro text-[#5F5E5A]">
+                    <ul className="mt-2 space-y-2 text-micro text-text-muted">
                       {candidate.reasons.map((reason, index) => (
                         <li
                           key={`${candidate.user_id}-${index}`}
@@ -369,10 +369,10 @@ export default function TasksPage() {
                           <span
                             className={`mt-1 h-1 w-1 rounded-full ${
                               index === 0
-                                ? 'bg-[#534AB7]'
+                                ? 'bg-brand'
                                 : index === 1
-                                  ? 'bg-[#0F6E56]'
-                                  : 'bg-[#854F0B]'
+                                  ? 'bg-verify-pass-fg'
+                                  : 'bg-verify-warn-fg'
                             }`}
                           />
                           {reason}
@@ -385,7 +385,7 @@ export default function TasksPage() {
                     type="button"
                     disabled={assigningUserId !== null}
                     onClick={() => handleAssign(candidate)}
-                    className="mt-4 w-full rounded-lg bg-[#534AB7] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#433A9A] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mt-4 w-full rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {assigningUserId === candidate.user_id
                       ? '배정 적용 중...'
@@ -404,7 +404,7 @@ export default function TasksPage() {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-[#5F5E5A]">{label}</span>
+      <span className="mb-2 block text-sm font-medium text-text-muted">{label}</span>
       {children}
     </label>
   );
@@ -413,15 +413,15 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-white p-4">
-      <p className="text-xs text-[#888780]">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-[#1A1A1A]">{value}</p>
+      <p className="text-xs text-text-subtle">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-text">{value}</p>
     </div>
   );
 }
 
 function EmptyPanel({ text }: { text: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[#D3D1C7] bg-[#F8F8F5] px-6 py-12 text-center text-sm text-[#888780]">
+    <div className="rounded-2xl border border-dashed border-border-strong bg-background px-6 py-12 text-center text-sm text-text-subtle">
       {text}
     </div>
   );

@@ -9,11 +9,11 @@ type Props = {
 };
 
 const TONE: Record<NonNullable<Props['tone']>, string> = {
-  indigo: 'text-[#534AB7]',
-  emerald: 'text-[#3B6D11]',
-  amber: 'text-[#854F0B]',
-  rose: 'text-[#185FA5]',
-  slate: 'text-[#1A1A1A]',
+  indigo: 'text-brand',
+  emerald: 'text-verify-pass-fg',
+  amber: 'text-verify-warn-fg',
+  rose: 'text-verify-info-fg',
+  slate: 'text-text',
 };
 
 export default function KpiCard({
@@ -24,14 +24,14 @@ export default function KpiCard({
   loading,
 }: Props) {
   return (
-    <div className="rounded-xl border border-[#EAEAE4] bg-white px-[18px] py-4 shadow-sm">
-      <p className="text-nano font-bold uppercase tracking-[0.8px] text-[#888780]">
+    <div className="rounded-xl border border-border bg-white px-[18px] py-4 shadow-sm">
+      <p className="text-nano font-bold uppercase tracking-[0.8px] text-text-subtle">
         {label}
       </p>
       <p className={`mt-2 text-[26px] font-bold leading-none ${TONE[tone]}`}>
         {loading ? '--' : value}
       </p>
-      {hint && <p className="mt-[5px] text-tiny text-[#888780]">{hint}</p>}
+      {hint && <p className="mt-[5px] text-tiny text-text-subtle">{hint}</p>}
     </div>
   );
 }

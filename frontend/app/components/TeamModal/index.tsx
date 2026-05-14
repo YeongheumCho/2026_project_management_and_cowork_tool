@@ -227,7 +227,7 @@ export default function TeamModal({
         [FIELD_SCHEMA_NAME_KEY]: templateNameForType(inferredType, fieldSchemas),
       },
     }));
-  }, [fieldSchemas, initial, mode, open, projectType]);
+  }, [fieldSchemas, initial, mode, open, projectType, selectedProject?.id]);
 
   useEffect(() => {
     if (f.assigneeIds.length === 0) return;
@@ -388,7 +388,7 @@ export default function TeamModal({
       />
 
       {!isAdmin && (
-        <p className="mt-3 rounded-xl bg-[#FAEEDA] px-4 py-3 text-sm text-[#854F0B]">
+        <p className="mt-3 rounded-xl bg-verify-warn-bg px-4 py-3 text-sm text-verify-warn-fg">
           {TEXT.adminOnly}
         </p>
       )}
@@ -418,7 +418,7 @@ export default function TeamModal({
         />
 
         {error && (
-          <p className="rounded-xl bg-[#FCEBEB] px-4 py-3 text-sm text-[#A32D2D]">
+          <p className="rounded-xl bg-verify-fail-bg px-4 py-3 text-sm text-verify-fail-fg">
             {error}
           </p>
         )}

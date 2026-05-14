@@ -1,7 +1,6 @@
 'use client';
 
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import AppShell from '../../components/AppShell';
 import {
@@ -121,12 +120,6 @@ function ProjectDetailContent() {
 
   return (
     <AppShell me={me}>
-      <div className="mb-4">
-        <Link href="/projects" className="text-sm font-semibold text-brand hover:underline">
-          프로젝트 목록
-        </Link>
-      </div>
-
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text">{title}</h1>
         <p className="mt-1 text-xs text-text-subtle">{subtitle}</p>

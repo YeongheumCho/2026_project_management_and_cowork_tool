@@ -169,7 +169,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={busy}
-              className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-2xl bg-brand-hover px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? '저장 중...' : '설정 저장'}
             </button>

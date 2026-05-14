@@ -67,8 +67,8 @@ export default function ProgressLogModal({ open, subproject, onClose, onSaved }:
       setProgressPercent('');
       setComment('');
       setMessage('진행률 기록이 저장되었습니다.');
-      await loadLogs();
       await onSaved();
+      onClose();
     } catch (error) {
       setMessage((error as Error).message);
     } finally {

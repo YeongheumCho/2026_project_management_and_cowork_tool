@@ -124,10 +124,10 @@ export default function DatePicker({
                   aria-pressed={selected}
                   onClick={() => {
                     if (disabled) return;
-                                    onChange(iso);
+                    onChange(iso);
                     setOpen(false);
                   }}
-                  className={`rounded-md py-1 text-center text-small transition \${
+                  className={`rounded-md py-1 text-center text-small transition ${
                     selected
                       ? 'bg-brand font-bold text-white'
                       : disabled

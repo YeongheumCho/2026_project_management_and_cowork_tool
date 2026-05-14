@@ -200,6 +200,8 @@ export type ProjectHistoryEntry = {
   id: number;
   user_id: number;
   user_name: string;
+  major_project_id?: number | null;
+  major_project_name?: string | null;
   project_id: number | null;
   project_name: string;
   subproject_id: number | null;
