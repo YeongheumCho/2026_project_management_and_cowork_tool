@@ -23,6 +23,7 @@ def _empty_schema(project_type: str) -> ProjectFieldSchemaResponse:
         project_type=project_type,
         section_label="추가 정보",
         fields=[],
+        weight=5,
         created_by=None,
         updated_at=datetime.now(timezone.utc),
     )
@@ -71,12 +72,14 @@ def upsert_field_schema(
             project_type=project_type,
             section_label=payload.section_label,
             fields_json=fields_json,
+            weight=payload.weight,
             created_by=admin.id,
         )
         db.add(schema)
     else:
         schema.section_label = payload.section_label
         schema.fields_json = fields_json
+        schema.weight = payload.weight
 
     db.commit()
     db.refresh(schema)
@@ -101,6 +104,7 @@ def patch_field_schema(
                 [field.model_dump() for field in (payload.fields or [])],
                 ensure_ascii=False,
             ),
+            weight=payload.weight if payload.weight is not None else 5,
             created_by=admin.id,
         )
         db.add(schema)
@@ -111,6 +115,8 @@ def patch_field_schema(
             schema.fields_json = json.dumps(
                 [field.model_dump() for field in payload.fields], ensure_ascii=False
             )
+        if payload.weight is not None:
+            schema.weight = payload.weight
 
     db.commit()
     db.refresh(schema)

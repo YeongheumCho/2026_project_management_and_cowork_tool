@@ -135,6 +135,8 @@ export type SubProject = {
   etc_days?: number | null;
   etc_note?: string | null;
 
+  weight?: number | null;
+
   custom_fields?: Record<string, unknown> | null;
 };
 
@@ -383,6 +385,7 @@ export type ProjectFieldSchema = {
   project_type: ProjectType | string;
   section_label: string;
   fields: FieldDefinition[];
+  weight: number;
   created_by: number | null;
   updated_at: string;
 };
@@ -481,6 +484,7 @@ export const DEFAULT_PROJECT_FIELD_SCHEMAS: Record<string, ProjectFieldSchema> =
     project_type: 'general',
     section_label: '추가 정보',
     fields: [],
+    weight: 5,
     created_by: null,
     updated_at: '',
   },
@@ -489,6 +493,7 @@ export const DEFAULT_PROJECT_FIELD_SCHEMAS: Record<string, ProjectFieldSchema> =
     project_type: 'official_inspection',
     section_label: '공식 검증 정보',
     fields: inspectionFields,
+    weight: 5,
     created_by: null,
     updated_at: '',
   },
@@ -497,6 +502,7 @@ export const DEFAULT_PROJECT_FIELD_SCHEMAS: Record<string, ProjectFieldSchema> =
     project_type: 'regular_inspection',
     section_label: '검증 정보',
     fields: inspectionFields.filter((item) => item.key !== 'priority'),
+    weight: 5,
     created_by: null,
     updated_at: '',
   },
@@ -512,6 +518,7 @@ export const DEFAULT_PROJECT_FIELD_SCHEMAS: Record<string, ProjectFieldSchema> =
       field(103, 'change_revalidate_min', '재검증(분)', 'number'),
       field(104, 'lin_std_hold_note', 'LIN/STD/HOLD/FAIL 메모', 'textarea'),
     ].map((item, order) => ({ ...item, order })),
+    weight: 5,
     created_by: null,
     updated_at: '',
   },
@@ -525,6 +532,7 @@ export const DEFAULT_PROJECT_FIELD_SCHEMAS: Record<string, ProjectFieldSchema> =
       field(2, 'etc_days', '소요일(DAY)', 'number'),
       field(3, 'etc_note', '비고 / 상세', 'textarea'),
     ],
+    weight: 5,
     created_by: null,
     updated_at: '',
   },
@@ -536,6 +544,7 @@ export function emptyFieldSchema(project_type: string): ProjectFieldSchema {
     project_type,
     section_label: '추가 정보',
     fields: [],
+    weight: 5,
     created_by: null,
     updated_at: new Date().toISOString(),
   };

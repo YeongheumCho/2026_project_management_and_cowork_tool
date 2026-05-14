@@ -103,6 +103,7 @@ class ProjectFieldSchema(Base):
         String(100), nullable=False, default="추가 정보"
     )
     fields_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    weight: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

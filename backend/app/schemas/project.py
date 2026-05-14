@@ -329,6 +329,9 @@ class _SubProjectKeficoFields(BaseModel):
     etc_days: Optional[float] = Field(default=None, ge=0)
     etc_note: Optional[str] = None
 
+    # 가중치 (1~10, 템플릿에서 상속)
+    weight: Optional[int] = Field(default=None, ge=1, le=10)
+
     # 커스텀 필드 (자유 형식)
     custom_fields: Optional[dict[str, Any]] = None
 
@@ -437,6 +440,8 @@ class SubProjectResponse(BaseModel):
     etc_month: Optional[str] = None
     etc_days: Optional[float] = None
     etc_note: Optional[str] = None
+
+    weight: Optional[int] = None
 
     custom_fields: Optional[dict[str, Any]] = None
 

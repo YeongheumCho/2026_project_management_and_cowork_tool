@@ -55,6 +55,8 @@ export function buildSubProjectPayload(f: FormState) {
     etc_days: numOrUndef(f.etcDays) ?? null,
     etc_note: strOrNull(f.etcNote),
 
+    weight: f.weight === '' ? null : f.weight,
+
     custom_fields:
       Object.keys(f.customFields).length > 0
         ? Object.fromEntries(

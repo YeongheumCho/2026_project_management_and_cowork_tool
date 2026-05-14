@@ -59,6 +59,9 @@ export type FormState = {
   etcDays: string;
   etcNote: string;
 
+  // 가중치 (1~10, 템플릿에서 상속)
+  weight: number | '';
+
   // 커스텀 필드 (프로젝트 유형별 동적 필드)
   customFields: Record<string, string>;
 };
@@ -106,6 +109,7 @@ export const EMPTY_FORM: FormState = {
   etcMonth: '',
   etcDays: '',
   etcNote: '',
+  weight: '',
   customFields: {},
 };
 
@@ -163,6 +167,7 @@ export function fromSubProject(sp: SubProject): FormState {
     etcMonth: sp.etc_month ?? '',
     etcDays: sp.etc_days != null ? String(sp.etc_days) : '',
     etcNote: sp.etc_note ?? '',
+    weight: sp.weight != null ? sp.weight : '',
     customFields: sp.custom_fields
       ? Object.fromEntries(
           Object.entries(sp.custom_fields).map(([k, v]) => [k, String(v ?? '')])

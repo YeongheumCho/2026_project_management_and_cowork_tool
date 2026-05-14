@@ -73,6 +73,7 @@ export default function TemplateManager() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [templateName, setTemplateName] = useState('');
+  const [templateWeight, setTemplateWeight] = useState<number>(5);
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [reuseSourceKey, setReuseSourceKey] = useState('');
 
@@ -130,6 +131,7 @@ export default function TemplateManager() {
   useEffect(() => {
     const schema = activeKey ? schemas[activeKey] : null;
     setTemplateName(schema?.section_label ?? '');
+    setTemplateWeight(schema?.weight ?? 5);
     setFields(schema ? cloneFields(schema.fields) : []);
     setError('');
     setMessage('');
@@ -232,6 +234,7 @@ export default function TemplateManager() {
       project_type: key,
       section_label: '새 템플릿',
       fields: cloneFields(base.fields),
+      weight: 5,
       created_by: null,
       updated_at: new Date().toISOString(),
     };
@@ -252,6 +255,7 @@ export default function TemplateManager() {
       project_type: key,
       section_label: copiedName,
       fields: cloneFields(source.fields),
+      weight: source.weight ?? 5,
       created_by: null,
       updated_at: new Date().toISOString(),
     };
@@ -270,6 +274,10 @@ export default function TemplateManager() {
 
     if (!name) {
       setError('템플릿 이름을 입력해주세요.');
+      return;
+    }
+    if (templateWeight < 1 || templateWeight > 10) {
+      setError('가중치는 1에서 10 사이의 값이어야 합니다.');
       return;
     }
     if (
@@ -305,6 +313,7 @@ export default function TemplateManager() {
             project_type: activeKey,
             section_label: name,
             fields: normalizedFields,
+            weight: templateWeight,
           }),
         },
       );
@@ -478,7 +487,10 @@ export default function TemplateManager() {
                     >
                       {schema.section_label}
                       <span className="ml-1.5 rounded-full bg-white/30 px-1.5 py-0.5 text-[10px]">
-                        {schema.fields.length}
+                        필드 {schema.fields.length}
+                      </span>
+                      <span className="ml-1 rounded-full bg-white/30 px-1.5 py-0.5 text-[10px]">
+                        가중치 {schema.weight ?? 5}
                       </span>
                     </button>
                   ))
@@ -490,17 +502,33 @@ export default function TemplateManager() {
               <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
                 <div className="space-y-5">
                   <div className="flex flex-wrap items-end justify-between gap-3">
-                    <label className="block min-w-[240px] max-w-sm flex-1">
-                      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
-                        템플릿 이름
-                      </span>
-                      <input
-                        value={templateName}
-                        onChange={(event) => setTemplateName(event.target.value)}
-                        className="input w-full"
-                        placeholder="예: 검증 정보"
-                      />
-                    </label>
+                    <div className="flex flex-wrap gap-3 flex-1">
+                      <label className="block min-w-[240px] max-w-sm flex-1">
+                        <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
+                          템플릿 이름 <span className="text-red-500">*</span>
+                        </span>
+                        <input
+                          value={templateName}
+                          onChange={(event) => setTemplateName(event.target.value)}
+                          className="input w-full"
+                          placeholder="예: 검증 정보"
+                        />
+                      </label>
+                      <label className="block w-[130px]">
+                        <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-[#888780]">
+                          가중치 (1~10) <span className="text-red-500">*</span>
+                        </span>
+                        <select
+                          value={templateWeight}
+                          onChange={(event) => setTemplateWeight(Number(event.target.value))}
+                          className="input w-full"
+                        >
+                          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                            <option key={n} value={n}>{n}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
                     <button
                       type="button"
                       onClick={resetToProjectDefault}
