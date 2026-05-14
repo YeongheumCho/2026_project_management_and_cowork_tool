@@ -28,6 +28,9 @@ jobs:
   backend:
     name: Backend (pytest)
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: sqlite:///./test.db
+      SECRET_KEY: ci-test-secret-key
     defaults:
       run:
         working-directory: backend

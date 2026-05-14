@@ -440,7 +440,9 @@ def _estimate_worked_minutes(db: Session, subproject_id: int, assignee_id: int |
         total_seconds += log.duration_sec
         if log.status == WORKLOG_RUNNING and log.current_started_at:
             total_seconds += max(0, int((now - log.current_started_at).total_seconds()))
-    return max(0, total_seconds // 60)
+    if total_seconds <= 0:
+        return 0
+    return max(1, (total_seconds + 59) // 60)
 
 
 def _build_history_keywords(project: Project, subproject: SubProject) -> str:
