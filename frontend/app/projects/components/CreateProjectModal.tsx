@@ -6,6 +6,7 @@ import OrganizationMemberPicker from '../../components/OrganizationMemberPicker'
 import {
   apiFetch,
   PROJECT_TYPE_LABEL,
+  PROJECT_TYPE_OPTIONS,
   type MajorProject,
   type Project,
   type ProjectType,
@@ -21,14 +22,6 @@ type Props = {
   onCreated: (project: Project) => Promise<void> | void;
   onError: (message: string) => void;
 };
-
-const PROJECT_TYPE_OPTIONS: ProjectType[] = [
-  'official_inspection',
-  'regular_inspection',
-  'change_inspection',
-  'etc_task',
-  'general',
-];
 
 export default function CreateProjectModal({
   open,
@@ -51,6 +44,20 @@ export default function CreateProjectModal({
     [majorProjectId, majorProjects],
   );
   const selectableUsers = selectedMajorProject?.members ?? [];
+  const availableProjectTypes = useMemo(
+    () =>
+      selectedMajorProject?.project_types?.length
+        ? selectedMajorProject.project_types
+        : PROJECT_TYPE_OPTIONS,
+    [selectedMajorProject],
+  );
+
+  useEffect(() => {
+    if (!open || !availableProjectTypes.length) return;
+    if (!availableProjectTypes.includes(type)) {
+      setType(availableProjectTypes[0]);
+    }
+  }, [availableProjectTypes, open, type]);
 
   const disabled = useMemo(
     () =>
@@ -76,7 +83,7 @@ export default function CreateProjectModal({
 
   function reset() {
     setName('');
-    setType('official_inspection');
+    setType(availableProjectTypes[0] ?? 'general');
     setMajorProjectId(majorProjects[0]?.id ?? '');
     setStartDate(defaultDate ?? '');
     setEndDate(defaultDate ?? '');
@@ -178,9 +185,9 @@ export default function CreateProjectModal({
             onChange={(event) => setType(event.target.value as ProjectType)}
             className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
           >
-            {PROJECT_TYPE_OPTIONS.map((option) => (
+            {availableProjectTypes.map((option) => (
               <option key={option} value={option}>
-                {PROJECT_TYPE_LABEL[option]}
+                {PROJECT_TYPE_LABEL[option] ?? option}
               </option>
             ))}
           </select>

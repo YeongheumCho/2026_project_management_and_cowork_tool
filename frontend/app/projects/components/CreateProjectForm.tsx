@@ -5,6 +5,7 @@ import OrganizationMemberPicker from '../../components/OrganizationMemberPicker'
 import {
   apiFetch,
   PROJECT_TYPE_LABEL,
+  PROJECT_TYPE_OPTIONS,
   type MajorProject,
   type Project,
   type ProjectType,
@@ -18,14 +19,6 @@ type Props = {
   onCreated: (project: Project) => void;
   onError: (msg: string) => void;
 };
-
-const PROJECT_TYPE_OPTIONS: ProjectType[] = [
-  'official_inspection',
-  'regular_inspection',
-  'change_inspection',
-  'etc_task',
-  'general',
-];
 
 const controlClass =
   'mt-1 h-10 w-full rounded-lg border border-border px-3 py-2 text-sm';
@@ -49,6 +42,19 @@ export default function CreateProjectForm({ users, majorProjects, onCreated, onE
     [majorProjectId, majorProjects],
   );
   const selectableUsers = selectedMajorProject?.members ?? [];
+  const availableProjectTypes = useMemo(
+    () =>
+      selectedMajorProject?.project_types?.length
+        ? selectedMajorProject.project_types
+        : PROJECT_TYPE_OPTIONS,
+    [selectedMajorProject],
+  );
+
+  useEffect(() => {
+    if (!availableProjectTypes.includes(type)) {
+      setType(availableProjectTypes[0] ?? 'general');
+    }
+  }, [availableProjectTypes, type]);
 
   const disabled = useMemo(
     () =>
@@ -78,7 +84,7 @@ export default function CreateProjectForm({ users, majorProjects, onCreated, onE
       });
       setName('');
       setMajorProjectId(initialMajorProjectId);
-      setType('official_inspection');
+      setType(availableProjectTypes[0] ?? 'general');
       setStartDate('');
       setEndDate('');
       setParticipantIds([]);
@@ -96,7 +102,7 @@ export default function CreateProjectForm({ users, majorProjects, onCreated, onE
       className="mb-6 rounded-2xl border border-border bg-white p-4 shadow-sm"
     >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-        <div className="grid content-center gap-3 sm:grid-cols-2 lg:h-[292px]">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label="프로젝트 이름" span>
             <input
               value={name}
@@ -131,9 +137,9 @@ export default function CreateProjectForm({ users, majorProjects, onCreated, onE
               onChange={(event) => setType(event.target.value as ProjectType)}
               className={controlClass}
             >
-              {PROJECT_TYPE_OPTIONS.map((option) => (
+              {availableProjectTypes.map((option) => (
                 <option key={option} value={option}>
-                  {PROJECT_TYPE_LABEL[option]}
+                  {PROJECT_TYPE_LABEL[option] ?? option}
                 </option>
               ))}
             </select>
@@ -158,7 +164,7 @@ export default function CreateProjectForm({ users, majorProjects, onCreated, onE
           </div>
         </div>
 
-        <div className="flex min-h-[292px] flex-col overflow-hidden rounded-2xl border border-border bg-surface-muted p-3 lg:h-[292px]">
+        <div className="flex h-[292px] min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface-muted p-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-medium text-text">프로젝트 참여 인원</p>
             <span className="text-xs text-text-subtle">

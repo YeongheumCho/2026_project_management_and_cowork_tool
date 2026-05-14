@@ -10,13 +10,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
-ProjectType = Literal[
-    "general",
-    "official_inspection",
-    "regular_inspection",
-    "change_inspection",
-    "etc_task",
-]
+ProjectType = str
 
 VerifyState = Literal[
     "not_started",
@@ -61,9 +55,33 @@ class MajorProjectBrief(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     kickoff_date: date | None = None
+    project_types: list[str] = Field(default_factory=list)
     is_default: bool = False
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("project_types", mode="before")
+    @classmethod
+    def _parse_project_types(cls, value: Any) -> list[str]:
+        fallback = [
+            "official_inspection",
+            "regular_inspection",
+            "change_inspection",
+            "etc_task",
+            "general",
+        ]
+        if value is None:
+            return fallback
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except json.JSONDecodeError:
+                return fallback
+            value = parsed
+        if not isinstance(value, list):
+            return fallback
+        result = [item.strip() for item in value if isinstance(item, str) and item.strip()]
+        return list(dict.fromkeys(result)) or fallback
 
 
 class MajorProjectCreate(BaseModel):
@@ -71,6 +89,13 @@ class MajorProjectCreate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     kickoff_date: date | None = None
+    project_types: list[str] = Field(default_factory=lambda: [
+        "official_inspection",
+        "regular_inspection",
+        "change_inspection",
+        "etc_task",
+        "general",
+    ])
     member_ids: list[int] = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -78,6 +103,14 @@ class MajorProjectCreate(BaseModel):
         if self.start_date is not None and self.end_date is not None and self.end_date < self.start_date:
             raise ValueError("종료일은 시작일 이후여야 합니다")
         return self
+
+    @field_validator("project_types")
+    @classmethod
+    def _check_project_types(cls, value: list[str]) -> list[str]:
+        unique = list(dict.fromkeys(item.strip() for item in value if item.strip()))
+        if not unique:
+            raise ValueError("프로젝트 유형을 1개 이상 선택해주세요.")
+        return unique
 
 
 class MajorProjectUpdate(MajorProjectCreate):

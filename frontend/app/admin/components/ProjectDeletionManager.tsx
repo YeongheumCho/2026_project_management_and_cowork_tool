@@ -69,7 +69,7 @@ export default function ProjectDeletionManager({ enabled }: Props) {
             프로젝트 삭제 관리
           </h3>
           <p className="mt-1 text-small text-[#888780]">
-            개별 프로젝트 삭제를 한곳에서 처리합니다.
+            대프로젝트에 속한 개별 프로젝트 삭제를 한 곳에서 처리합니다.
           </p>
         </div>
       </div>
