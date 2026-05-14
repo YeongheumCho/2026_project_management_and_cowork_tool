@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import type { Project, SubProject, UserBrief } from '../../lib/api';
+import type { MajorProject, Project, SubProject, UserBrief } from '../../lib/api';
 import { colorForId, colorForPosition } from './colors';
 import { compactPosition } from '../../lib/display';
 import {
@@ -15,6 +15,7 @@ import {
 } from './groupUsersByTeam';
 
 type Props = {
+  majorProjects: MajorProject[];
   projects: Project[];
   subprojects: SubProject[];
   users: UserBrief[];
@@ -26,6 +27,7 @@ type Props = {
 };
 
 export default function Sidebar({
+  majorProjects,
   projects,
   subprojects,
   users,
@@ -48,6 +50,54 @@ export default function Sidebar({
     }
     return grouped;
   }, [subprojects]);
+
+  const projectTree = useMemo(() => {
+    const majorById = new Map<number, MajorProject>();
+    for (const majorProject of majorProjects) {
+      majorById.set(majorProject.id, majorProject);
+    }
+
+    const grouped = new Map<number, { majorProject: MajorProject; projects: Project[] }>();
+    for (const majorProject of majorProjects) {
+      grouped.set(majorProject.id, { majorProject, projects: [] });
+    }
+
+    for (const project of projects) {
+      const majorProjectId = project.major_project_id ?? project.major_project?.id;
+      if (majorProjectId == null) continue;
+
+      let majorProject = majorById.get(majorProjectId);
+      if (!majorProject && project.major_project) {
+        majorProject = {
+          ...project.major_project,
+          members: project.participants,
+          project_count: 0,
+          created_at: project.created_at,
+        };
+      }
+      if (!majorProject) continue;
+
+      const bucket = grouped.get(majorProjectId) ?? { majorProject, projects: [] };
+      bucket.projects.push(project);
+      grouped.set(majorProjectId, bucket);
+    }
+
+    return Array.from(grouped.values())
+      .map((bucket) => ({
+        ...bucket,
+        projects: bucket.projects.sort((left, right) =>
+          left.created_at.localeCompare(right.created_at),
+        ),
+      }))
+      .filter((bucket) => bucket.projects.length > 0)
+      .sort((left, right) => {
+        if (left.majorProject.is_default !== right.majorProject.is_default) {
+          return left.majorProject.is_default ? 1 : -1;
+        }
+        return left.majorProject.name.localeCompare(right.majorProject.name, 'ko');
+      });
+  }, [majorProjects, projects]);
+
   const subprojectsByMember = useMemo(() => {
     const grouped = new Map<number, SubProject[]>();
     for (const subproject of subprojects) {
@@ -65,6 +115,7 @@ export default function Sidebar({
   const [expanded, setExpanded] = useState<Set<string>>(() =>
     initialExpandedKeys(groups, myTeam),
   );
+  const [expandedMajorProjects, setExpandedMajorProjects] = useState<Set<number>>(new Set());
   const [expandedProjects, setExpandedProjects] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -73,6 +124,18 @@ export default function Sidebar({
       return initialExpandedKeys(groups, myTeam);
     });
   }, [groups, myTeam]);
+
+  useEffect(() => {
+    if (projectTree.length === 0) return;
+    setExpandedMajorProjects((current) => {
+      if (current.size > 0) return current;
+      return new Set(projectTree.map((item) => item.majorProject.id));
+    });
+    setExpandedProjects((current) => {
+      if (current.size > 0) return current;
+      return new Set(projectTree.flatMap((item) => item.projects.map((project) => project.id)));
+    });
+  }, [projectTree]);
 
   useEffect(() => {
     if (selectedMemberId == null) return;
@@ -111,22 +174,34 @@ export default function Sidebar({
     onProjectSelect?.(projectId);
   };
 
+  const toggleMajorProject = (majorProjectId: number) => {
+    setExpandedMajorProjects((current) => {
+      const next = new Set(current);
+      if (next.has(majorProjectId)) next.delete(majorProjectId);
+      else next.add(majorProjectId);
+      return next;
+    });
+  };
+
   return (
     <aside className="hidden w-[240px] shrink-0 border-r border-border bg-surface lg:block">
       <div className="h-full overflow-y-auto px-2.5 py-3.5">
         <Section title="프로젝트">
-          {projects.length === 0 ? (
+          {projectTree.length === 0 ? (
             <EmptyHint text="아직 프로젝트가 없습니다." />
           ) : (
             <ul className="space-y-1">
-              {projects.map((project) => (
-                <li key={project.id}>
-                  <ProjectItem
-                    project={project}
-                    subprojects={subprojectsByProject.get(project.id) ?? []}
-                    expanded={expandedProjects.has(project.id)}
-                    selected={selectedProjectId === project.id}
-                    onToggle={() => toggleProject(project.id)}
+              {projectTree.map(({ majorProject, projects: childProjects }) => (
+                <li key={majorProject.id}>
+                  <MajorProjectItem
+                    majorProject={majorProject}
+                    projects={childProjects}
+                    subprojectsByProject={subprojectsByProject}
+                    expandedMajorProjects={expandedMajorProjects}
+                    expandedProjects={expandedProjects}
+                    selectedProjectId={selectedProjectId}
+                    onToggleMajor={() => toggleMajorProject(majorProject.id)}
+                    onToggleProject={toggleProject}
                   />
                 </li>
               ))}
@@ -396,6 +471,67 @@ function MemberList({
         </li>
       ))}
     </ul>
+  );
+}
+
+function MajorProjectItem({
+  majorProject,
+  projects,
+  subprojectsByProject,
+  expandedMajorProjects,
+  expandedProjects,
+  selectedProjectId,
+  onToggleMajor,
+  onToggleProject,
+}: {
+  majorProject: MajorProject;
+  projects: Project[];
+  subprojectsByProject: Map<number, SubProject[]>;
+  expandedMajorProjects: Set<number>;
+  expandedProjects: Set<number>;
+  selectedProjectId?: number | null;
+  onToggleMajor: () => void;
+  onToggleProject: (projectId: number) => void;
+}) {
+  const expanded = expandedMajorProjects.has(majorProject.id);
+  const subprojectCount = projects.reduce(
+    (sum, project) => sum + (subprojectsByProject.get(project.id)?.length ?? 0),
+    0,
+  );
+
+  return (
+    <div>
+      <button type="button" onClick={onToggleMajor} className={itemClass(expanded)}>
+        <span
+          className={`inline-block text-nano text-text-subtle transition-transform ${
+            expanded ? 'rotate-90' : ''
+          }`}
+          aria-hidden
+        >
+          ??
+        </span>
+        <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${colorForId(majorProject.id)}`} />
+        <span className="truncate">{majorProject.name}</span>
+        <span className="ml-auto shrink-0 text-tiny text-text-faint">
+          {projects.length}/{subprojectCount}
+        </span>
+      </button>
+      {expanded && (
+        <ul className="ml-3 mt-0.5 space-y-0.5 border-l border-border-subtle pl-2">
+          {projects.map((project) => (
+            <li key={project.id}>
+              <ProjectItem
+                project={project}
+                subprojects={subprojectsByProject.get(project.id) ?? []}
+                expanded={expandedProjects.has(project.id)}
+                selected={selectedProjectId === project.id}
+                onToggle={() => onToggleProject(project.id)}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

@@ -2,12 +2,21 @@
 
 import { type ChangeEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../../components/Modal';
-import { apiFetch, type Project, type SubProject, type UserBrief } from '../../lib/api';
+import {
+  apiFetch,
+  type Project,
+  type SubProject,
+  type UserBrief,
+  type VerificationLevel,
+} from '../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 
 type ParsedRow = {
   function_name: string;
   avg_expected_minutes: number | null;
+  assignee_name: string;
+  assignee_id: number | null;
+  verification_level: VerificationLevel | null;
   error: string | null;
 };
 
@@ -31,6 +40,26 @@ const MINUTE_HEADERS = [
   'avg_expected_minutes',
   'minutes',
 ];
+const ASSIGNEE_HEADERS = ['담당자', '담당자명', 'assignee', 'assignee_name'];
+const LEVEL_HEADERS = [
+  'Lv',
+  'LV',
+  'level',
+  '검증Lv',
+  '검증LV',
+  '검증Level',
+  '검증LEVEL',
+  'verification_level',
+];
+const LEVEL_ALIASES: Record<string, VerificationLevel> = {
+  basic: 'basic',
+  기초: 'basic',
+  lv1: 'LV1',
+  lv2: 'LV2',
+  bsw: 'BSW',
+  lv3: 'LV3',
+  lv4: 'LV4',
+};
 
 function parseCsvLine(line: string): string[] {
   const cols: string[] = [];
@@ -78,7 +107,13 @@ function parseMinutes(raw: string): number | null {
   return value;
 }
 
-function parseCsv(text: string): ParsedRow[] {
+function normalizeLevel(raw: string): VerificationLevel | null {
+  const key = raw.trim().replace(/\s+/g, '').toLowerCase();
+  if (!key) return null;
+  return LEVEL_ALIASES[key] ?? null;
+}
+
+function parseCsv(text: string, assigneeOptions: UserBrief[]): ParsedRow[] {
   const lines = text
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -88,19 +123,33 @@ function parseCsv(text: string): ParsedRow[] {
   const headers = parseCsvLine(lines[0]);
   const functionIndex = findHeaderIndex(headers, FUNCTION_HEADERS);
   const minuteIndex = findHeaderIndex(headers, MINUTE_HEADERS);
+  const assigneeIndex = findHeaderIndex(headers, ASSIGNEE_HEADERS);
+  const levelIndex = findHeaderIndex(headers, LEVEL_HEADERS);
 
   return lines.slice(1).map((line) => {
     const cols = parseCsvLine(line);
     const functionName = (cols[functionIndex >= 0 ? functionIndex : 0] ?? '').trim();
     const minutes = parseMinutes(cols[minuteIndex >= 0 ? minuteIndex : 1] ?? '');
+    const assigneeName = (cols[assigneeIndex >= 0 ? assigneeIndex : 2] ?? '').trim();
+    const levelRaw = cols[levelIndex >= 0 ? levelIndex : 3] ?? '';
+    const assigneeMatches = assigneeOptions.filter((user) => user.name.trim() === assigneeName);
+    const verificationLevel = normalizeLevel(levelRaw);
     const errors: string[] = [];
 
     if (!functionName) errors.push('기능명 누락');
     if (minutes === null) errors.push('평균 소요 시간은 1분 이상의 정수로 입력');
+    if (!assigneeName) errors.push('담당자 누락');
+    else if (assigneeMatches.length === 0) errors.push(`담당자 없음: ${assigneeName}`);
+    else if (assigneeMatches.length > 1) errors.push(`동명이인 담당자: ${assigneeName}`);
+    if (!levelRaw.trim()) errors.push('Lv 누락');
+    else if (verificationLevel === null) errors.push(`Lv 값 오류: ${levelRaw}`);
 
     return {
       function_name: functionName,
       avg_expected_minutes: minutes,
+      assignee_name: assigneeName,
+      assignee_id: assigneeMatches.length === 1 ? assigneeMatches[0].id : null,
+      verification_level: verificationLevel,
       error: errors.length > 0 ? errors.join(', ') : null,
     };
   });
@@ -122,7 +171,6 @@ export default function CsvImportModal({
   const [results, setResults] = useState<ResultRow[] | null>(null);
   const [importing, setImporting] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [defaultAssigneeId, setDefaultAssigneeId] = useState<number | ''>('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -131,21 +179,13 @@ export default function CsvImportModal({
     return participants.length > 0 ? participants : users;
   }, [project?.participants, users]);
 
-  const defaultAssignee = assigneeOptions.find((user) => user.id === defaultAssigneeId) ?? null;
   const validRows = rows.filter((row) => row.error === null);
   const invalidRows = rows.filter((row) => row.error !== null);
-  const hasInvalidDefaults =
-    !project ||
-    defaultAssigneeId === '' ||
-    !startDate ||
-    !endDate ||
-    endDate < startDate;
+  const hasInvalidDefaults = !project || !startDate || !endDate || endDate < startDate;
   const canImport = validRows.length > 0 && !hasInvalidDefaults && !importing;
 
   useEffect(() => {
     if (!open) return;
-    const firstAssignee = (project?.participants?.length ? project.participants : users)[0];
-    setDefaultAssigneeId(firstAssignee?.id ?? '');
     setStartDate(project?.start_date ?? '');
     setEndDate(project?.end_date ?? '');
   }, [open, project, users]);
@@ -164,10 +204,10 @@ export default function CsvImportModal({
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = (ev.target?.result as string) ?? '';
-      const parsed = parseCsv(text);
+      const parsed = parseCsv(text, assigneeOptions);
       setRows(parsed);
       if (parsed.length === 0) {
-        setFileError('불러온 행이 없습니다. 기능명과 평균소요시간(분) 컬럼을 확인해주세요.');
+        setFileError('불러온 행이 없습니다. 기능명, 평균소요시간(분), 담당자, Lv 컬럼을 확인해주세요.');
       }
     };
     reader.readAsText(file, 'UTF-8');
@@ -175,7 +215,6 @@ export default function CsvImportModal({
 
   const handleImport = async () => {
     if (!project || !canImport) return;
-    const assigneeId = Number(defaultAssigneeId);
     setImporting(true);
 
     const resultList: ResultRow[] = [];
@@ -193,9 +232,10 @@ export default function CsvImportModal({
             name: row.function_name,
             function_name: row.function_name,
             avg_expected_minutes: row.avg_expected_minutes,
+            verification_level: row.verification_level,
             start_date: startDate,
             end_date: endDate,
-            assignee_ids: [assigneeId],
+            assignee_ids: row.assignee_id === null ? [] : [row.assignee_id],
           }),
         });
         resultList.push({ ...row, status: 'ok', detail: '등록 완료' });
@@ -219,7 +259,6 @@ export default function CsvImportModal({
     setRows([]);
     setResults(null);
     setFileError(null);
-    setDefaultAssigneeId('');
     setStartDate('');
     setEndDate('');
     if (fileRef.current) fileRef.current.value = '';
@@ -227,12 +266,12 @@ export default function CsvImportModal({
   };
 
   const downloadSample = () => {
-    const csv = '\uFEFF기능명,평균소요시간(분)\nTST+RGR,120\n02_Diagnosis,90\n';
+    const csv = '\uFEFF기능명,평균소요시간(분),담당자,Lv\nTST+RGR,120,홍길동,LV2\n02_Diagnosis,90,김철수,LV3\n';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = '검증기능_평균소요시간_일괄등록.csv';
+    a.download = '검증기능_담당자_Lv_일괄등록.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -245,30 +284,11 @@ export default function CsvImportModal({
             CSV로 검증 기능 일괄 등록
           </h2>
           <p className="mt-1 text-micro text-[#888780]">
-            CSV에는 검증할 기능명과 평균 소요 시간만 입력하고, 담당자와 기간은 아래 기본값으로 일괄 적용합니다.
+            CSV에는 검증할 기능명, 평균 소요 시간, 담당자, Lv를 입력하고 기간은 아래 기본값으로 일괄 적용합니다.
           </p>
         </div>
 
-        <div className="grid gap-3 rounded-[14px] border border-[#EAEAE4] bg-[#FAFAF7] p-4 md:grid-cols-[1.4fr_1fr_1fr]">
-          <label className="block text-micro font-semibold text-[#5F5E5A]">
-            기본 담당자
-            <select
-              value={defaultAssigneeId}
-              onChange={(event) => setDefaultAssigneeId(Number(event.target.value))}
-              className="mt-1 h-9 w-full rounded-[10px] border border-[#DDDAD0] bg-white px-3 text-small text-[#1A1A1A] outline-none focus:border-[#534AB7]"
-            >
-              {assigneeOptions.length === 0 ? (
-                <option value="">선택 가능한 담당자 없음</option>
-              ) : (
-                assigneeOptions.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {formatPerson(user)}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-
+        <div className="grid gap-3 rounded-[14px] border border-[#EAEAE4] bg-[#FAFAF7] p-4 md:grid-cols-2">
           <DateField label="기본 시작일" value={startDate} onChange={setStartDate} />
           <DateField label="기본 종료일" value={endDate} onChange={setEndDate} />
         </div>
@@ -292,7 +312,7 @@ export default function CsvImportModal({
             양식 다운로드
           </button>
           <p className="text-micro text-[#888780]">
-            컬럼: 기능명 / 평균소요시간(분)
+            컬럼: 기능명 / 평균소요시간(분) / 담당자 / Lv
           </p>
         </div>
 
@@ -300,7 +320,7 @@ export default function CsvImportModal({
 
         {hasInvalidDefaults && (
           <p className="rounded-[12px] bg-[#FFF7E8] px-4 py-2 text-micro text-[#9A6400]">
-            기본 담당자와 시작일, 종료일을 확인해야 일괄 등록할 수 있습니다.
+            시작일과 종료일을 확인해야 일괄 등록할 수 있습니다.
           </p>
         )}
 
@@ -309,7 +329,6 @@ export default function CsvImportModal({
             <ImportSummary total={rows.length} valid={validRows.length} invalid={invalidRows.length} />
             <PreviewTable
               rows={rows}
-              defaultAssigneeName={defaultAssignee?.name ?? '-'}
               period={startDate && endDate ? `${startDate} ~ ${endDate}` : '-'}
             />
             {validRows.length > 0 && (
@@ -388,11 +407,9 @@ function ImportSummary({ total, valid, invalid }: { total: number; valid: number
 
 function PreviewTable({
   rows,
-  defaultAssigneeName,
   period,
 }: {
   rows: ParsedRow[];
-  defaultAssigneeName: string;
   period: string;
 }) {
   return (
@@ -403,7 +420,8 @@ function PreviewTable({
             <TableHead>#</TableHead>
             <TableHead>검증 기능</TableHead>
             <TableHead>평균 소요(분)</TableHead>
-            <TableHead>기본 담당자</TableHead>
+            <TableHead>담당자</TableHead>
+            <TableHead>Lv</TableHead>
             <TableHead>기간</TableHead>
             <TableHead>상태</TableHead>
           </tr>
@@ -414,7 +432,8 @@ function PreviewTable({
               <TableCell muted>{index + 1}</TableCell>
               <TableCell strong>{row.function_name || '-'}</TableCell>
               <TableCell>{row.avg_expected_minutes ?? '-'}</TableCell>
-              <TableCell>{defaultAssigneeName}</TableCell>
+              <TableCell>{row.assignee_name || '-'}</TableCell>
+              <TableCell>{row.verification_level ?? '-'}</TableCell>
               <TableCell>{period}</TableCell>
               <TableCell>
                 {row.error ? (
@@ -451,6 +470,8 @@ function ResultTable({ results }: { results: ResultRow[] }) {
             <TableHead>#</TableHead>
             <TableHead>검증 기능</TableHead>
             <TableHead>평균 소요(분)</TableHead>
+            <TableHead>담당자</TableHead>
+            <TableHead>Lv</TableHead>
             <TableHead>결과</TableHead>
           </tr>
         </thead>
@@ -460,6 +481,8 @@ function ResultTable({ results }: { results: ResultRow[] }) {
               <TableCell muted>{index + 1}</TableCell>
               <TableCell strong>{row.function_name || '-'}</TableCell>
               <TableCell>{row.avg_expected_minutes ?? '-'}</TableCell>
+              <TableCell>{row.assignee_name || '-'}</TableCell>
+              <TableCell>{row.verification_level ?? '-'}</TableCell>
               <TableCell>
                 {row.status === 'ok' ? (
                   <span className="text-[#0F6E56]">{row.detail}</span>

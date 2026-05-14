@@ -1,9 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiFetch, type Project, type SubProject, type UserBrief } from '../../lib/api';
+import {
+  apiFetch,
+  type MajorProject,
+  type Project,
+  type SubProject,
+  type UserBrief,
+} from '../../lib/api';
 
 type State = {
+  majorProjects: MajorProject[];
   projects: Project[];
   subprojects: SubProject[];
   users: UserBrief[];
@@ -19,6 +26,7 @@ type State = {
  * 가장 이해하기 쉽다 — 머지 컨플릭 관점에서도 shell 내부 로컬 상태가 유리.
  */
 export function useSidebarData(): State {
+  const [majorProjects, setMajorProjects] = useState<MajorProject[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [subprojects, setSubprojects] = useState<SubProject[]>([]);
   const [users, setUsers] = useState<UserBrief[]>([]);
@@ -28,12 +36,14 @@ export function useSidebarData(): State {
     let cancelled = false;
     const load = async () => {
       try {
-        const [ps, sps, us] = await Promise.all([
+        const [mps, ps, sps, us] = await Promise.all([
+          apiFetch<MajorProject[]>('/major-projects'),
           apiFetch<Project[]>('/projects'),
           apiFetch<SubProject[]>('/subprojects'),
           apiFetch<UserBrief[]>('/users'),
         ]);
         if (cancelled) return;
+        setMajorProjects(mps);
         setProjects(ps);
         setSubprojects(sps);
         setUsers(us);
@@ -49,5 +59,5 @@ export function useSidebarData(): State {
     };
   }, []);
 
-  return { projects, subprojects, users, loading };
+  return { majorProjects, projects, subprojects, users, loading };
 }
