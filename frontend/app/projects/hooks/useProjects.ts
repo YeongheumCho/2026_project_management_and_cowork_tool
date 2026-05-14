@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   apiFetch,
+  type MajorProject,
   type ProjectHistorySummary,
   type Project,
   type ProjectTimeSummary,
@@ -12,6 +13,7 @@ import {
 
 type UseProjectsResult = {
   projects: Project[];
+  majorProjects: MajorProject[];
   subprojects: SubProject[];
   users: UserBrief[];
   timeByProject: Map<number, ProjectTimeSummary>;
@@ -25,6 +27,7 @@ type UseProjectsResult = {
 
 export function useProjects(enabled: boolean): UseProjectsResult {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [majorProjects, setMajorProjects] = useState<MajorProject[]>([]);
   const [subprojects, setSubProjects] = useState<SubProject[]>([]);
   const [users, setUsers] = useState<UserBrief[]>([]);
   const [timeSummary, setTimeSummary] = useState<ProjectTimeSummary[]>([]);
@@ -35,14 +38,16 @@ export function useProjects(enabled: boolean): UseProjectsResult {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [projectList, subprojectList, userList, timeSummaryList, historySummaryList] =
+      const [majorProjectList, projectList, subprojectList, userList, timeSummaryList, historySummaryList] =
         await Promise.all([
+          apiFetch<MajorProject[]>('/major-projects'),
           apiFetch<Project[]>('/projects'),
           apiFetch<SubProject[]>('/subprojects'),
           apiFetch<UserBrief[]>('/users'),
           apiFetch<ProjectTimeSummary[]>('/projects/time-summary'),
           apiFetch<ProjectHistorySummary[]>('/projects/history-summary'),
         ]);
+      setMajorProjects(majorProjectList);
       setProjects(projectList);
       setSubProjects(subprojectList);
       setUsers(userList);
@@ -91,6 +96,7 @@ export function useProjects(enabled: boolean): UseProjectsResult {
 
   return {
     projects,
+    majorProjects,
     subprojects,
     users,
     timeByProject,

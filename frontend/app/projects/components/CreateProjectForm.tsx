@@ -1,10 +1,11 @@
-'use client';
+﻿'use client';
 
-import { FormEvent, type ReactNode, useMemo, useState } from 'react';
+import { FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import OrganizationMemberPicker from '../../components/OrganizationMemberPicker';
 import {
   apiFetch,
   PROJECT_TYPE_LABEL,
+  type MajorProject,
   type Project,
   type ProjectType,
   type UserBrief,
@@ -13,6 +14,7 @@ import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 
 type Props = {
   users: UserBrief[];
+  majorProjects: MajorProject[];
   onCreated: (project: Project) => void;
   onError: (msg: string) => void;
 };
@@ -28,21 +30,34 @@ const PROJECT_TYPE_OPTIONS: ProjectType[] = [
 const controlClass =
   'mt-1 h-10 w-full rounded-lg border border-border px-3 py-2 text-sm';
 
-export default function CreateProjectForm({ users, onCreated, onError }: Props) {
+export default function CreateProjectForm({ users, majorProjects, onCreated, onError }: Props) {
+  const initialMajorProjectId = majorProjects[0]?.id ?? '';
+  const [majorProjectId, setMajorProjectId] = useState<number | ''>(initialMajorProjectId);
   const [name, setName] = useState('');
   const [type, setType] = useState<ProjectType>('official_inspection');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [participantIds, setParticipantIds] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (majorProjectId === '' && majorProjects.length > 0) {
+      setMajorProjectId(majorProjects[0].id);
+    }
+  }, [majorProjectId, majorProjects]);
+  const selectedMajorProject = useMemo(
+    () => majorProjects.find((item) => item.id === majorProjectId) ?? null,
+    [majorProjectId, majorProjects],
+  );
+  const selectableUsers = selectedMajorProject?.members ?? [];
 
   const disabled = useMemo(
     () =>
+      majorProjectId === '' ||
       !name.trim() ||
       participantIds.length === 0 ||
       (startDate !== '' && endDate !== '' && endDate < startDate) ||
       busy,
-    [busy, endDate, name, participantIds, startDate],
+    [busy, endDate, majorProjectId, name, participantIds, startDate],
   );
 
   const submit = async (event: FormEvent) => {
@@ -54,6 +69,7 @@ export default function CreateProjectForm({ users, onCreated, onError }: Props) 
         method: 'POST',
         body: JSON.stringify({
           name: name.trim(),
+          major_project_id: majorProjectId,
           project_type: type,
           participant_ids: participantIds,
           start_date: startDate || null,
@@ -61,6 +77,7 @@ export default function CreateProjectForm({ users, onCreated, onError }: Props) 
         }),
       });
       setName('');
+      setMajorProjectId(initialMajorProjectId);
       setType('official_inspection');
       setStartDate('');
       setEndDate('');
@@ -84,9 +101,28 @@ export default function CreateProjectForm({ users, onCreated, onError }: Props) 
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="예: 2026 Q2 정기 점검"
+              placeholder="예: 2026 Q2 정기 검증"
               className={controlClass}
             />
+          </Field>
+
+          <Field label="대프로젝트" span>
+            <select
+              value={majorProjectId}
+              onChange={(event) => {
+                const nextId = event.target.value === '' ? '' : Number(event.target.value);
+                setMajorProjectId(nextId);
+                setParticipantIds([]);
+              }}
+              className={controlClass}
+            >
+              <option value="">대프로젝트를 선택하세요</option>
+              {majorProjects.map((majorProject) => (
+                <option key={majorProject.id} value={majorProject.id}>
+                  {majorProject.name}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <Field label="유형" span>
@@ -126,12 +162,12 @@ export default function CreateProjectForm({ users, onCreated, onError }: Props) 
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-medium text-text">프로젝트 참여 인원</p>
             <span className="text-xs text-text-subtle">
-              {participantIds.length}/{users.length}명
+              {participantIds.length}/{selectableUsers.length}명
             </span>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto pr-1">
             <OrganizationMemberPicker
-              users={users}
+              users={selectableUsers}
               selectedIds={participantIds}
               onChange={setParticipantIds}
               disabled={busy}

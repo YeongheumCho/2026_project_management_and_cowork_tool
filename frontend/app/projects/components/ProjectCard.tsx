@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import {
   PROJECT_TYPE_LABEL,
   type Project,
@@ -57,7 +58,8 @@ export default function ProjectCard({
   const periodLabel =
     project.start_date && project.end_date
       ? `${project.start_date} ~ ${project.end_date}`
-      : '기간 미지정';
+      : '기간 미설정';
+  const majorProjectName = project.major_project?.name ?? '대프로젝트 미분류';
 
   return (
     <section className="overflow-hidden rounded-[24px] border border-[#E7E5DD] bg-white shadow-[0_14px_40px_rgba(28,25,23,0.06)]">
@@ -78,7 +80,10 @@ export default function ProjectCard({
               <h3 className="text-[17px] font-semibold tracking-[-0.02em] text-[#1D1D1B]">
                 {project.name}
               </h3>
-              <span className="rounded-full border border-[#E5E2FF] bg-[#F5F3FF] px-2.5 py-1 text-tiny font-bold uppercase tracking-[0.08em] text-[#534AB7]">
+              <span className="rounded-full border border-[#E5E2FF] bg-[#F5F3FF] px-2.5 py-1 text-tiny font-bold text-[#534AB7]">
+                {majorProjectName}
+              </span>
+              <span className="rounded-full border border-[#E5E2FF] bg-white px-2.5 py-1 text-tiny font-bold text-[#534AB7]">
                 {typeLabel}
               </span>
               <span
@@ -88,7 +93,7 @@ export default function ProjectCard({
                     : 'bg-[#E6F1FB] text-[#185FA5]'
                 }`}
               >
-                {isCompleted ? '완료' : '진행중'}
+                {isCompleted ? '완료' : '진행 중'}
               </span>
             </div>
 
@@ -102,7 +107,7 @@ export default function ProjectCard({
             </div>
           </div>
 
-          <div className="min-w-[180px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
+          <SummaryPanel>
             <div className="flex items-center justify-between text-micro font-semibold text-[#5F5E5A]">
               <span>완료 항목</span>
               <span className={isCompleted ? 'text-[#0F6E56]' : 'text-[#185FA5]'}>
@@ -118,9 +123,9 @@ export default function ProjectCard({
               className="mt-2"
               ariaLabel={`${project.name} 진행률`}
             />
-          </div>
+          </SummaryPanel>
 
-          <div className="min-w-[240px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
+          <SummaryPanel>
             <div className="flex items-center justify-between text-micro font-semibold text-[#5F5E5A]">
               <span>투입 시간</span>
               <span className="text-[#1D1D1B]">
@@ -146,9 +151,9 @@ export default function ProjectCard({
                 ))
               )}
             </div>
-          </div>
+          </SummaryPanel>
 
-          <div className="min-w-[240px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
+          <SummaryPanel>
             <div className="flex items-center justify-between text-micro font-semibold text-[#5F5E5A]">
               <span>수행 이력</span>
               <span className="text-[#1D1D1B]">
@@ -158,7 +163,7 @@ export default function ProjectCard({
             <div className="mt-2 space-y-1.5">
               {topHistoryMembers.length === 0 ? (
                 <p className="text-micro text-[#8B897F]">
-                  아직 누적된 완료 이력이 없습니다.
+                  아직 완료 이력이 없습니다.
                 </p>
               ) : (
                 topHistoryMembers.map((member) => (
@@ -179,31 +184,19 @@ export default function ProjectCard({
                 ))
               )}
             </div>
-          </div>
+          </SummaryPanel>
 
           {isAdmin && (
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => onEditProject(project)}
-                className="rounded-[14px] border border-[#D8D3FF] bg-white px-4 py-2 text-micro font-bold text-[#534AB7] transition hover:bg-[#F5F3FF]"
-              >
+              <ActionButton onClick={() => onEditProject(project)}>
                 프로젝트 수정
-              </button>
-              <button
-                type="button"
-                onClick={() => onDeleteProject(project)}
-                className="rounded-[14px] border border-[#F4C9C9] bg-white px-4 py-2 text-micro font-bold text-[#A32D2D] transition hover:bg-[#FFF4F4]"
-              >
+              </ActionButton>
+              <ActionButton tone="danger" onClick={() => onDeleteProject(project)}>
                 프로젝트 삭제
-              </button>
-              <button
-                type="button"
-                onClick={() => onCsvImport(project.id)}
-                className="rounded-[14px] border border-[#D8D3FF] bg-white px-4 py-2 text-micro font-bold text-[#534AB7] transition hover:bg-[#F5F3FF]"
-              >
+              </ActionButton>
+              <ActionButton onClick={() => onCsvImport(project.id)}>
                 CSV 일괄 등록
-              </button>
+              </ActionButton>
               <button
                 type="button"
                 onClick={() => onAddSub(project.id)}
@@ -236,11 +229,38 @@ export default function ProjectCard({
               ))}
             </ul>
           )}
-
-
         </div>
       )}
     </section>
+  );
+}
+
+function SummaryPanel({ children }: { children: ReactNode }) {
+  return (
+    <div className="min-w-[220px] flex-1 rounded-[18px] border border-[#F0EEE7] bg-[#FCFCFA] px-4 py-3">
+      {children}
+    </div>
+  );
+}
+
+function ActionButton({
+  children,
+  onClick,
+  tone = 'default',
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  tone?: 'default' | 'danger';
+}) {
+  const className =
+    tone === 'danger'
+      ? 'rounded-[14px] border border-[#F4C9C9] bg-white px-4 py-2 text-micro font-bold text-[#A32D2D] transition hover:bg-[#FFF4F4]'
+      : 'rounded-[14px] border border-[#D8D3FF] bg-white px-4 py-2 text-micro font-bold text-[#534AB7] transition hover:bg-[#F5F3FF]';
+
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {children}
+    </button>
   );
 }
 

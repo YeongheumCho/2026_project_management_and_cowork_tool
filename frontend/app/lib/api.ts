@@ -137,6 +137,8 @@ export type SubProject = {
 
 export type Project = {
   id: number;
+  major_project_id?: number | null;
+  major_project?: MajorProjectBrief | null;
   name: string;
   project_type: ProjectType | string;
   start_date?: string | null;
@@ -148,6 +150,21 @@ export type Project = {
   subproject_count: number;
   completed_subproject_count: number;
   in_progress_subproject_count: number;
+};
+
+export type MajorProjectBrief = {
+  id: number;
+  name: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  kickoff_date?: string | null;
+  is_default: boolean;
+};
+
+export type MajorProject = MajorProjectBrief & {
+  members: UserBrief[];
+  project_count: number;
+  created_at: string;
 };
 
 export type ProgressLog = {

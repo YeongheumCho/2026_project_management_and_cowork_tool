@@ -54,7 +54,44 @@ class ProjectParticipantBrief(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class MajorProjectBrief(BaseModel):
+    id: int
+    name: str
+    start_date: date | None = None
+    end_date: date | None = None
+    kickoff_date: date | None = None
+    is_default: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MajorProjectCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    start_date: date | None = None
+    end_date: date | None = None
+    kickoff_date: date | None = None
+    member_ids: list[int] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _check_dates(self):
+        if self.start_date is not None and self.end_date is not None and self.end_date < self.start_date:
+            raise ValueError("종료일은 시작일 이후여야 합니다")
+        return self
+
+
+class MajorProjectUpdate(MajorProjectCreate):
+    pass
+
+
+class MajorProjectResponse(MajorProjectBrief):
+    members: list[ProjectParticipantBrief] = []
+    project_count: int = 0
+    created_at: datetime
+
+
 class ProjectCreate(BaseModel):
+    major_project_id: int
     name: str = Field(min_length=1, max_length=200)
     project_type: ProjectType = "general"
     participant_ids: list[int] = Field(min_length=1)
@@ -73,6 +110,7 @@ class ProjectCreate(BaseModel):
 
 
 class ProjectUpdate(BaseModel):
+    major_project_id: int
     name: str = Field(min_length=1, max_length=200)
     project_type: ProjectType = "general"
     participant_ids: list[int] = Field(min_length=1)
@@ -92,6 +130,8 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(BaseModel):
     id: int
+    major_project_id: int | None = None
+    major_project: MajorProjectBrief | None = None
     name: str
     project_type: str
     start_date: Optional[date] = None

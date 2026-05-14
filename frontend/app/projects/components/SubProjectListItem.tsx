@@ -13,12 +13,12 @@ import {
 } from '../../lib/subprojectStatus';
 
 const TEXT = {
-  uploadDone: '\uc5c5\ub85c\ub4dc \uc644\ub8cc',
-  firstVerify: '1\ucc28 \uac80\uc99d',
-  inReview: '\uc778\ub9ac\ubdf0',
-  unassigned: '\ubbf8\uc9c0\uc815',
-  progress: '\uc9c4\ud589\ub960',
-  separator: ' \u00b7 ',
+  uploadDone: '업로드 완료',
+  firstVerify: '1차 검증',
+  inReview: '인리뷰',
+  unassigned: '미지정',
+  progress: '진행률',
+  separator: ' · ',
 } as const;
 
 type Props = {

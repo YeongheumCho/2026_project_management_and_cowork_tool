@@ -6,9 +6,11 @@
 from app.models.base import Base  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.project import (  # noqa: F401
+    MajorProject,
     Project,
     SubProject,
     SubTask,
+    major_project_members,
     project_participants,
     STATUS_PLANNED,
     STATUS_IN_PROGRESS,

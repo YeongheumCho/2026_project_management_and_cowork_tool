@@ -24,6 +24,7 @@ export default function ProjectsPage() {
 
   const {
     projects,
+    majorProjects,
     users,
     byProject,
     timeByProject,
@@ -37,6 +38,13 @@ export default function ProjectsPage() {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [projectInitial, setProjectInitial] = useState<Project | null>(null);
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
+  const [csvProjectId, setCsvProjectId] = useState<number | undefined>();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [modalProjectId, setModalProjectId] = useState<number | undefined>();
+  const [modalInitial, setModalInitial] = useState<SubProject | null>(null);
+  const [progressTarget, setProgressTarget] = useState<SubProject | null>(null);
 
   const toggleExpand = (id: number) =>
     setExpanded((prev) => {
@@ -45,15 +53,6 @@ export default function ProjectsPage() {
       else next.add(id);
       return next;
     });
-
-  const [csvModalOpen, setCsvModalOpen] = useState(false);
-  const [csvProjectId, setCsvProjectId] = useState<number | undefined>();
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-  const [modalProjectId, setModalProjectId] = useState<number | undefined>();
-  const [modalInitial, setModalInitial] = useState<SubProject | null>(null);
-  const [progressTarget, setProgressTarget] = useState<SubProject | null>(null);
 
   const openCreateSub = (projectId: number) => {
     if (!isAdmin) return;
@@ -77,10 +76,6 @@ export default function ProjectsPage() {
     setModalOpen(true);
   };
 
-  const openSubProgress = (sp: SubProject) => {
-    setProgressTarget(sp);
-  };
-
   const openEditProject = (project: Project) => {
     if (!isAdmin) return;
     setProjectInitial(project);
@@ -89,13 +84,10 @@ export default function ProjectsPage() {
 
   const handleDeleteProject = async (project: Project) => {
     if (!isAdmin) return;
-    if (
-      !window.confirm(
-        `"${project.name}" 프로젝트를 삭제하시겠습니까? 하위 프로젝트도 함께 삭제됩니다.`,
-      )
-    ) {
-      return;
-    }
+    const ok = window.confirm(
+      `"${project.name}" 프로젝트를 삭제하시겠습니까? 하위 프로젝트도 함께 삭제됩니다.`,
+    );
+    if (!ok) return;
 
     try {
       await apiFetch<void>(`/projects/${project.id}`, { method: 'DELETE' });
@@ -122,16 +114,15 @@ export default function ProjectsPage() {
         </p>
       )}
 
-      {isAdmin && (
-        <CreateProjectForm
-          users={users}
-          onCreated={async (created) => {
-            await reload();
-            setExpanded((prev) => new Set(prev).add(created.id));
-          }}
-          onError={setError}
-        />
-      )}
+      <CreateProjectForm
+        users={users}
+        majorProjects={majorProjects}
+        onCreated={async (created) => {
+          await reload();
+          setExpanded((prev) => new Set(prev).add(created.id));
+        }}
+        onError={setError}
+      />
 
       <div className="space-y-4">
         {loading && (
@@ -159,7 +150,7 @@ export default function ProjectsPage() {
             onToggle={toggleExpand}
             onAddSub={openCreateSub}
             onCsvImport={openCsvImport}
-            onOpenSubProgress={openSubProgress}
+            onOpenSubProgress={setProgressTarget}
             onEditSub={openEditSub}
             onEditProject={openEditProject}
             onDeleteProject={handleDeleteProject}
@@ -171,6 +162,7 @@ export default function ProjectsPage() {
         open={projectModalOpen}
         project={projectInitial}
         users={users}
+        majorProjects={majorProjects}
         onClose={() => {
           setProjectModalOpen(false);
           setProjectInitial(null);

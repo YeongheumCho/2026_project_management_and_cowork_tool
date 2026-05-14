@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.config import settings
 from app.core.security import hash_password, verify_password
 from app.dependencies import get_current_user, get_db, require_admin
-from app.models.project import PROJECT_TYPES, STATUS_COMPLETED, Project, SubProject, SubTask
+from app.models.project import PROJECT_TYPES, STATUS_COMPLETED, MajorProject, Project, SubProject, SubTask
 from app.models.user import User
 from app.models.workflow import (
     ProjectExecutionHistory,
@@ -79,6 +79,10 @@ def _utcnow() -> datetime:
 
 def _deserialize_tasks(template: ProjectTemplate) -> list[dict]:
     return json.loads(template.tasks_json)
+
+
+def _default_major_project_id(db: Session) -> int | None:
+    return db.scalar(select(MajorProject.id).where(MajorProject.is_default.is_(True)))
 
 
 def _serialize_template_response(template: ProjectTemplate) -> TemplateResponse:
@@ -890,6 +894,7 @@ def assign_recommended_work(
         )
 
     project = Project(
+        major_project_id=_default_major_project_id(db),
         name=payload.project_name,
         project_type=payload.project_type if payload.project_type in PROJECT_TYPES else "general",
         created_by=admin.id,

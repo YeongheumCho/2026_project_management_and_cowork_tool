@@ -21,7 +21,7 @@ def _ensure_additive_schema_updates() -> None:
     """Apply tiny additive updates that create_all cannot add to existing tables."""
     inspector = inspect(engine)
     table_names = inspector.get_table_names()
-    if "subprojects" not in table_names:
+    if "projects" not in table_names:
         return
 
     statements: list[str] = []
@@ -36,6 +36,10 @@ def _ensure_additive_schema_updates() -> None:
         project_columns = {
             column["name"] for column in inspector.get_columns("projects")
         }
+        if "major_project_id" not in project_columns:
+            statements.append(
+                "ALTER TABLE projects ADD COLUMN major_project_id INTEGER REFERENCES major_projects(id) ON DELETE RESTRICT"
+            )
         if "start_date" not in project_columns:
             statements.append("ALTER TABLE projects ADD COLUMN start_date DATE")
         if "end_date" not in project_columns:
@@ -82,6 +86,47 @@ def _ensure_additive_schema_updates() -> None:
     with engine.begin() as connection:
         for statement in statements:
             connection.execute(text(statement))
+        if "major_projects" in inspect(engine).get_table_names():
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO major_projects (name, is_default)
+                    SELECT '미분류/기본 대프로젝트', TRUE
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM major_projects WHERE is_default = TRUE
+                    )
+                    """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO major_project_members (major_project_id, user_id)
+                    SELECT mp.id, u.id
+                    FROM major_projects mp
+                    CROSS JOIN users u
+                    WHERE mp.is_default = TRUE
+                      AND u.is_active = TRUE
+                      AND NOT EXISTS (
+                        SELECT 1
+                        FROM major_project_members mpm
+                        WHERE mpm.major_project_id = mp.id
+                          AND mpm.user_id = u.id
+                      )
+                    """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                    UPDATE projects
+                    SET major_project_id = (
+                        SELECT id FROM major_projects WHERE is_default = TRUE LIMIT 1
+                    )
+                    WHERE major_project_id IS NULL
+                    """
+                )
+            )
         if "subproject_assignees" in inspect(engine).get_table_names():
             connection.execute(
                 text(

@@ -1,18 +1,18 @@
-"""
-프로젝트/소프로젝트/세부 태스크 REST API.
+﻿"""
+?꾨줈?앺듃/?뚰봽濡쒖젥???몃? ?쒖뒪??REST API.
 
-엔드포인트 요약
+?붾뱶?ъ씤???붿빟
   # Projects
-  POST   /projects                     관리자: 최상위 프로젝트 생성
-  GET    /projects                     전체 사용자: 프로젝트 목록
+  POST   /projects                     愿由ъ옄: 理쒖긽???꾨줈?앺듃 ?앹꽦
+  GET    /projects                     ?꾩껜 ?ъ슜?? ?꾨줈?앺듃 紐⑸줉
   # SubProjects
-  POST   /subprojects                  관리자: 소프로젝트 생성 (프로젝트 유형에 따라 세부 태스크 자동 생성)
-  GET    /subprojects                  쿼리: ?project_id, ?assignee_id
-  GET    /subprojects/{id}             단건 조회
-  PUT    /subprojects/{id}             관리자: KEFICO 필드 포함 부분 수정
-  DELETE /subprojects/{id}             관리자: 미완료 상태에서만 삭제
+  POST   /subprojects                  愿由ъ옄: ?뚰봽濡쒖젥???앹꽦 (?꾨줈?앺듃 ?좏삎???곕씪 ?몃? ?쒖뒪???먮룞 ?앹꽦)
+  GET    /subprojects                  荑쇰━: ?project_id, ?assignee_id
+  GET    /subprojects/{id}             ?④굔 議고쉶
+  PUT    /subprojects/{id}             愿由ъ옄: KEFICO ?꾨뱶 ?ы븿 遺遺??섏젙
+  DELETE /subprojects/{id}             愿由ъ옄: 誘몄셿猷??곹깭?먯꽌留???젣
   # SubTasks
-  PATCH  /subtasks/{id}                체크/해제 — 담당자 본인 또는 관리자
+  PATCH  /subtasks/{id}                泥댄겕/?댁젣 ???대떦??蹂몄씤 ?먮뒗 愿由ъ옄
 """
 import json
 from collections import defaultdict
@@ -28,6 +28,7 @@ from app.models.project import (
     DEFAULT_SUBTASK_TEMPLATE,
     ETC_SUBTASK_TEMPLATE,
     INSPECTION_SUBTASK_TEMPLATE,
+    MajorProject,
     STATUS_COMPLETED,
     STATUS_IN_PROGRESS,
     STATUS_PLANNED,
@@ -42,6 +43,9 @@ from app.models.user import User
 from app.models.workflow import WORKLOG_RUNNING, ProjectExecutionHistory, WorkLog
 from app.schemas.progress_log import ProgressLogCreate, ProgressLogResponse
 from app.schemas.project import (
+    MajorProjectCreate,
+    MajorProjectResponse,
+    MajorProjectUpdate,
     ProjectHistoryCreate,
     ProjectHistoryEntry,
     ProjectHistoryMemberSummary,
@@ -63,7 +67,7 @@ from app.schemas.project import (
 router = APIRouter(tags=["projects"])
 
 
-# 프로젝트 유형 → 세부 태스크 템플릿 매핑
+# ?꾨줈?앺듃 ?좏삎 ???몃? ?쒖뒪???쒗뵆由?留ㅽ븨
 _TEMPLATE_BY_TYPE = {
     "official_inspection": INSPECTION_SUBTASK_TEMPLATE,
     "regular_inspection": INSPECTION_SUBTASK_TEMPLATE,
@@ -73,7 +77,7 @@ _TEMPLATE_BY_TYPE = {
 }
 
 
-# 업데이트 시 공통으로 복사할 KEFICO 필드 목록
+# ?낅뜲?댄듃 ??怨듯넻?쇰줈 蹂듭궗??KEFICO ?꾨뱶 紐⑸줉
 _KEFICO_COPY_FIELDS = (
     "priority", "controller_name", "controller_version", "controller_country",
     "to_number", "to_assignee", "verification_level", "vehicle_type",
@@ -166,7 +170,7 @@ def _load_subproject(db: Session, subproject_id: int) -> SubProject:
     if not sp:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="소프로젝트를 찾을 수 없습니다.",
+            detail="?뚰봽濡쒖젥?몃? 李얠쓣 ???놁뒿?덈떎.",
         )
     return sp
 
@@ -194,7 +198,7 @@ def _load_valid_assignees(
     if not assignee_ids:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="담당자를 1명 이상 선택해주세요.",
+            detail="?대떦?먮? 1紐??댁긽 ?좏깮?댁＜?몄슂.",
         )
 
     assignees = db.scalars(
@@ -205,7 +209,7 @@ def _load_valid_assignees(
     if len(assignees) != len(assignee_ids):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="유효하지 않은 담당자가 포함되어 있습니다.",
+            detail="?좏슚?섏? ?딆? ?대떦?먭? ?ы븿?섏뼱 ?덉뒿?덈떎.",
         )
 
     if project and project.participants:
@@ -214,7 +218,7 @@ def _load_valid_assignees(
         if invalid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="담당자는 해당 프로젝트 참여 인원 중에서만 선택할 수 있습니다.",
+                detail="?대떦?먮뒗 ?대떦 ?꾨줈?앺듃 李몄뿬 ?몄썝 以묒뿉?쒕쭔 ?좏깮?????덉뒿?덈떎.",
             )
 
     order = {user_id: index for index, user_id in enumerate(assignee_ids)}
@@ -226,11 +230,110 @@ def _set_subproject_assignees(sp: SubProject, assignees: list[User]) -> None:
     sp.assignee_id = assignees[0].id if assignees else None
 
 
+def _serialize_major_project_response(major_project: MajorProject) -> MajorProjectResponse:
+    return MajorProjectResponse(
+        id=major_project.id,
+        name=major_project.name,
+        start_date=major_project.start_date,
+        end_date=major_project.end_date,
+        kickoff_date=major_project.kickoff_date,
+        is_default=bool(major_project.is_default),
+        created_at=major_project.created_at,
+        members=list(major_project.members or []),
+        project_count=len(major_project.projects or []),
+    )
+
+
+def _load_major_project_for_user(
+    db: Session,
+    major_project_id: int,
+    current_user: User,
+) -> MajorProject:
+    major_project = db.scalar(
+        select(MajorProject)
+        .options(selectinload(MajorProject.members), selectinload(MajorProject.projects))
+        .where(MajorProject.id == major_project_id)
+    )
+    if not major_project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="??꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
+        )
+    if current_user.role != "admin" and current_user.id not in {user.id for user in major_project.members}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="蹂몄씤??諛곗젙????꾨줈?앺듃留??ъ슜?????덉뒿?덈떎.",
+        )
+    return major_project
+
+
+def _load_major_project_members(
+    db: Session,
+    member_ids: list[int],
+) -> list[User]:
+    if not member_ids:
+        return []
+    unique_ids = list(dict.fromkeys(member_ids))
+    members = db.scalars(
+        select(User)
+        .where(User.id.in_(unique_ids), User.is_active.is_(True))
+        .order_by(User.name.asc())
+    ).all()
+    if len(members) != len(unique_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="?좏슚?섏? ?딆? ??꾨줈?앺듃 李몄뿬?먭? ?ы븿?섏뼱 ?덉뒿?덈떎.",
+        )
+    order = {user_id: index for index, user_id in enumerate(unique_ids)}
+    return sorted(members, key=lambda user: order[user.id])
+
+
+def _load_project_participants_for_major(
+    db: Session,
+    major_project: MajorProject,
+    participant_ids: list[int],
+) -> list[User]:
+    unique_ids = list(dict.fromkeys(participant_ids))
+    if not unique_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="?꾨줈?앺듃 李몄뿬 ?몄썝??1紐??댁긽 ?좏깮?댁＜?몄슂.",
+        )
+    major_member_ids = {user.id for user in major_project.members}
+    invalid_ids = [user_id for user_id in unique_ids if user_id not in major_member_ids]
+    if invalid_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="以묓봽濡쒖젥??李몄뿬?먮뒗 ?좏깮????꾨줈?앺듃 李몄뿬???덉뿉?쒕쭔 ?좏깮?????덉뒿?덈떎.",
+        )
+    participants = db.scalars(
+        select(User)
+        .where(User.id.in_(unique_ids), User.is_active.is_(True))
+        .order_by(User.name.asc())
+    ).all()
+    if len(participants) != len(unique_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="?좏슚?섏? ?딆? ?꾨줈?앺듃 李몄뿬 ?몄썝???ы븿?섏뼱 ?덉뒿?덈떎.",
+        )
+    order = {user_id: index for index, user_id in enumerate(unique_ids)}
+    return sorted(participants, key=lambda user: order[user.id])
+
+
 def _get_visible_project_ids_for_user(db: Session, current_user: User) -> set[int]:
     if current_user.role == "admin":
         return set(
             db.scalars(select(Project.id)).all()
         )
+
+    major_project_ids = set(
+        db.scalars(
+            select(Project.id)
+            .join(MajorProject, MajorProject.id == Project.major_project_id)
+            .join(MajorProject.members)
+            .where(User.id == current_user.id)
+        ).all()
+    )
 
     # Use whole-project membership as the primary visibility rule. Keep assigned
     # subprojects as a fallback for older data that may not have participants.
@@ -259,7 +362,7 @@ def _get_visible_project_ids_for_user(db: Session, current_user: User) -> set[in
             .distinct()
         ).all()
     )
-    return participant_project_ids | assigned_project_ids
+    return major_project_ids | participant_project_ids | assigned_project_ids
 
 
 def _ensure_subproject_access(sp: SubProject, current_user: User) -> None:
@@ -268,7 +371,7 @@ def _ensure_subproject_access(sp: SubProject, current_user: User) -> None:
     if current_user.id not in _subproject_assignee_ids(sp):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="해당 소프로젝트에 접근할 수 없습니다.",
+            detail="?대떦 ?뚰봽濡쒖젥?몄뿉 ?묎렐?????놁뒿?덈떎.",
         )
 
 
@@ -280,19 +383,19 @@ def _validate_subproject_dates_within_project(
     if end_date < start_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="종료일은 시작일 이후여야 합니다.",
+            detail="醫낅즺?쇱? ?쒖옉???댄썑?ъ빞 ?⑸땲??",
         )
     if project is None:
         return
     if project.start_date is not None and start_date < project.start_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="하위 프로젝트 시작일은 상위 프로젝트 시작일 이후여야 합니다.",
+            detail="?섏쐞 ?꾨줈?앺듃 ?쒖옉?쇱? ?곸쐞 ?꾨줈?앺듃 ?쒖옉???댄썑?ъ빞 ?⑸땲??",
         )
     if project.end_date is not None and end_date > project.end_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="하위 프로젝트 종료일은 상위 프로젝트 종료일 이내여야 합니다.",
+            detail="?섏쐞 ?꾨줈?앺듃 醫낅즺?쇱? ?곸쐞 ?꾨줈?앺듃 醫낅즺???대궡?ъ빞 ?⑸땲??",
         )
 
 
@@ -342,7 +445,7 @@ def _sync_subproject_execution_history(
         )
     ).all()
 
-    # 관리자가 수동 편집한 행은 자동 동기화 대상에서 제외 — 보존만 한다.
+    # 愿由ъ옄媛 ?섎룞 ?몄쭛???됱? ?먮룞 ?숆린????곸뿉???쒖쇅 ??蹂댁〈留??쒕떎.
     auto_rows = [row for row in existing_rows if not row.manual_override]
 
     assignee_ids = sorted(_subproject_assignee_ids(subproject))
@@ -407,12 +510,12 @@ def _serialize_history_entry(history: ProjectExecutionHistory, user: User | None
 
 
 def _apply_kefico_fields(sp: SubProject, payload) -> None:
-    """payload에서 KEFICO 필드들 중 값이 들어온 것만 sp에 반영."""
+    """payload?먯꽌 KEFICO ?꾨뱶??以?媛믪씠 ?ㅼ뼱??寃껊쭔 sp??諛섏쁺."""
     data = payload.model_dump(exclude_unset=True)
     for fname in _KEFICO_COPY_FIELDS:
         if fname in data:
             setattr(sp, fname, data[fname])
-    # 커스텀 필드 반영
+    # 而ㅼ뒪? ?꾨뱶 諛섏쁺
     if "custom_fields" in data and data["custom_fields"] is not None:
         sp.custom_fields = json.dumps(data["custom_fields"], ensure_ascii=False)
     elif "custom_fields" in data and data["custom_fields"] is None:
@@ -442,6 +545,8 @@ def _serialize_project_response(project: Project) -> ProjectResponse:
 
     return ProjectResponse(
         id=project.id,
+        major_project_id=project.major_project_id,
+        major_project=project.major_project,
         name=project.name,
         project_type=project.project_type,
         start_date=project.start_date,
@@ -456,6 +561,135 @@ def _serialize_project_response(project: Project) -> ProjectResponse:
     )
 
 
+# ========== Major Projects ==========
+
+@router.get("/major-projects", response_model=list[MajorProjectResponse])
+def list_major_projects(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    stmt = (
+        select(MajorProject)
+        .options(selectinload(MajorProject.members), selectinload(MajorProject.projects))
+        .order_by(MajorProject.created_at.desc())
+    )
+    if current_user.role != "admin":
+        stmt = stmt.where(MajorProject.members.any(User.id == current_user.id))
+    return [_serialize_major_project_response(item) for item in db.scalars(stmt).all()]
+
+
+@router.post(
+    "/major-projects",
+    response_model=MajorProjectResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_major_project(
+    payload: MajorProjectCreate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    members = _load_major_project_members(db, payload.member_ids)
+    major_project = MajorProject(
+        name=payload.name,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        kickoff_date=payload.kickoff_date,
+        is_default=False,
+    )
+    major_project.members = members
+    db.add(major_project)
+    db.commit()
+    db.refresh(major_project)
+    major_project = db.scalar(
+        select(MajorProject)
+        .options(selectinload(MajorProject.members), selectinload(MajorProject.projects))
+        .where(MajorProject.id == major_project.id)
+    )
+    return _serialize_major_project_response(major_project)
+
+
+@router.put("/major-projects/{major_project_id}", response_model=MajorProjectResponse)
+def update_major_project(
+    major_project_id: int,
+    payload: MajorProjectUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    major_project = db.scalar(
+        select(MajorProject)
+        .options(
+            selectinload(MajorProject.members),
+            selectinload(MajorProject.projects).selectinload(Project.participants),
+        )
+        .where(MajorProject.id == major_project_id)
+    )
+    if not major_project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="??꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
+        )
+
+    members = _load_major_project_members(db, payload.member_ids)
+    member_ids = {user.id for user in members}
+    invalid_projects = [
+        project.name
+        for project in major_project.projects
+        if any(participant.id not in member_ids for participant in project.participants)
+    ]
+    if invalid_projects:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "?섏쐞 以묓봽濡쒖젥??李몄뿬?먭? ????꾨줈?앺듃 李몄뿬??紐⑸줉???ы븿?섏뼱???⑸땲?? "
+                + ", ".join(invalid_projects[:3])
+            ),
+        )
+
+    major_project.name = payload.name
+    major_project.start_date = payload.start_date
+    major_project.end_date = payload.end_date
+    major_project.kickoff_date = payload.kickoff_date
+    major_project.members = members
+    db.commit()
+    major_project = db.scalar(
+        select(MajorProject)
+        .options(selectinload(MajorProject.members), selectinload(MajorProject.projects))
+        .where(MajorProject.id == major_project.id)
+    )
+    return _serialize_major_project_response(major_project)
+
+
+@router.delete("/major-projects/{major_project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_major_project(
+    major_project_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    major_project = db.scalar(
+        select(MajorProject)
+        .options(selectinload(MajorProject.projects))
+        .where(MajorProject.id == major_project_id)
+    )
+    if not major_project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="??꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
+        )
+    if major_project.is_default:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="湲곕낯 ??꾨줈?앺듃????젣?????놁뒿?덈떎.",
+        )
+    if major_project.projects:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="?뚯냽 以묓봽濡쒖젥?멸? ?덈뒗 ??꾨줈?앺듃????젣?????놁뒿?덈떎.",
+        )
+    db.delete(major_project)
+    db.commit()
+    return None
+
+
 # ========== Projects ==========
 
 @router.post(
@@ -466,26 +700,18 @@ def _serialize_project_response(project: Project) -> ProjectResponse:
 def create_project(
     payload: ProjectCreate,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ):
-    participant_ids = list(dict.fromkeys(payload.participant_ids))
-    participants = db.scalars(
-        select(User)
-        .where(User.id.in_(participant_ids), User.is_active.is_(True))
-        .order_by(User.name.asc())
-    ).all()
-    if len(participants) != len(participant_ids):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="유효하지 않은 프로젝트 참여 인원이 포함되어 있습니다.",
-        )
+    major_project = _load_major_project_for_user(db, payload.major_project_id, current_user)
+    participants = _load_project_participants_for_major(db, major_project, payload.participant_ids)
 
     project = Project(
+        major_project_id=major_project.id,
         name=payload.name,
         project_type=payload.project_type,
         start_date=payload.start_date,
         end_date=payload.end_date,
-        created_by=admin.id,
+        created_by=current_user.id,
     )
     project.participants = participants
     db.add(project)
@@ -493,6 +719,7 @@ def create_project(
     project = db.scalar(
         select(Project)
         .options(
+            selectinload(Project.major_project),
             selectinload(Project.participants),
             selectinload(Project.subprojects).selectinload(SubProject.assignees),
         )
@@ -508,7 +735,11 @@ def list_projects(
 ):
     stmt = (
         select(Project)
-        .options(selectinload(Project.participants), selectinload(Project.subprojects))
+        .options(
+            selectinload(Project.major_project),
+            selectinload(Project.participants),
+            selectinload(Project.subprojects),
+        )
         .order_by(Project.created_at.desc())
     )
     if current_user.role != "admin":
@@ -529,6 +760,7 @@ def update_project(
     project = db.scalar(
         select(Project)
         .options(
+            selectinload(Project.major_project),
             selectinload(Project.participants),
             selectinload(Project.subprojects).selectinload(SubProject.assignees),
         )
@@ -537,20 +769,11 @@ def update_project(
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="프로젝트를 찾을 수 없습니다.",
+            detail="?꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
         )
 
-    participant_ids = list(dict.fromkeys(payload.participant_ids))
-    participants = db.scalars(
-        select(User)
-        .where(User.id.in_(participant_ids), User.is_active.is_(True))
-        .order_by(User.name.asc())
-    ).all()
-    if len(participants) != len(participant_ids):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="유효하지 않은 프로젝트 참여 인원이 포함되어 있습니다.",
-        )
+    major_project = _load_major_project_for_user(db, payload.major_project_id, _)
+    participants = _load_project_participants_for_major(db, major_project, payload.participant_ids)
 
     participant_id_set = {user.id for user in participants}
     invalid_assignees = [
@@ -562,12 +785,13 @@ def update_project(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                "현재 배정된 하위 프로젝트 담당자가 새 참여 인원에 포함되지 않습니다: "
+                "?꾩옱 諛곗젙???섏쐞 ?꾨줈?앺듃 ?대떦?먭? ??李몄뿬 ?몄썝???ы븿?섏? ?딆뒿?덈떎: "
                 + ", ".join(invalid_assignees[:3])
             ),
         )
 
     project.name = payload.name
+    project.major_project_id = major_project.id
     project.project_type = payload.project_type
     if "start_date" in payload.model_fields_set:
         project.start_date = payload.start_date
@@ -577,7 +801,11 @@ def update_project(
     db.commit()
     project = db.scalar(
         select(Project)
-        .options(selectinload(Project.participants), selectinload(Project.subprojects))
+        .options(
+            selectinload(Project.major_project),
+            selectinload(Project.participants),
+            selectinload(Project.subprojects),
+        )
         .where(Project.id == project.id)
     )
     return _serialize_project_response(project)
@@ -593,7 +821,7 @@ def delete_project(
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="프로젝트를 찾을 수 없습니다.",
+            detail="?꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
         )
 
     db.delete(project)
@@ -685,7 +913,7 @@ def create_subproject(
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="프로젝트를 찾을 수 없습니다.",
+            detail="?꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
         )
 
     _validate_subproject_dates_within_project(
@@ -710,10 +938,10 @@ def create_subproject(
     )
     _set_subproject_assignees(sp, assignees)
 
-    # KEFICO 필드 복사
+    # KEFICO ?꾨뱶 蹂듭궗
     _apply_kefico_fields(sp, payload)
 
-    # 세부 태스크: 프로젝트 유형별 코드 내장 템플릿 적용
+    # ?몃? ?쒖뒪?? ?꾨줈?앺듃 ?좏삎蹂?肄붾뱶 ?댁옣 ?쒗뵆由??곸슜
     task_source = [(name, float(w)) for name, w in _TEMPLATE_BY_TYPE.get(project.project_type, DEFAULT_SUBTASK_TEMPLATE)]
 
     for idx, (task_name, weight) in enumerate(task_source, start=1):
@@ -804,7 +1032,7 @@ def update_subproject(
     if new_end < new_start:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="종료일은 시작일 이후여야 합니다.",
+            detail="醫낅즺?쇱? ?쒖옉???댄썑?ъ빞 ?⑸땲??",
         )
 
     _validate_subproject_dates_within_project(project, new_start, new_end)
@@ -822,10 +1050,10 @@ def update_subproject(
     if payload.end_date is not None:
         sp.end_date = payload.end_date
 
-    # KEFICO 필드 반영
+    # KEFICO ?꾨뱶 諛섏쁺
     _apply_kefico_fields(sp, payload)
 
-    # verifier/reviewer FK 검증
+    # verifier/reviewer FK 寃利?
     for fk_name in ("verifier_id", "reviewer_id"):
         val = getattr(sp, fk_name)
         if val is not None:
@@ -833,7 +1061,7 @@ def update_subproject(
             if not ref:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"{fk_name} 사용자를 찾을 수 없습니다.",
+                    detail=f"{fk_name} ?ъ슜?먮? 李얠쓣 ???놁뒿?덈떎.",
                 )
 
     db.flush()
@@ -860,7 +1088,7 @@ def delete_subproject(
     if sp.status == STATUS_COMPLETED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="완료된 일정은 삭제할 수 없습니다.",
+            detail="?꾨즺???쇱젙? ??젣?????놁뒿?덈떎.",
         )
     db.delete(sp)
     db.commit()
@@ -880,14 +1108,14 @@ def update_subtask(
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="세부 태스크를 찾을 수 없습니다.",
+            detail="?몃? ?쒖뒪?щ? 李얠쓣 ???놁뒿?덈떎.",
         )
 
     sp = _load_subproject(db, task.subproject_id)
     if current_user.role != "admin" and current_user.id not in _subproject_assignee_ids(sp):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="본인이 담당한 태스크만 변경할 수 있습니다.",
+            detail="蹂몄씤???대떦???쒖뒪?щ쭔 蹂寃쏀븷 ???덉뒿?덈떎.",
         )
 
     if payload.is_done is not None:
@@ -963,7 +1191,7 @@ def create_project_execution_history(
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="사용자를 찾을 수 없습니다.",
+            detail="?ъ슜?먮? 李얠쓣 ???놁뒿?덈떎.",
         )
 
     subproject: SubProject | None = None
@@ -976,14 +1204,14 @@ def create_project_execution_history(
     if payload.project_id is not None and not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="프로젝트를 찾을 수 없습니다.",
+            detail="?꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
         )
 
     project_name = (payload.project_name or (project.name if project else None) or "").strip()
     if not project_name:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="프로젝트명을 입력해주세요.",
+            detail="?꾨줈?앺듃紐낆쓣 ?낅젰?댁＜?몄슂.",
         )
 
     history = ProjectExecutionHistory(
@@ -1020,46 +1248,46 @@ def update_project_execution_history(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    """관리자: 업무 이력 행 수동 편집. 편집 시 manual_override=True 로 표시되어
-    이후 SubProject 변경에 의한 자동 동기화가 이 행을 덮어쓰지 않는다.
+    """愿由ъ옄: ?낅Т ?대젰 ???섎룞 ?몄쭛. ?몄쭛 ??manual_override=True 濡??쒖떆?섏뼱
+    ?댄썑 SubProject 蹂寃쎌뿉 ?섑븳 ?먮룞 ?숆린?붽? ???됱쓣 ??뼱?곗? ?딅뒗??
     """
     history = db.get(ProjectExecutionHistory, history_id)
     if not history:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="업무 이력을 찾을 수 없습니다.",
+            detail="?낅Т ?대젰??李얠쓣 ???놁뒿?덈떎.",
         )
 
     data = payload.model_dump(exclude_unset=True)
     if not data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="수정할 필드가 없습니다.",
+            detail="?섏젙???꾨뱶媛 ?놁뒿?덈떎.",
         )
 
     if "started_on" in data and "ended_on" in data:
         if data["started_on"] and data["ended_on"] and data["started_on"] > data["ended_on"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="시작일이 종료일보다 늦을 수 없습니다.",
+                detail="?쒖옉?쇱씠 醫낅즺?쇰낫????쓣 ???놁뒿?덈떎.",
             )
     elif "started_on" in data and history.ended_on:
         if data["started_on"] and data["started_on"] > history.ended_on:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="시작일이 종료일보다 늦을 수 없습니다.",
+                detail="?쒖옉?쇱씠 醫낅즺?쇰낫????쓣 ???놁뒿?덈떎.",
             )
     elif "ended_on" in data and history.started_on:
         if data["ended_on"] and history.started_on > data["ended_on"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="시작일이 종료일보다 늦을 수 없습니다.",
+                detail="?쒖옉?쇱씠 醫낅즺?쇰낫????쓣 ???놁뒿?덈떎.",
             )
 
     if "worked_minutes" in data and data["worked_minutes"] is not None and data["worked_minutes"] < 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="소요 시간은 음수일 수 없습니다.",
+            detail="?뚯슂 ?쒓컙? ?뚯닔?????놁뒿?덈떎.",
         )
 
     for field, value in data.items():
@@ -1081,14 +1309,14 @@ def delete_project_execution_history(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    """관리자: 업무 이력 삭제. SubProject가 완료 상태로 재동기화되면 새 자동 행이
-    생성될 수 있으나, 수동 편집된 행은 다시 만들어지지 않는다.
+    """愿由ъ옄: ?낅Т ?대젰 ??젣. SubProject媛 ?꾨즺 ?곹깭濡??щ룞湲고솕?섎㈃ ???먮룞 ?됱씠
+    ?앹꽦?????덉쑝?? ?섎룞 ?몄쭛???됱? ?ㅼ떆 留뚮뱾?댁?吏 ?딅뒗??
     """
     history = db.get(ProjectExecutionHistory, history_id)
     if not history:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="업무 이력을 찾을 수 없습니다.",
+            detail="?낅Т ?대젰??李얠쓣 ???놁뒿?덈떎.",
         )
     db.delete(history)
     db.commit()
@@ -1182,10 +1410,10 @@ def backfill_project_execution_history(
     return None
 
 
-# ─────────────────────────────────────────────────────────────
-#  ProgressLog 엔드포인트 (main_branch에서 병합)
-#  사용자가 날짜별로 진행률(%)과 코멘트를 기록하는 업무 일지.
-# ─────────────────────────────────────────────────────────────
+# ?????????????????????????????????????????????????????????????
+#  ProgressLog ?붾뱶?ъ씤??(main_branch?먯꽌 蹂묓빀)
+#  ?ъ슜?먭? ?좎쭨蹂꾨줈 吏꾪뻾瑜?%)怨?肄붾찘?몃? 湲곕줉?섎뒗 ?낅Т ?쇱?.
+# ?????????????????????????????????????????????????????????????
 
 
 @router.post(
@@ -1204,7 +1432,7 @@ def create_subproject_progress_log(
     if current_user.id not in assignee_ids:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="본인에게 배정된 하위 프로젝트만 진행률을 기록할 수 있습니다.",
+            detail="蹂몄씤?먭쾶 諛곗젙???섏쐞 ?꾨줈?앺듃留?吏꾪뻾瑜좎쓣 湲곕줉?????덉뒿?덈떎.",
         )
 
     progress_log = ProgressLog(
@@ -1239,7 +1467,7 @@ def list_subproject_progress_logs(
     if current_user.role != "admin" and current_user.id not in _subproject_assignee_ids(sp):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="본인에게 배정된 하위 프로젝트의 진행률 기록만 볼 수 있습니다.",
+            detail="蹂몄씤?먭쾶 諛곗젙???섏쐞 ?꾨줈?앺듃??吏꾪뻾瑜?湲곕줉留?蹂????덉뒿?덈떎.",
         )
 
     stmt = select(ProgressLog).where(ProgressLog.subproject_id == subproject_id)
@@ -1262,12 +1490,12 @@ def create_progress_log(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """본인이 해당 프로젝트에서 오늘 한 일의 진행률을 기록한다."""
+    """蹂몄씤???대떦 ?꾨줈?앺듃?먯꽌 ?ㅻ뒛 ???쇱쓽 吏꾪뻾瑜좎쓣 湲곕줉?쒕떎."""
     project = db.get(Project, project_id)
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="프로젝트를 찾을 수 없습니다.",
+            detail="?꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
         )
 
     progress_log = ProgressLog(
@@ -1292,12 +1520,12 @@ def list_project_progress_logs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """본인이 이 프로젝트에 남긴 진행 기록 목록."""
+    """蹂몄씤?????꾨줈?앺듃???④릿 吏꾪뻾 湲곕줉 紐⑸줉."""
     project = db.get(Project, project_id)
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="프로젝트를 찾을 수 없습니다.",
+            detail="?꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
         )
 
     logs = db.scalars(

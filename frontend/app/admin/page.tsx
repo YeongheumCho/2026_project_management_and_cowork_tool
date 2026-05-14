@@ -1,9 +1,11 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import AppShell from '../components/AppShell';
+import type { UserBrief } from '../lib/api';
 import { useMe } from '../lib/useMe';
 import AdminOrgScopeTree from './components/AdminOrgScopeTree';
+import MajorProjectManager from './components/MajorProjectManager';
 import ProjectDeletionManager from './components/ProjectDeletionManager';
 import StopwatchSummaryManager from './components/StopwatchSummaryManager';
 import TemplateManager from './components/TemplateManager';
@@ -11,12 +13,13 @@ import UserTable from './components/UserTable';
 import WorkHistoryManager from './components/WorkHistoryManager';
 import { useAdminUsers } from './hooks/useAdminUsers';
 
-type AdminTab = 'users' | 'projects' | 'templates' | 'work-history';
+type AdminTab = 'users' | 'major-projects' | 'projects' | 'templates' | 'work-history';
 type DateRange = { from: string; to: string };
 
 const TABS: { id: AdminTab; label: string }[] = [
   { id: 'users', label: '사용자 권한 관리' },
   { id: 'projects', label: '프로젝트 삭제 관리' },
+  { id: 'major-projects', label: '대프로젝트 관리' },
   { id: 'templates', label: '템플릿 필드 구성 관리' },
   { id: 'work-history', label: '업무 이력 관리' },
 ];
@@ -79,7 +82,7 @@ export default function AdminPage() {
           관리자 설정
         </h1>
         <p className="mt-1 text-small text-[#888780]">
-          사용자 권한과 프로젝트 유형별 필드 구성을 관리합니다.
+          사용자 권한과 프로젝트, 템플릿, 업무 이력을 관리합니다.
         </p>
       </div>
 
@@ -115,6 +118,10 @@ export default function AdminPage() {
         />
       )}
 
+
+      {activeTab === 'major-projects' && (
+        <MajorProjectManager users={users as UserBrief[]} />
+      )}
       {activeTab === 'projects' && (
         <ProjectDeletionManager enabled={isAdmin} />
       )}

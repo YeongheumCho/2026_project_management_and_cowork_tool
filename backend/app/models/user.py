@@ -42,3 +42,8 @@ class User(Base):
         secondary="project_participants",
         back_populates="participants",
     )
+    major_projects = relationship(
+        "MajorProject",
+        secondary="major_project_members",
+        back_populates="members",
+    )

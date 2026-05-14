@@ -42,6 +42,13 @@ project_participants = Table(
     Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
 )
 
+major_project_members = Table(
+    "major_project_members",
+    Base.metadata,
+    Column("major_project_id", ForeignKey("major_projects.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+)
+
 subproject_assignees = Table(
     "subproject_assignees",
     Base.metadata,
@@ -83,10 +90,38 @@ VERIFICATION_LEVELS = {"basic", "LV1", "LV2", "BSW", "LV3", "LV4"}
 ETC_CATEGORIES = {"education", "vacation", "business_trip", "fail_classification", "other"}
 
 
+class MajorProject(Base):
+    __tablename__ = "major_projects"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    kickoff_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    projects = relationship("Project", back_populates="major_project")
+    members = relationship(
+        "User",
+        secondary=major_project_members,
+        back_populates="major_projects",
+    )
+
+
 class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    major_project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("major_projects.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     project_type: Mapped[str] = mapped_column(
         String(50), default="general", nullable=False
@@ -102,6 +137,7 @@ class Project(Base):
         nullable=False,
     )
 
+    major_project = relationship("MajorProject", back_populates="projects")
     subprojects = relationship(
         "SubProject",
         back_populates="project",
