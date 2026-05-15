@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import AppShell from '../components/AppShell';
 import type { UserBrief } from '../lib/api';
 import { useMe } from '../lib/useMe';
-import AdminOrgScopeTree from './components/AdminOrgScopeTree';
 import MajorProjectManager from './components/MajorProjectManager';
 import ProjectDeletionManager from './components/ProjectDeletionManager';
 import TemplateManager from './components/TemplateManager';
@@ -129,61 +128,14 @@ export default function AdminPage() {
       )}
 
       {activeTab === 'work-history' && (
-        <div className="space-y-4">
-          <AdminOrgScopeTree
-            users={users}
-            selectedIds={selectedOrgUserIds}
-            onSelect={setSelectedOrgUserIds}
-          />
-          <section className="rounded-2xl border border-border bg-white p-4">
-            <div className="mb-3">
-              <h3 className="text-md font-bold text-text">조회 기간</h3>
-              <p className="mt-1 text-small text-text-subtle">
-                선택한 담당자의 스톱워치 시간 현황과 업무 이력 현황에 함께 적용됩니다.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
-              <label className="block text-small font-semibold text-text-subtle">
-                시작일
-                <input
-                  type="date"
-                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
-                  value={workRange.from}
-                  onChange={(event) =>
-                    setWorkRange((prev) => ({ ...prev, from: event.target.value }))
-                  }
-                />
-              </label>
-              <label className="block text-small font-semibold text-text-subtle">
-                종료일
-                <input
-                  type="date"
-                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
-                  value={workRange.to}
-                  onChange={(event) =>
-                    setWorkRange((prev) => ({ ...prev, to: event.target.value }))
-                  }
-                />
-              </label>
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={() => setWorkRange({ from: '', to: '' })}
-                  className="w-full rounded-lg border border-border px-4 py-2 text-body font-semibold text-brand transition hover:bg-surface-muted md:w-auto"
-                >
-                  기간 초기화
-                </button>
-              </div>
-            </div>
-          </section>
-          <WorkStatusManager
-            enabled={isAdmin}
-            users={users}
-            selectedUserIds={selectedOrgUserIds}
-            dateRange={workRange}
-            onDateRangeChange={setWorkRange}
-          />
-        </div>
+        <WorkStatusManager
+          enabled={isAdmin}
+          users={users}
+          selectedUserIds={selectedOrgUserIds}
+          onSelectedUserIdsChange={setSelectedOrgUserIds}
+          dateRange={workRange}
+          onDateRangeChange={setWorkRange}
+        />
       )}
     </AppShell>
   );

@@ -32,10 +32,10 @@ export default function AdminOrgScopeTree({
   })) as UserBrief[];
 
   return (
-    <section className="rounded-2xl border border-border bg-white p-4">
+    <div className="rounded-xl border border-border bg-white p-3">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-md font-bold text-text">담당자</h3>
+          <h4 className="text-body font-bold text-text">담당자</h4>
           <p className="mt-1 text-small text-text-subtle">
             선택 범위: {selectedIds ? `${selectedIds.size}명` : '전체'}
           </p>
@@ -53,7 +53,7 @@ export default function AdminOrgScopeTree({
         </button>
       </div>
 
-      <div className="max-h-[300px] overflow-y-auto pr-1">
+      <div className="max-h-[260px] overflow-y-auto pr-1">
         <OrganizationMemberPicker
           users={pickerUsers}
           selectedIds={selectedArray}
@@ -63,6 +63,6 @@ export default function AdminOrgScopeTree({
           emptyLabel="선택 가능한 인원이 없습니다."
         />
       </div>
-    </section>
+    </div>
   );
 }
