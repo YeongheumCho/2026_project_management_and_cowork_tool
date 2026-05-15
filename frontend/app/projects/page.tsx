@@ -76,6 +76,14 @@ export default function ProjectsPage() {
     setModalOpen(true);
   };
 
+  const openSubProject = (sp: SubProject) => {
+    if (isAdmin) {
+      openEditSub(sp);
+      return;
+    }
+    setProgressTarget(sp);
+  };
+
   const openEditProject = (project: Project) => {
     if (!isAdmin) return;
     setProjectInitial(project);
@@ -149,7 +157,7 @@ export default function ProjectsPage() {
             onToggle={toggleExpand}
             onAddSub={openCreateSub}
             onCsvImport={openCsvImport}
-            onOpenSubProgress={setProgressTarget}
+            onOpenSubProgress={openSubProject}
             onEditSub={openEditSub}
             onEditProject={openEditProject}
             onDeleteProject={handleDeleteProject}
