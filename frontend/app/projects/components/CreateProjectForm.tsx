@@ -4,6 +4,7 @@ import { FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import OrganizationMemberPicker from '../../components/OrganizationMemberPicker';
 import {
   apiFetch,
+  defaultFieldSchema,
   PROJECT_TYPE_LABEL,
   PROJECT_TYPE_OPTIONS,
   type MajorProject,
@@ -80,6 +81,12 @@ export default function CreateProjectForm({ majorProjects, onCreated, onError }:
           end_date: endDate || null,
         }),
       });
+      let templateError = '';
+      try {
+        await ensureDefaultTemplate(created);
+      } catch (nextError) {
+        templateError = (nextError as Error).message;
+      }
       setName('');
       setMajorProjectId(initialMajorProjectId);
       setType(availableProjectTypes[0] ?? 'general');
@@ -87,6 +94,9 @@ export default function CreateProjectForm({ majorProjects, onCreated, onError }:
       setEndDate('');
       setParticipantIds([]);
       onCreated(created);
+      if (templateError) {
+        onError(`프로젝트는 생성됐지만 기본 템플릿을 만들지 못했습니다: ${templateError}`);
+      }
     } catch (err) {
       onError((err as Error).message);
     } finally {
@@ -181,6 +191,21 @@ export default function CreateProjectForm({ majorProjects, onCreated, onError }:
       </div>
     </form>
   );
+}
+
+async function ensureDefaultTemplate(project: Project) {
+  const schema = defaultFieldSchema(String(project.project_type));
+  const projectTemplateType = `project_${project.id}_template_default`;
+
+  await apiFetch(`/field-schemas/${projectTemplateType}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      project_type: projectTemplateType,
+      section_label: schema.section_label,
+      fields: schema.fields,
+      weight: schema.weight,
+    }),
+  });
 }
 
 function Field({

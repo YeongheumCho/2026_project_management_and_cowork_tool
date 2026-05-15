@@ -13,6 +13,7 @@ import {
   type UserBrief,
 } from '../../lib/api';
 import Modal from '../Modal';
+import ProgressBar from '../ProgressBar';
 import ModalFooter from './parts/ModalFooter';
 import ModalHeader from './parts/ModalHeader';
 import BasicSection from './sections/BasicSection';
@@ -393,6 +394,10 @@ export default function TeamModal({
         </p>
       )}
 
+      {mode === 'edit' && initial && (
+        <ProgressSummary subproject={initial} />
+      )}
+
       <form onSubmit={submit} className="mt-4 space-y-5">
         <BasicSection
           f={f}
@@ -432,6 +437,32 @@ export default function TeamModal({
         />
       </form>
     </Modal>
+  );
+}
+
+function ProgressSummary({ subproject }: { subproject: SubProject }) {
+  const progress = Math.min(100, Math.max(0, subproject.progress ?? 0));
+  const doneTasks = subproject.subtasks.filter((task) => task.is_done).length;
+  const totalTasks = subproject.subtasks.length;
+
+  return (
+    <section className="mt-4 rounded-xl border border-border bg-surface-muted p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold text-text-subtle">진행률</p>
+          <p className="mt-1 text-lg font-bold text-text">{Math.round(progress)}%</p>
+        </div>
+        <p className="text-xs font-medium text-text-muted">
+          {subproject.start_date} - {subproject.end_date}
+          {totalTasks > 0 ? ` · 세부 항목 ${doneTasks}/${totalTasks}` : ''}
+        </p>
+      </div>
+      <ProgressBar
+        value={progress}
+        className="mt-3"
+        ariaLabel={`${subproject.name} 진행률`}
+      />
+    </section>
   );
 }
 
