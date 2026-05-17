@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import type { MajorProject, Project, SubProject, UserBrief } from '../../lib/api';
-import { colorForPosition } from './colors';
 import { compactPosition } from '../../lib/display';
+import { colorForPosition } from './colors';
 import {
   expandedKeysForMember,
   groupUsersByTeam,
@@ -96,7 +96,7 @@ export default function Sidebar({
         if (left.majorProject.is_default !== right.majorProject.is_default) {
           return left.majorProject.is_default ? 1 : -1;
         }
-        return left.majorProject.name.localeCompare(right.majorProject.name, 'ko');
+        return left.majorProject.name.localeCompare(right.majorProject.name, 'ko-KR');
       });
   }, [majorProjects, projects]);
 
@@ -114,6 +114,7 @@ export default function Sidebar({
     }
     return grouped;
   }, [subprojects]);
+
   const [expanded, setExpanded] = useState<Set<string>>(() =>
     initialExpandedKeys(groups, myTeam),
   );
@@ -421,7 +422,7 @@ function HierarchyButton({
         }`}
         aria-hidden
       >
-        ▶
+        ›
       </span>
       <span className="flex-1 truncate">{label}</span>
       <span className="shrink-0 text-tiny font-medium text-text-faint">{count}</span>
@@ -593,16 +594,18 @@ function SidebarSubprojectList({
             <button
               type="button"
               onClick={() => onSubprojectSelect(subproject)}
+              title="진행률 기록"
               className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-micro font-medium text-text-muted hover:bg-surface-muted"
             >
-              <SubprojectRowContent subproject={subproject} />
+              <SubprojectRowContent subproject={subproject} actionLabel="기록" />
             </button>
           ) : (
             <Link
               href={`/projects/${subproject.project_id}?subprojectId=${subproject.id}`}
+              title="상세 보기"
               className="flex items-center gap-1.5 rounded-md px-2 py-1 text-micro font-medium text-text-muted hover:bg-surface-muted"
             >
-              <SubprojectRowContent subproject={subproject} />
+              <SubprojectRowContent subproject={subproject} actionLabel="상세" />
             </Link>
           )}
         </li>
@@ -611,13 +614,22 @@ function SidebarSubprojectList({
   );
 }
 
-function SubprojectRowContent({ subproject }: { subproject: SubProject }) {
+function SubprojectRowContent({
+  subproject,
+  actionLabel,
+}: {
+  subproject: SubProject;
+  actionLabel: string;
+}) {
   return (
     <>
       <span className={`h-[6px] w-[6px] shrink-0 rounded-full ${statusDotClass(subproject.status)}`} />
-      <span className="truncate">{subproject.name}</span>
-      <span className="ml-auto shrink-0 text-tiny text-text-faint">
+      <span className="min-w-0 flex-1 truncate">{subproject.name}</span>
+      <span className="shrink-0 text-tiny text-text-faint">
         {Math.round(subproject.progress)}%
+      </span>
+      <span className="shrink-0 rounded-full bg-surface-muted px-1.5 py-0.5 text-[9px] text-text-faint">
+        {actionLabel}
       </span>
     </>
   );

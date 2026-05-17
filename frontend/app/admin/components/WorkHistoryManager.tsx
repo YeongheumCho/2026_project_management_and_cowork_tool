@@ -31,6 +31,10 @@ type Props = {
   users: AdminUser[];
   selectedUserIds?: Set<number> | null;
   dateRange: DateRange;
+  majorProjects: MajorProject[];
+  projects: Project[];
+  majorProjectId: number | '';
+  projectId: number | '';
   onChanged?: () => void;
 };
 
@@ -82,7 +86,7 @@ function formatDate(value: string | null): string {
 function formatMinutes(minutes: number): string {
   if (!Number.isFinite(minutes) || minutes <= 0) return '-';
   const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
+  const mins = Math.round(minutes % 60);
   if (hours === 0) return `${mins}분`;
   if (mins === 0) return `${hours}시간`;
   return `${hours}시간 ${mins}분`;
@@ -156,16 +160,16 @@ export default function WorkHistoryManager({
   users,
   selectedUserIds = null,
   dateRange,
+  majorProjects,
+  projects,
+  majorProjectId,
+  projectId,
   onChanged,
 }: Props) {
   const [entries, setEntries] = useState<ProjectHistoryEntry[]>([]);
-  const [majorProjects, setMajorProjects] = useState<MajorProject[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [subprojects, setSubprojects] = useState<SubProject[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [majorProjectId, setMajorProjectId] = useState<number | ''>('');
-  const [projectId, setProjectId] = useState<number | ''>('');
   const [createDraft, setCreateDraft] = useState<CreateDraft>(DEFAULT_CREATE_DRAFT);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -186,15 +190,11 @@ export default function WorkHistoryManager({
       if (dateRange.from) params.set('start_date', dateRange.from);
       if (dateRange.to) params.set('end_date', dateRange.to);
       const query = params.toString();
-      const [historyRows, majorProjectRows, projectRows, subprojectRows] = await Promise.all([
+      const [historyRows, subprojectRows] = await Promise.all([
         apiFetch<ProjectHistoryEntry[]>(`/projects/history${query ? `?${query}` : ''}`),
-        apiFetch<MajorProject[]>('/major-projects'),
-        apiFetch<Project[]>('/projects'),
         apiFetch<SubProject[]>('/subprojects'),
       ]);
       setEntries(historyRows);
-      setMajorProjects(majorProjectRows);
-      setProjects(projectRows);
       setSubprojects(subprojectRows);
       setMessage('');
     } catch (error) {
@@ -208,6 +208,14 @@ export default function WorkHistoryManager({
     void load();
   }, [load]);
 
+  useEffect(() => {
+    setCreateDraft((prev) => ({
+      ...prev,
+      major_project_id: prev.mode === 'existing' ? majorProjectId : prev.major_project_id,
+      project_id: prev.mode === 'existing' ? projectId : prev.project_id,
+    }));
+  }, [majorProjectId, projectId]);
+
   const sortedUsers = useMemo(
     () => [...users].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')),
     [users],
@@ -216,14 +224,6 @@ export default function WorkHistoryManager({
   const sortedMajorProjects = useMemo(
     () => [...majorProjects].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')),
     [majorProjects],
-  );
-
-  const filterProjects = useMemo(
-    () =>
-      projects
-        .filter((project) => majorProjectId === '' || projectMajorId(project) === majorProjectId)
-        .sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')),
-    [majorProjectId, projects],
   );
 
   const createProjects = useMemo(
@@ -261,17 +261,12 @@ export default function WorkHistoryManager({
     [displayRows],
   );
 
-  useEffect(() => {
-    if (projectId !== '' && !filterProjects.some((project) => project.id === projectId)) {
-      setProjectId('');
-    }
-  }, [filterProjects, projectId]);
-
   function updateCreateDraft<K extends keyof CreateDraft>(key: K, value: CreateDraft[K]) {
     setCreateDraft((prev) => {
       const next = { ...prev, [key]: value };
       if (key === 'mode') {
-        next.project_id = '';
+        next.project_id = value === 'existing' ? projectId : '';
+        next.major_project_id = value === 'existing' ? majorProjectId : '';
         next.project_name = '';
         next.project_type = 'manual';
         next.subproject_id = '';
@@ -317,23 +312,23 @@ export default function WorkHistoryManager({
 
   async function createManualHistory() {
     if (createDraft.user_id === '') {
-      setCreateError('담당자를 선택해주세요.');
+      setCreateError('담당자를 선택해 주세요.');
       return;
     }
     if (createDraft.mode === 'existing' && createDraft.subproject_id === '') {
-      setCreateError('기존 이력 추가는 프로젝트와 하위 프로젝트를 선택해주세요.');
+      setCreateError('등록된 이력으로 추가하려면 프로젝트와 하위 프로젝트를 선택해 주세요.');
       return;
     }
     if (
       createDraft.mode === 'manual' &&
       (!createDraft.project_name.trim() || !createDraft.subproject_name.trim())
     ) {
-      setCreateError('직접 입력 이력은 프로젝트명과 하위 프로젝트명을 입력해주세요.');
+      setCreateError('직접 입력 이력은 프로젝트명과 하위 프로젝트명을 입력해 주세요.');
       return;
     }
     const minutes = Number(createDraft.worked_minutes);
     if (!Number.isFinite(minutes) || minutes < 0) {
-      setCreateError('소요 시간은 0 이상의 숫자로 입력해주세요.');
+      setCreateError('소요 시간은 0 이상 숫자로 입력해 주세요.');
       return;
     }
 
@@ -363,11 +358,15 @@ export default function WorkHistoryManager({
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      setCreateDraft(DEFAULT_CREATE_DRAFT);
+      setCreateDraft({
+        ...DEFAULT_CREATE_DRAFT,
+        major_project_id: majorProjectId,
+        project_id: projectId,
+      });
       setShowCreateForm(false);
       await load();
       onChanged?.();
-      setMessage('업무 이력이 추가되었습니다.');
+      setMessage('업무 이력을 추가했습니다.');
     } catch (error) {
       setCreateError((error as Error).message);
     } finally {
@@ -431,7 +430,17 @@ export default function WorkHistoryManager({
   function exportRows() {
     downloadExcel(
       `업무_이력_현황_${dateRange.from || '전체'}_${dateRange.to || '전체'}.xls`,
-      ['담당자', '대프로젝트', '프로젝트', '하위 프로젝트명', '유형', '시작일', '종료일', '소요 시간', '기록 구분'],
+      [
+        '담당자',
+        '대프로젝트',
+        '프로젝트',
+        '하위 프로젝트명',
+        '유형',
+        '시작일',
+        '종료일',
+        '소요 시간',
+        '기록 구분',
+      ],
       displayRows.map((row) => [
         row.user_name,
         row.major_project_name ?? '대프로젝트 미지정',
@@ -460,69 +469,27 @@ export default function WorkHistoryManager({
         <div>
           <h3 className="text-md font-bold text-text">업무 이력 관리</h3>
           <p className="mt-1 text-small text-text-subtle">
-            조회 결과를 먼저 확인하고, 필요한 경우에만 수동 이력을 추가합니다.
+            상단 조회 조건에 맞는 업무 이력을 확인하고, 필요한 경우에만 수동 이력을 추가합니다.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setShowCreateForm((current) => !current);
-            setCreateError('');
-          }}
-          className="rounded-lg bg-brand px-3 py-2 text-small font-semibold text-white transition hover:bg-brand-hover"
-        >
-          {showCreateForm ? '업무 이력 추가 닫기' : '+ 업무 이력 추가'}
-        </button>
-      </div>
-
-      <div className="rounded-xl border border-border bg-surface-muted p-3">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
-          <label className="block text-small font-semibold text-text-subtle">
-            대프로젝트 필터
-            <select
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
-              value={majorProjectId}
-              onChange={(event) => {
-                setMajorProjectId(event.target.value === '' ? '' : Number(event.target.value));
-                setProjectId('');
-              }}
-            >
-              <option value="">전체</option>
-              {sortedMajorProjects.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-small font-semibold text-text-subtle">
-            프로젝트 필터
-            <select
-              className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
-              value={projectId}
-              onChange={(event) =>
-                setProjectId(event.target.value === '' ? '' : Number(event.target.value))
-              }
-            >
-              <option value="">전체</option>
-              {filterProjects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={exportRows}
-              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-body font-semibold text-text transition hover:border-brand hover:text-brand md:w-auto"
-            >
-              엑셀로 내보내기
-            </button>
-          </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={exportRows}
+            className="rounded-lg border border-border bg-white px-3 py-2 text-small font-semibold text-text transition hover:border-brand hover:text-brand"
+          >
+            엑셀 내보내기
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowCreateForm((current) => !current);
+              setCreateError('');
+            }}
+            className="rounded-lg bg-brand px-3 py-2 text-small font-semibold text-white transition hover:bg-brand-hover"
+          >
+            {showCreateForm ? '업무 이력 추가 닫기' : '+ 업무 이력 추가'}
+          </button>
         </div>
       </div>
 
@@ -532,7 +499,7 @@ export default function WorkHistoryManager({
             <div>
               <h4 className="text-body font-bold text-text">업무 이력 추가</h4>
               <p className="mt-1 text-small text-text-subtle">
-                기존 프로젝트를 선택하거나, 목록에 없는 이력을 직접 입력합니다.
+                등록된 하위 프로젝트를 선택하거나, 목록에 없는 과거 이력을 직접 입력합니다.
               </p>
             </div>
             {createError && (
@@ -542,8 +509,8 @@ export default function WorkHistoryManager({
 
           <div className="mb-3 flex rounded-xl border border-border bg-surface-muted p-1">
             {[
-              { id: 'existing', label: '기존 프로젝트 선택' },
-              { id: 'manual', label: '직접 입력' },
+              { id: 'existing', label: '등록된 하위 프로젝트 선택' },
+              { id: 'manual', label: '목록에 없는 이력 직접 입력' },
             ].map((item) => (
               <button
                 key={item.id}
@@ -823,7 +790,7 @@ export default function WorkHistoryManager({
       </div>
 
       <p className="text-small text-text-subtle">
-        하위 프로젝트 완료 시 자동으로 생성된 이력과 관리자가 직접 추가한 수동 이력을 함께 표시합니다.
+        하위 프로젝트 완료 시 자동 생성된 이력과 관리자가 직접 추가한 수동 이력을 함께 표시합니다.
       </p>
 
       {editingRow && editDraft && (
@@ -831,7 +798,8 @@ export default function WorkHistoryManager({
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <h3 className="text-heading font-bold text-text">업무 이력 편집</h3>
             <p className="mt-1 text-small text-text-subtle">
-              {editingRow.user_name} · {editingRow.project_name}
+              {editingRow.user_name} · {editingRow.major_project_name ?? '대프로젝트 미지정'} ·{' '}
+              {editingRow.project_name}
             </p>
 
             <div className="mt-4 space-y-3">

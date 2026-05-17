@@ -20,6 +20,7 @@ class FieldDefinition(BaseModel):
     options: list[FieldOption] = Field(default_factory=list)
     required: bool = False
     order: int = 0
+    default_value: str | None = None
 
 
 class ProjectFieldSchemaCreate(BaseModel):

@@ -40,6 +40,7 @@ function newField(order: number): FieldDefinition {
     options: [],
     required: false,
     order,
+    default_value: '',
   };
 }
 
@@ -47,6 +48,7 @@ function cloneFields(fields: FieldDefinition[]): FieldDefinition[] {
   return fields.map((field, order) => ({
     ...field,
     options: field.options.map((option) => ({ ...option })),
+    default_value: field.default_value ?? '',
     order,
   }));
 }
@@ -61,6 +63,10 @@ function uniqueTemplateName(baseName: string, templates: ProjectFieldSchema[]) {
     index += 1;
   }
   return nextName;
+}
+
+function hasDefaultValue(field: FieldDefinition) {
+  return (field.default_value ?? '').trim() !== '';
 }
 
 export default function TemplateManager() {
@@ -81,6 +87,7 @@ export default function TemplateManager() {
     () => projects.find((project) => project.id === activeProjectId) ?? null,
     [activeProjectId, projects],
   );
+
   const projectTemplates = useMemo(
     () =>
       activeProject
@@ -92,10 +99,12 @@ export default function TemplateManager() {
         : [],
     [activeProject, schemas],
   );
+
   const sortedFields = useMemo(
     () => fields.slice().sort((a, b) => a.order - b.order),
     [fields],
   );
+
   const reusableTemplates = useMemo(
     () =>
       Object.values(schemas)
@@ -117,16 +126,11 @@ export default function TemplateManager() {
 
   useEffect(() => {
     if (!activeProject) return;
-    const templates = Object.values(schemas)
-      .filter((schema) => isTemplateForProject(schema, activeProject.id))
-      .sort((left, right) =>
-        left.section_label.localeCompare(right.section_label, 'ko-KR'),
-      );
-    const nextActive = templates.some((schema) => schema.project_type === activeKey)
+    const nextActive = projectTemplates.some((schema) => schema.project_type === activeKey)
       ? activeKey
-      : String(templates[0]?.project_type ?? '');
+      : String(projectTemplates[0]?.project_type ?? '');
     setActiveKey(nextActive);
-  }, [activeKey, activeProject, schemas]);
+  }, [activeKey, activeProject, projectTemplates]);
 
   useEffect(() => {
     const schema = activeKey ? schemas[activeKey] : null;
@@ -165,7 +169,13 @@ export default function TemplateManager() {
   ) {
     setFields((current) =>
       current.map((field, fieldIndex) =>
-        fieldIndex === index ? { ...field, [key]: value } : field,
+        fieldIndex === index
+          ? {
+              ...field,
+              [key]: value,
+              ...(key === 'field_type' ? { default_value: '' } : {}),
+            }
+          : field,
       ),
     );
   }
@@ -215,6 +225,7 @@ export default function TemplateManager() {
       ...field,
       key: field.key.trim(),
       label: field.label.trim(),
+      default_value: field.default_value?.trim() || null,
       options: field.options
         .map((option) => ({
           label: option.label.trim(),
@@ -240,7 +251,7 @@ export default function TemplateManager() {
     };
     setSchemas((current) => ({ ...current, [key]: nextSchema }));
     setActiveKey(key);
-    setMessage('새 템플릿을 추가했습니다. 이름과 필드를 설정한 뒤 저장해주세요.');
+    setMessage('새 템플릿을 추가했습니다. 이름과 필드를 설정한 뒤 저장해 주세요.');
   }
 
   function handleReuseTemplate() {
@@ -263,7 +274,7 @@ export default function TemplateManager() {
     setSchemas((current) => ({ ...current, [key]: nextSchema }));
     setActiveKey(key);
     setReuseSourceKey('');
-    setMessage('저장된 템플릿을 선택한 프로젝트에 복사했습니다. 필요하면 이름과 필드를 조정한 뒤 저장해주세요.');
+    setMessage('저장된 템플릿을 현재 프로젝트로 복사했습니다.');
   }
 
   async function handleSave() {
@@ -273,11 +284,11 @@ export default function TemplateManager() {
     const name = templateName.trim();
 
     if (!name) {
-      setError('템플릿 이름을 입력해주세요.');
+      setError('템플릿 이름을 입력해 주세요.');
       return;
     }
     if (templateWeight < 1 || templateWeight > 10) {
-      setError('가중치는 1에서 10 사이의 값이어야 합니다.');
+      setError('가중치는 1에서 10 사이여야 합니다.');
       return;
     }
     if (
@@ -289,7 +300,7 @@ export default function TemplateManager() {
       return;
     }
     if (keys.length !== normalizedFields.length) {
-      setError('모든 필드의 고유 키를 입력해주세요.');
+      setError('모든 필드에 고유 키를 입력해 주세요.');
       return;
     }
     if (new Set(keys).size !== keys.length) {
@@ -297,7 +308,7 @@ export default function TemplateManager() {
       return;
     }
     if (normalizedFields.some((field) => !field.label)) {
-      setError('모든 필드의 표시 이름을 입력해주세요.');
+      setError('모든 필드의 표시 이름을 입력해 주세요.');
       return;
     }
 
@@ -318,7 +329,7 @@ export default function TemplateManager() {
         },
       );
       setSchemas((current) => ({ ...current, [activeKey]: updated }));
-      setMessage('템플릿을 저장했습니다.');
+      setMessage('템플릿을 저장했습니다. 기본값은 하위 프로젝트 생성 시 자동 입력됩니다.');
     } catch (nextError) {
       setError((nextError as Error).message);
     } finally {
@@ -357,9 +368,9 @@ export default function TemplateManager() {
     <section className="rounded-3xl border border-border bg-white p-6 shadow-sm">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-xl font-bold text-text">템플릿 필드 구성 관리</h3>
+          <h3 className="text-xl font-bold text-text">템플릿 관리</h3>
           <p className="mt-1 text-sm text-text-subtle">
-            프로젝트별로 하위 프로젝트 생성에 사용할 템플릿을 관리합니다.
+            프로젝트별 하위 프로젝트 템플릿, 필드 구성, 기본값을 관리합니다.
           </p>
         </div>
       </div>
@@ -416,9 +427,7 @@ export default function TemplateManager() {
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold text-text-subtle">선택 프로젝트</p>
-                  <h4 className="text-lg font-bold text-text">
-                    {activeProject?.name}
-                  </h4>
+                  <h4 className="text-lg font-bold text-text">{activeProject?.name}</h4>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {activeKey && (
@@ -471,7 +480,7 @@ export default function TemplateManager() {
               <div className="flex flex-wrap gap-2">
                 {projectTemplates.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-border-strong px-4 py-4 text-sm text-text-subtle">
-                    이 프로젝트에 할당된 템플릿이 없습니다. 템플릿을 추가해주세요.
+                    이 프로젝트에 할당된 템플릿이 없습니다. 템플릿을 추가해 주세요.
                   </p>
                 ) : (
                   projectTemplates.map((schema) => (
@@ -490,6 +499,9 @@ export default function TemplateManager() {
                         필드 {schema.fields.length}
                       </span>
                       <span className="ml-1 rounded-full bg-white/30 px-1.5 py-0.5 text-[10px]">
+                        기본값 {schema.fields.filter(hasDefaultValue).length}
+                      </span>
+                      <span className="ml-1 rounded-full bg-white/30 px-1.5 py-0.5 text-[10px]">
                         가중치 {schema.weight ?? 5}
                       </span>
                     </button>
@@ -502,7 +514,7 @@ export default function TemplateManager() {
               <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
                 <div className="space-y-5">
                   <div className="flex flex-wrap items-end justify-between gap-3">
-                    <div className="flex flex-wrap gap-3 flex-1">
+                    <div className="flex flex-1 flex-wrap gap-3">
                       <label className="block min-w-[240px] max-w-sm flex-1">
                         <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-text-subtle">
                           템플릿 이름 <span className="text-red-500">*</span>
@@ -516,7 +528,7 @@ export default function TemplateManager() {
                       </label>
                       <label className="block w-[130px]">
                         <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-text-subtle">
-                          가중치 (1~10) <span className="text-red-500">*</span>
+                          가중치 <span className="text-red-500">*</span>
                         </span>
                         <select
                           value={templateWeight}
@@ -524,7 +536,9 @@ export default function TemplateManager() {
                           className="input w-full"
                         >
                           {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                            <option key={n} value={n}>{n}</option>
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
                           ))}
                         </select>
                       </label>
@@ -561,18 +575,14 @@ export default function TemplateManager() {
                         onUpdateOption={(optionIndex, key, value) =>
                           updateOption(index, optionIndex, key, value)
                         }
-                        onRemoveOption={(optionIndex) =>
-                          removeOption(index, optionIndex)
-                        }
+                        onRemoveOption={(optionIndex) => removeOption(index, optionIndex)}
                       />
                     ))}
                   </div>
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setFields((current) => [...current, newField(current.length)])
-                    }
+                    onClick={() => setFields((current) => [...current, newField(current.length)])}
                     className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand/40 py-3 text-sm font-bold text-brand hover:border-brand hover:bg-brand-soft/30"
                   >
                     + 필드 추가
@@ -583,7 +593,7 @@ export default function TemplateManager() {
                       type="button"
                       onClick={() => void handleSave()}
                       disabled={saving}
-                      className="rounded-lg bg-brand px-5 py-2 text-xs font-bold text-white disabled:opacity-50 hover:bg-brand-hover"
+                      className="rounded-lg bg-brand px-5 py-2 text-xs font-bold text-white hover:bg-brand-hover disabled:opacity-50"
                     >
                       {saving ? '저장 중...' : '저장'}
                     </button>
@@ -633,9 +643,7 @@ function FieldEditor({
   return (
     <div className="rounded-2xl border border-border bg-white p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="text-xs font-bold text-text-faint">
-          필드 #{index + 1}
-        </span>
+        <span className="text-xs font-bold text-text-faint">필드 #{index + 1}</span>
         <div className="flex gap-1">
           <button
             type="button"
@@ -663,53 +671,64 @@ function FieldEditor({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <SmallField label="필드 키">
-          <input
-            value={field.key}
-            onChange={(event) =>
-              onChange('key', event.target.value.replace(/\s/g, '_'))
-            }
-            className="input"
-            placeholder="예: controller_name"
-          />
-        </SmallField>
-        <SmallField label="표시 이름">
-          <input
-            value={field.label}
-            onChange={(event) => onChange('label', event.target.value)}
-            className="input"
-            placeholder="예: 제어기명"
-          />
-        </SmallField>
-        <SmallField label="필드 타입">
-          <select
-            value={field.field_type}
-            onChange={(event) =>
-              onChange('field_type', event.target.value as FieldType)
-            }
-            className="input"
-          >
-            {(Object.entries(FIELD_TYPE_LABEL) as [FieldType, string][]).map(
-              ([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ),
-            )}
-          </select>
-        </SmallField>
-        <SmallField label="필수 여부">
-          <label className="flex h-full items-center gap-2">
+      <div className="rounded-xl border border-border bg-surface-muted p-3">
+        <p className="mb-3 text-xs font-bold text-text-subtle">필드 정보</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <SmallField label="필드 키">
             <input
-              type="checkbox"
-              checked={field.required}
-              onChange={(event) => onChange('required', event.target.checked)}
-              className="h-4 w-4 accent-brand"
+              value={field.key}
+              onChange={(event) => onChange('key', event.target.value.replace(/\s/g, '_'))}
+              className="input"
+              placeholder="예: controller_name"
             />
-            <span className="text-sm text-text">필수 입력</span>
-          </label>
-        </SmallField>
+          </SmallField>
+          <SmallField label="표시 이름">
+            <input
+              value={field.label}
+              onChange={(event) => onChange('label', event.target.value)}
+              className="input"
+              placeholder="예: 제어기명"
+            />
+          </SmallField>
+          <SmallField label="필드 유형">
+            <select
+              value={field.field_type}
+              onChange={(event) => onChange('field_type', event.target.value as FieldType)}
+              className="input"
+            >
+              {(Object.entries(FIELD_TYPE_LABEL) as [FieldType, string][]).map(
+                ([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ),
+              )}
+            </select>
+          </SmallField>
+          <SmallField label="필수 여부">
+            <label className="flex h-full items-center gap-2">
+              <input
+                type="checkbox"
+                checked={field.required}
+                onChange={(event) => onChange('required', event.target.checked)}
+                className="h-4 w-4 accent-brand"
+              />
+              <span className="text-sm text-text">필수 입력</span>
+            </label>
+          </SmallField>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-xl border border-border bg-white p-3">
+        <p className="mb-3 text-xs font-bold text-text-subtle">기본값</p>
+        <DefaultValueInput
+          field={field}
+          value={field.default_value ?? ''}
+          onChange={(value) => onChange('default_value', value)}
+        />
+        <p className="mt-2 text-tiny text-text-subtle">
+          저장된 기본값은 이 템플릿으로 하위 프로젝트를 생성할 때 자동 입력됩니다.
+        </p>
       </div>
 
       {field.field_type === 'select' && (
@@ -757,6 +776,74 @@ function FieldEditor({
   );
 }
 
+function DefaultValueInput({
+  field,
+  value,
+  onChange,
+}: {
+  field: FieldDefinition;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  if (field.field_type === 'checkbox') {
+    return (
+      <label className="flex h-10 items-center gap-2 rounded-lg border border-border bg-white px-3">
+        <input
+          type="checkbox"
+          checked={value === 'true'}
+          onChange={(event) => onChange(event.target.checked ? 'true' : '')}
+          className="h-4 w-4 accent-brand"
+        />
+        <span className="text-sm text-text-subtle">기본 체크</span>
+      </label>
+    );
+  }
+
+  if (field.field_type === 'select') {
+    return (
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="input w-full"
+      >
+        <option value="">기본값 없음</option>
+        {field.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  if (field.field_type === 'textarea') {
+    return (
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="input min-h-[72px] w-full"
+        placeholder="하위 프로젝트 생성 시 자동으로 채울 값"
+      />
+    );
+  }
+
+  return (
+    <input
+      type={
+        field.field_type === 'number'
+          ? 'number'
+          : field.field_type === 'date'
+            ? 'date'
+            : 'text'
+      }
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="input w-full"
+      placeholder="하위 프로젝트 생성 시 자동으로 채울 값"
+    />
+  );
+}
+
 function TemplatePreview({
   templateName,
   fields,
@@ -777,7 +864,7 @@ function TemplatePreview({
 
       {fields.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border-strong px-4 py-8 text-center text-sm text-text-faint">
-          추가한 필드가 없습니다.
+          추가된 필드가 없습니다.
         </div>
       ) : (
         <div className="grid gap-3">
@@ -796,16 +883,37 @@ function PreviewField({ field }: { field: FieldDefinition }) {
       <span className="mb-1.5 block text-xs font-bold text-text-muted">
         {field.label || '필드 이름'}
         {field.required && <span className="ml-0.5 text-red-500">*</span>}
+        {hasDefaultValue(field) && (
+          <span className="ml-1 rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] text-brand">
+            기본값
+          </span>
+        )}
       </span>
       {field.field_type === 'select' ? (
-        <select className="input w-full" disabled>
-          <option>{field.options[0]?.label || '선택'}</option>
+        <select className="input w-full" disabled value={field.default_value ?? ''}>
+          <option value="">{field.options[0]?.label || '선택'}</option>
+          {field.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       ) : field.field_type === 'textarea' ? (
-        <textarea className="input min-h-[72px] w-full" disabled />
+        <textarea
+          className="input min-h-[72px] w-full"
+          disabled
+          readOnly
+          value={field.default_value ?? ''}
+        />
       ) : field.field_type === 'checkbox' ? (
         <div className="flex h-10 items-center gap-2 rounded-lg border border-border bg-white px-3">
-          <input type="checkbox" disabled className="h-4 w-4" />
+          <input
+            type="checkbox"
+            checked={field.default_value === 'true'}
+            disabled
+            readOnly
+            className="h-4 w-4"
+          />
           <span className="text-sm text-text-subtle">체크</span>
         </div>
       ) : (
@@ -819,6 +927,8 @@ function PreviewField({ field }: { field: FieldDefinition }) {
           }
           className="input w-full"
           disabled
+          readOnly
+          value={field.default_value ?? ''}
         />
       )}
     </label>

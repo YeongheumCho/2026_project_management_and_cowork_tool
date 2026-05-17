@@ -93,7 +93,7 @@ export default function ProjectCard({
                     : 'bg-verify-info-bg text-verify-info-fg'
                 }`}
               >
-                {isCompleted ? '완료' : '진행 중'}
+                {isCompleted ? '프로젝트 완료' : '진행 중 프로젝트'}
               </span>
             </div>
 
@@ -195,7 +195,7 @@ export default function ProjectCard({
                 프로젝트 삭제
               </ActionButton>
               <ActionButton onClick={() => onCsvImport(project.id)}>
-                CSV 일괄 등록
+                CSV 업무 가져오기
               </ActionButton>
               <button
                 type="button"
