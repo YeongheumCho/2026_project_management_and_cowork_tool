@@ -17,7 +17,7 @@ type DateRange = { from: string; to: string };
 const TABS: { id: AdminTab; label: string }[] = [
   { id: 'users', label: '사용자 권한 관리' },
   { id: 'major-projects', label: '프로젝트 관리' },
-  { id: 'templates', label: '템플릿 필드 구성 관리' },
+  { id: 'templates', label: '템플릿 관리' },
   { id: 'work-history', label: '업무 이력 관리' },
 ];
 

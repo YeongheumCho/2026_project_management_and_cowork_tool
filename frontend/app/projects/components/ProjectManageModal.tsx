@@ -150,6 +150,9 @@ export default function ProjectManageModal({
               </option>
             ))}
           </select>
+          <p className="mt-1 text-xs text-text-subtle">
+            선택한 대프로젝트의 참여자와 프로젝트 유형만 사용할 수 있습니다.
+          </p>
         </div>
 
         <div className="flex-shrink-0">
@@ -171,6 +174,9 @@ export default function ProjectManageModal({
               </option>
             ))}
           </select>
+          <p className="mt-1 text-xs text-text-subtle">
+            대프로젝트 관리에서 허용한 프로젝트 유형만 표시됩니다.
+          </p>
         </div>
 
         <div className="grid flex-shrink-0 gap-4 md:grid-cols-2">

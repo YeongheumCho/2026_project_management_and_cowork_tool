@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import AppShell from '../components/AppShell';
+import type { SubProject } from '../lib/api';
 import { useMe } from '../lib/useMe';
 import CreateProjectModal from '../projects/components/CreateProjectModal';
+import ProgressLogModal from '../projects/components/ProgressLogModal';
 import { useWorkflowSelection } from '../lib/workflow-selection';
 import DashboardHeader from './components/DashboardHeader';
 import KpiGrid from './components/KpiGrid';
@@ -35,6 +37,7 @@ export default function DashboardPage() {
   const isAdmin = me?.role === 'admin';
   const [createOpen, setCreateOpen] = useState(false);
   const [modalError, setModalError] = useState('');
+  const [progressTarget, setProgressTarget] = useState<SubProject | null>(null);
 
   const filteredSubprojects = useMemo(() => {
     if (!selectedMemberId) return subprojects;
@@ -145,6 +148,7 @@ export default function DashboardPage() {
         candidates={timerCandidates}
         projects={projects}
         onChanged={reload}
+        onProgressRequested={setProgressTarget}
       />
 
       <CreateProjectModal
@@ -159,6 +163,14 @@ export default function DashboardPage() {
           setSelectedProjectId(created.id);
         }}
         onError={setModalError}
+      />
+
+      <ProgressLogModal
+        open={progressTarget !== null}
+        subproject={progressTarget}
+        onClose={() => setProgressTarget(null)}
+        onSaved={reload}
+        initialProgressPercent={100}
       />
     </AppShell>
   );

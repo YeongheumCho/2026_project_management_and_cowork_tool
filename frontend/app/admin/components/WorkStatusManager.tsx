@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import {
@@ -61,7 +61,8 @@ type ProjectStatusRow = {
   projectName: string;
   subprojectName: string;
   userName: string;
-  stopwatchSeconds: number;
+  userId: number;
+  userPeriodStopwatchSeconds: number;
   historyMinutes: number;
   startedOn: string | null;
   endedOn: string | null;
@@ -105,7 +106,7 @@ function formatSeconds(seconds: number): string {
 function formatMinutes(minutes: number): string {
   if (!Number.isFinite(minutes) || minutes <= 0) return '-';
   const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
+  const mins = Math.round(minutes % 60);
   if (hours === 0) return `${mins}분`;
   if (mins === 0) return `${hours}시간`;
   return `${hours}시간 ${mins}분`;
@@ -314,13 +315,40 @@ export default function WorkStatusManager({
     [selectedUserIds, workRows],
   );
 
-  const visibleHistoryRows = useMemo(
+  const selectedUserHistoryRows = useMemo(
     () =>
       selectedUserIds
         ? historyRows.filter((row) => selectedUserIds.has(row.user_id))
         : historyRows,
     [historyRows, selectedUserIds],
   );
+
+  const visibleHistoryRows = useMemo(
+    () =>
+      selectedUserHistoryRows
+        .filter((row) => majorProjectId === '' || row.major_project_id === majorProjectId)
+        .filter((row) => projectId === '' || row.project_id === projectId),
+    [majorProjectId, projectId, selectedUserHistoryRows],
+  );
+
+  const sortedMajorProjects = useMemo(
+    () => [...majorProjects].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')),
+    [majorProjects],
+  );
+
+  const majorFilteredProjects = useMemo(
+    () =>
+      projects
+        .filter((project) => majorProjectId === '' || projectMajorId(project) === majorProjectId)
+        .sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')),
+    [majorProjectId, projects],
+  );
+
+  useEffect(() => {
+    if (projectId !== '' && !majorFilteredProjects.some((project) => project.id === projectId)) {
+      setProjectId('');
+    }
+  }, [majorFilteredProjects, projectId]);
 
   useEffect(() => {
     if (selectedMemberId !== null && selectedUserIds && !selectedUserIds.has(selectedMemberId)) {
@@ -331,7 +359,7 @@ export default function WorkStatusManager({
   useEffect(() => {
     setSelectedMemberId(null);
     setSelectedProjectKey(null);
-  }, [dateRange.from, dateRange.to, viewMode]);
+  }, [dateRange.from, dateRange.to, majorProjectId, projectId, viewMode]);
 
   const memberRows = useMemo<MemberStatusRow[]>(() => {
     const rows = new Map<number, MemberStatusRow>();
@@ -374,60 +402,39 @@ export default function WorkStatusManager({
     );
   }, [usersById, visibleHistoryRows, visibleWorkRows, workByUser]);
 
-  const sortedMajorProjects = useMemo(
-    () => [...majorProjects].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')),
-    [majorProjects],
-  );
-
-  const majorFilteredProjects = useMemo(
-    () =>
-      projects
-        .filter((project) => majorProjectId === '' || projectMajorId(project) === majorProjectId)
-        .sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')),
-    [majorProjectId, projects],
-  );
-
-  useEffect(() => {
-    if (projectId !== '' && !majorFilteredProjects.some((project) => project.id === projectId)) {
-      setProjectId('');
-    }
-  }, [majorFilteredProjects, projectId]);
-
   const projectRows = useMemo<ProjectStatusRow[]>(() => {
     const rows = new Map<string, ProjectStatusRow>();
-    visibleHistoryRows
-      .filter((history) => majorProjectId === '' || history.major_project_id === majorProjectId)
-      .filter((history) => projectId === '' || history.project_id === projectId)
-      .forEach((history) => {
-        const key = [
-          history.major_project_id ?? 'none',
-          history.project_id ?? 'none',
-          history.subproject_id ?? history.subproject_name,
-          history.user_id,
-        ].join(':');
-        const existing = rows.get(key);
-        const work = workByUser.get(history.user_id);
-        if (existing) {
-          existing.historyMinutes += history.worked_minutes || 0;
-          existing.startedOn = mergeStart(existing.startedOn, history.started_on);
-          existing.endedOn = mergeEnd(existing.endedOn, history.ended_on);
-          return;
-        }
-        rows.set(key, {
-          key,
-          majorProjectId: history.major_project_id ?? null,
-          projectId: history.project_id ?? null,
-          subprojectId: history.subproject_id ?? null,
-          subprojectName: history.subproject_name || '하위 프로젝트 미지정',
-          majorProjectName: history.major_project_name ?? '대프로젝트 미지정',
-          projectName: history.project_name || '프로젝트 미지정',
-          userName: history.user_name,
-          stopwatchSeconds: work?.total_seconds ?? 0,
-          historyMinutes: history.worked_minutes || 0,
-          startedOn: history.started_on,
-          endedOn: history.ended_on,
-        });
+    visibleHistoryRows.forEach((history) => {
+      const key = [
+        history.major_project_id ?? 'none',
+        history.project_id ?? 'none',
+        history.subproject_id ?? history.subproject_name,
+        history.user_id,
+      ].join(':');
+      const existing = rows.get(key);
+      const work = workByUser.get(history.user_id);
+      if (existing) {
+        existing.historyMinutes += history.worked_minutes || 0;
+        existing.startedOn = mergeStart(existing.startedOn, history.started_on);
+        existing.endedOn = mergeEnd(existing.endedOn, history.ended_on);
+        return;
+      }
+      rows.set(key, {
+        key,
+        majorProjectId: history.major_project_id ?? null,
+        projectId: history.project_id ?? null,
+        subprojectId: history.subproject_id ?? null,
+        subprojectName: history.subproject_name || '하위 프로젝트 미지정',
+        majorProjectName: history.major_project_name ?? '대프로젝트 미지정',
+        projectName: history.project_name || '프로젝트 미지정',
+        userName: history.user_name,
+        userId: history.user_id,
+        userPeriodStopwatchSeconds: work?.total_seconds ?? 0,
+        historyMinutes: history.worked_minutes || 0,
+        startedOn: history.started_on,
+        endedOn: history.ended_on,
       });
+    });
 
     return [...rows.values()].sort(
       (a, b) =>
@@ -436,7 +443,7 @@ export default function WorkStatusManager({
         a.subprojectName.localeCompare(b.subprojectName, 'ko-KR') ||
         a.userName.localeCompare(b.userName, 'ko-KR'),
     );
-  }, [majorProjectId, projectId, visibleHistoryRows, workByUser]);
+  }, [visibleHistoryRows, workByUser]);
 
   const selectedProjectRow = useMemo(
     () => projectRows.find((row) => row.key === selectedProjectKey) ?? null,
@@ -476,6 +483,13 @@ export default function WorkStatusManager({
     [visibleHistoryRows],
   );
 
+  const resetFilters = () => {
+    onSelectedUserIdsChange?.(null);
+    onDateRangeChange?.({ from: '', to: '' });
+    setMajorProjectId('');
+    setProjectId('');
+  };
+
   const exportRows = () => {
     if (viewMode === 'member') {
       downloadExcel(
@@ -496,19 +510,18 @@ export default function WorkStatusManager({
 
     downloadExcel(
       `업무_현황_프로젝트기준_${dateRange.from || '전체'}_${dateRange.to || '전체'}.xls`,
-      ['대프로젝트', '프로젝트', '하위 프로젝트', '담당자', '담당자 기간 스톱워치', '업무 이력 소요 시간', '기간'],
+      ['대프로젝트', '프로젝트', '하위 프로젝트', '담당자', '담당자 기간 총 스톱워치', '업무 이력 소요 시간', '기간'],
       projectRows.map((row) => [
         row.majorProjectName,
         row.projectName,
         row.subprojectName,
         row.userName,
-        formatSeconds(row.stopwatchSeconds),
+        formatSeconds(row.userPeriodStopwatchSeconds),
         formatMinutes(row.historyMinutes),
         `${formatDate(row.startedOn)} ~ ${formatDate(row.endedOn)}`,
       ]),
     );
   };
-
   if (!enabled) {
     return null;
   }
@@ -520,7 +533,7 @@ export default function WorkStatusManager({
           <div>
             <h3 className="text-md font-bold text-text">통합 업무 현황</h3>
             <p className="mt-1 text-small text-text-subtle">
-              조직도와 조회 기간을 기준으로 스톱워치 시간과 업무 이력을 함께 확인합니다.
+              담당자, 기간, 프로젝트 조건을 한 곳에서 선택하고 스톱워치 시간과 업무 이력을 함께 확인합니다.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -561,54 +574,88 @@ export default function WorkStatusManager({
               onSelect={onSelectedUserIdsChange}
             />
           )}
-          {onDateRangeChange && (
-            <div className="rounded-xl border border-border bg-surface-muted p-3">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h4 className="text-body font-bold text-text">조회 기간</h4>
-                  <p className="mt-1 text-small text-text-subtle">
-                    선택한 담당자와 기간이 현황 표와 업무 이력에 함께 적용됩니다.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onDateRangeChange({ from: '', to: '' })}
-                  className="rounded-lg border border-border bg-white px-3 py-2 text-small font-semibold text-brand transition hover:bg-brand-soft"
-                >
-                  기간 초기화
-                </button>
+          <div className="rounded-xl border border-border bg-surface-muted p-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 className="text-body font-bold text-text">조회 조건</h4>
+                <p className="mt-1 text-small text-text-subtle">
+                  선택한 조건은 현황 표와 하단 업무 이력 목록에 함께 적용됩니다.
+                </p>
               </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <label className="block text-small font-semibold text-text-subtle">
-                  시작일
-                  <input
-                    type="date"
-                    className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
-                    value={dateRange.from}
-                    onChange={(event) =>
-                      onDateRangeChange({ ...dateRange, from: event.target.value })
-                    }
-                  />
-                </label>
-                <label className="block text-small font-semibold text-text-subtle">
-                  종료일
-                  <input
-                    type="date"
-                    className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
-                    value={dateRange.to}
-                    onChange={(event) =>
-                      onDateRangeChange({ ...dateRange, to: event.target.value })
-                    }
-                  />
-                </label>
-              </div>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="rounded-lg border border-border bg-white px-3 py-2 text-small font-semibold text-brand transition hover:bg-brand-soft"
+              >
+                조건 초기화
+              </button>
             </div>
-          )}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <label className="block text-small font-semibold text-text-subtle">
+                시작일
+                <input
+                  type="date"
+                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
+                  value={dateRange.from}
+                  onChange={(event) =>
+                    onDateRangeChange?.({ ...dateRange, from: event.target.value })
+                  }
+                />
+              </label>
+              <label className="block text-small font-semibold text-text-subtle">
+                종료일
+                <input
+                  type="date"
+                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
+                  value={dateRange.to}
+                  onChange={(event) =>
+                    onDateRangeChange?.({ ...dateRange, to: event.target.value })
+                  }
+                />
+              </label>
+              <label className="block text-small font-semibold text-text-subtle">
+                대프로젝트
+                <select
+                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
+                  value={majorProjectId}
+                  onChange={(event) => {
+                    setMajorProjectId(event.target.value === '' ? '' : Number(event.target.value));
+                    setProjectId('');
+                  }}
+                >
+                  <option value="">전체</option>
+                  {sortedMajorProjects.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-small font-semibold text-text-subtle">
+                프로젝트
+                <select
+                  className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
+                  value={projectId}
+                  onChange={(event) => {
+                    setProjectId(event.target.value === '' ? '' : Number(event.target.value));
+                    setSelectedProjectKey(null);
+                  }}
+                >
+                  <option value="">전체</option>
+                  {majorFilteredProjects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
         </div>
 
         <div className="mb-4 flex flex-wrap gap-2 text-small">
           <span className="rounded-lg bg-brand-soft px-3 py-2 font-semibold text-brand">
-            스톱워치 누적 {formatSeconds(totalStopwatchSeconds)}
+            담당자 기간 총 스톱워치 {formatSeconds(totalStopwatchSeconds)}
           </span>
           <span className="rounded-lg bg-verify-pass-bg px-3 py-2 font-semibold text-verify-pass-fg">
             업무 이력 {visibleHistoryRows.length}건
@@ -617,48 +664,6 @@ export default function WorkStatusManager({
             이력 소요 {formatMinutes(totalHistoryMinutes)}
           </span>
         </div>
-
-        {viewMode === 'project' && (
-          <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="block text-small font-semibold text-text-subtle">
-              대프로젝트
-              <select
-                className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
-                value={majorProjectId}
-                onChange={(event) => {
-                  setMajorProjectId(event.target.value === '' ? '' : Number(event.target.value));
-                  setProjectId('');
-                  setSelectedProjectKey(null);
-                }}
-              >
-                <option value="">전체</option>
-                {sortedMajorProjects.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-small font-semibold text-text-subtle">
-              프로젝트
-              <select
-                className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-body text-text"
-                value={projectId}
-                onChange={(event) => {
-                  setProjectId(event.target.value === '' ? '' : Number(event.target.value));
-                  setSelectedProjectKey(null);
-                }}
-              >
-                <option value="">전체</option>
-                {majorFilteredProjects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        )}
 
         {error && (
           <p className="mb-3 rounded-lg bg-verify-fail-bg px-3 py-2 text-small text-verify-fail-fg">
@@ -694,12 +699,15 @@ export default function WorkStatusManager({
         users={users}
         selectedUserIds={selectedUserIds}
         dateRange={dateRange}
+        majorProjects={majorProjects}
+        projects={projects}
+        majorProjectId={majorProjectId}
+        projectId={projectId}
         onChanged={() => setRefreshToken((value) => value + 1)}
       />
     </div>
   );
 }
-
 function MemberStatusTable({
   rows,
   selectedMemberId,
@@ -722,7 +730,7 @@ function MemberStatusTable({
             <th className="px-4 py-3 font-semibold">진행 중</th>
             <th className="px-4 py-3 font-semibold">일시정지</th>
             <th className="px-4 py-3 font-semibold">완료</th>
-            <th className="px-4 py-3 font-semibold">업무 이력 건수</th>
+            <th className="px-4 py-3 font-semibold">이력 건수</th>
             <th className="px-4 py-3 font-semibold">이력 소요</th>
           </tr>
         </thead>
@@ -791,8 +799,8 @@ function ProjectStatusTable({
             <th className="px-4 py-3 font-semibold">프로젝트</th>
             <th className="px-4 py-3 font-semibold">하위 프로젝트</th>
             <th className="px-4 py-3 font-semibold">담당자</th>
-            <th className="px-4 py-3 font-semibold">담당자 기간 스톱워치</th>
-            <th className="px-4 py-3 font-semibold">업무 이력 소요</th>
+            <th className="px-4 py-3 font-semibold">담당자 기간 총 스톱워치</th>
+            <th className="px-4 py-3 font-semibold">이력 소요</th>
             <th className="px-4 py-3 font-semibold">기간</th>
           </tr>
         </thead>
@@ -811,7 +819,9 @@ function ProjectStatusTable({
                   <td className="px-4 py-3">{row.projectName}</td>
                   <td className="px-4 py-3 font-semibold">{row.subprojectName}</td>
                   <td className="px-4 py-3">{row.userName}</td>
-                  <td className="px-4 py-3">{formatSeconds(row.stopwatchSeconds)}</td>
+                  <td className="px-4 py-3">
+                    {formatSeconds(row.userPeriodStopwatchSeconds)}
+                  </td>
                   <td className="px-4 py-3">{formatMinutes(row.historyMinutes)}</td>
                   <td className="px-4 py-3 text-text-muted">
                     {formatDate(row.startedOn)} ~ {formatDate(row.endedOn)}
@@ -844,7 +854,7 @@ function HistoryTreePanel({ tree }: { tree: HistoryTreeMajor[] }) {
   if (tree.length === 0) {
     return (
       <p className="rounded-lg bg-white px-3 py-4 text-center text-small text-text-subtle">
-        조회 기간에 해당하는 수행 프로젝트가 없습니다.
+        조회 조건에 해당하는 수행 프로젝트가 없습니다.
       </p>
     );
   }
@@ -927,7 +937,7 @@ function TreeRow({
         depth === 0 ? 'bg-surface text-text' : 'bg-surface-muted text-text-muted'
       }`}
     >
-      <span className="text-nano text-text-subtle">›</span>
+      <span className="text-nano text-text-subtle">{depth === 0 ? '대' : '중'}</span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <span className="shrink-0 text-tiny font-medium text-text-faint">{count}건</span>
       <span className="shrink-0 text-tiny font-medium text-text-subtle">{meta}</span>

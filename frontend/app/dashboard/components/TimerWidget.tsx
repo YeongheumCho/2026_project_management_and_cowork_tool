@@ -14,13 +14,19 @@ type Props = {
   candidates: SubProject[];
   projects?: Project[];
   onChanged?: () => Promise<void> | void;
+  onProgressRequested?: (subproject: SubProject) => void;
 };
 
 type PendingStart = {
   candidate: SubProject;
 };
 
-export default function TimerWidget({ candidates, projects, onChanged }: Props) {
+export default function TimerWidget({
+  candidates,
+  projects,
+  onChanged,
+  onProgressRequested,
+}: Props) {
   const [logs, setLogs] = useState<WorkLog[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -45,7 +51,6 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
     [logs],
   );
 
-  // Map active (non-completed) work logs by subproject_id for quick card lookup
   const activeLogBySub = useMemo(() => {
     const map = new Map<number, WorkLog>();
     for (const log of logs) {
@@ -110,6 +115,14 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
   ) {
     setBusy(true);
     try {
+      const targetLog = logs.find((log) => log.id === logId);
+      const completedSubproject =
+        action === 'complete' && targetLog?.subproject_id != null
+          ? candidates.find(
+              (candidate) => candidate.id === targetLog?.subproject_id,
+            ) ?? null
+          : null;
+
       if (action === 'delete') {
         await apiFetch<void>(`/work-logs/${logId}`, { method: 'DELETE' });
       } else if (action === 'complete') {
@@ -124,6 +137,9 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
       }
       await loadLogs();
       await onChanged?.();
+      if (completedSubproject) {
+        onProgressRequested?.(completedSubproject);
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -131,16 +147,25 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
     }
   }
 
+  const orphanPausedLogs = pausedLogs.filter(
+    (log) => !candidates.some((candidate) => candidate.id === log.subproject_id),
+  );
+
   return (
     <>
       <section className="mt-4 rounded-2xl border border-border bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-text">
-            스톱워치 — 오늘 담당 업무
-          </h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-base font-semibold text-text">
+              스톱워치 — 오늘 담당 업무
+            </h2>
+            <p className="mt-1 text-xs text-text-subtle">
+              완료 및 기록을 누르면 진행률 기록 창이 이어서 열립니다.
+            </p>
+          </div>
           {runningLogs.length > 0 && (
             <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-              {runningLogs.length}개 진행 중
+              {runningLogs.length}건 진행 중
             </span>
           )}
         </div>
@@ -177,7 +202,6 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
                         : 'border-border bg-white'
                   }`}
                 >
-                  {/* Header */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-text">
@@ -198,18 +222,16 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
                     )}
                   </div>
 
-                  {/* Elapsed timer */}
                   {activeLog ? (
                     <p className="mt-2 font-mono text-2xl font-bold tabular-nums tracking-tight text-text">
                       {formatHMS(elapsed)}
                     </p>
                   ) : (
                     <p className="mt-2 text-xs text-text-faint">
-                      진척률 {Math.round(candidate.progress)}%
+                      진행률 {Math.round(candidate.progress)}%
                     </p>
                   )}
 
-                  {/* Action buttons */}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {!activeLog && (
                       <MiniButton
@@ -228,7 +250,7 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
                           tone="amber"
                         />
                         <MiniButton
-                          label="완료"
+                          label="완료 및 기록"
                           onClick={() => mutateLog(activeLog.id, 'complete')}
                           disabled={busy}
                           tone="rose"
@@ -244,7 +266,7 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
                           tone="slate"
                         />
                         <MiniButton
-                          label="완료"
+                          label="완료 및 기록"
                           onClick={() => mutateLog(activeLog.id, 'complete')}
                           disabled={busy}
                           tone="rose"
@@ -258,11 +280,10 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
           </div>
         )}
 
-        {/* Completed logs */}
         {completedLogs.length > 0 && (
           <div className="mt-6">
             <TimerColumn
-              title="완료 작업"
+              title="최근 완료 작업"
               emptyText=""
               items={completedLogs}
               renderItem={(log) => (
@@ -278,15 +299,12 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
           </div>
         )}
 
-        {/* Paused logs not linked to any candidate */}
-        {pausedLogs.filter((l) => !candidates.some((c) => c.id === l.subproject_id)).length > 0 && (
+        {orphanPausedLogs.length > 0 && (
           <div className="mt-4">
             <TimerColumn
-              title="일시정지 (기타)"
+              title="일시정지 작업"
               emptyText=""
-              items={pausedLogs.filter(
-                (l) => !candidates.some((c) => c.id === l.subproject_id),
-              )}
+              items={orphanPausedLogs}
               renderItem={(log) => (
                 <LogCard
                   key={log.id}
@@ -303,7 +321,6 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
         )}
       </section>
 
-      {/* Pending start modal */}
       <Modal
         open={pendingStart !== null}
         onClose={() => setPendingStart(null)}
@@ -316,8 +333,7 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
               이미 진행 중인 작업이 있습니다
             </h2>
             <p className="mt-1 text-sm text-text-subtle">
-              새 작업을 시작하면 기존 작업을 자동으로 일시정지하거나, 동시 진행으로
-              유지할 수 있습니다.
+              새 작업을 시작하려면 기존 작업을 일시정지하거나 동시 진행으로 이어갈 수 있습니다.
             </p>
           </div>
 
@@ -359,7 +375,7 @@ export default function TimerWidget({ candidates, projects, onChanged }: Props) 
               }
               className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              동시 진행 유지
+              동시 진행
             </button>
           </div>
         </div>
@@ -443,7 +459,7 @@ function LogCard({
           <MiniButton label="재개" onClick={onResume} disabled={busy} tone="slate" />
         )}
         {log.status !== 'completed' && onComplete && (
-          <MiniButton label="완료" onClick={onComplete} disabled={busy} tone="emerald" />
+          <MiniButton label="완료 및 기록" onClick={onComplete} disabled={busy} tone="emerald" />
         )}
         <MiniButton label="삭제" onClick={onDelete} disabled={busy} tone="rose" />
       </div>

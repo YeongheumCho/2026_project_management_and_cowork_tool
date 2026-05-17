@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shared API utilities and domain types.
  */
 export const API_BASE_URL =
@@ -380,6 +380,7 @@ export type FieldDefinition = {
   options: FieldOption[];
   required: boolean;
   order: number;
+  default_value?: string | null;
 };
 
 export type ProjectFieldSchema = {
@@ -403,7 +404,7 @@ export const PROJECT_TYPE_LABEL: Record<string, string> = {
 export const VERIFY_STATE_LABEL: Record<VerifyState, string> = {
   not_started: '대기',
   in_progress: '검증 중',
-  all_pass: '올패스 완료',
+  all_pass: '전체 완료',
   fail_issue: 'FAIL 이슈',
   pass_issue: 'PASS 이슈',
   review_done: '검토 완료',
@@ -539,7 +540,6 @@ export const DEFAULT_PROJECT_FIELD_SCHEMAS: Record<string, ProjectFieldSchema> =
     updated_at: '',
   },
 };
-
 export function emptyFieldSchema(project_type: string): ProjectFieldSchema {
   return {
     id: 0,
@@ -621,3 +621,4 @@ export async function apiFetch<T>(
   }
   return body as T;
 }
+

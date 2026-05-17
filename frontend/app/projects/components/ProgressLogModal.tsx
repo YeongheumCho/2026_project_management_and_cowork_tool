@@ -10,9 +10,16 @@ type Props = {
   subproject: SubProject | null;
   onClose: () => void;
   onSaved: () => Promise<void> | void;
+  initialProgressPercent?: number;
 };
 
-export default function ProgressLogModal({ open, subproject, onClose, onSaved }: Props) {
+export default function ProgressLogModal({
+  open,
+  subproject,
+  onClose,
+  onSaved,
+  initialProgressPercent,
+}: Props) {
   const [logs, setLogs] = useState<ProgressLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -37,11 +44,13 @@ export default function ProgressLogModal({ open, subproject, onClose, onSaved }:
 
   useEffect(() => {
     if (!open) return;
-    setProgressPercent('');
+    setProgressPercent(
+      initialProgressPercent == null ? '' : String(initialProgressPercent),
+    );
     setWorkDate(toISODate(new Date()));
     setComment('');
     void loadLogs();
-  }, [loadLogs, open]);
+  }, [initialProgressPercent, loadLogs, open]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -49,7 +58,7 @@ export default function ProgressLogModal({ open, subproject, onClose, onSaved }:
 
     const nextProgress = Number(progressPercent);
     if (!Number.isFinite(nextProgress) || nextProgress < 0 || nextProgress > 100) {
-      setMessage('진행률은 0~100 사이 숫자로 입력해주세요.');
+      setMessage('진행률은 0~100 사이 숫자로 입력해 주세요.');
       return;
     }
 
@@ -66,7 +75,6 @@ export default function ProgressLogModal({ open, subproject, onClose, onSaved }:
       });
       setProgressPercent('');
       setComment('');
-      setMessage('진행률 기록이 저장되었습니다.');
       await onSaved();
       onClose();
     } catch (error) {
@@ -159,14 +167,14 @@ export default function ProgressLogModal({ open, subproject, onClose, onSaved }:
         </form>
 
         <section className="rounded-2xl border border-border bg-surface-muted p-4">
-          <h3 className="text-base font-semibold text-text">수행 이력</h3>
+          <h3 className="text-base font-semibold text-text">진행률 이력</h3>
           <div className="mt-4 max-h-[360px] space-y-2 overflow-y-auto pr-1">
             {loading && (
               <p className="py-8 text-center text-sm text-text-faint">불러오는 중...</p>
             )}
             {!loading && logs.length === 0 && (
               <p className="py-8 text-center text-sm text-text-faint">
-                아직 진행 기록이 없습니다.
+                아직 진행률 기록이 없습니다.
               </p>
             )}
             {!loading &&

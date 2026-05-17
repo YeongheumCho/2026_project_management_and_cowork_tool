@@ -12,15 +12,6 @@ import {
   SUBPROJECT_STATUS_LABEL,
 } from '../../lib/subprojectStatus';
 
-const TEXT = {
-  uploadDone: '업로드 완료',
-  firstVerify: '1차 검증',
-  inReview: '인리뷰',
-  unassigned: '미지정',
-  progress: '진행률',
-  separator: ' · ',
-} as const;
-
 type Props = {
   sp: SubProject;
   onClick: (sp: SubProject) => void;
@@ -28,7 +19,12 @@ type Props = {
   onEdit?: (sp: SubProject) => void;
 };
 
-export default function SubProjectListItem({ sp, onClick, canEdit = false, onEdit }: Props) {
+export default function SubProjectListItem({
+  sp,
+  onClick,
+  canEdit = false,
+  onEdit,
+}: Props) {
   const level = sp.verification_level
     ? VERIFICATION_LEVEL_LABEL[sp.verification_level]
     : null;
@@ -41,25 +37,19 @@ export default function SubProjectListItem({ sp, onClick, canEdit = false, onEdi
   const metaBits = [sp.controller_name, level, sp.vehicle_type].filter(Boolean);
   const assigneeLabel = sp.assignees?.length
     ? sp.assignees.map((assignee) => assignee.name).join(', ')
-    : (sp.assignee?.name ?? TEXT.unassigned);
+    : (sp.assignee?.name ?? '미지정');
 
   return (
     <li>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => onClick(sp)}
-        onKeyDown={(event) => {
-          if (event.key !== 'Enter' && event.key !== ' ') return;
-          event.preventDefault();
-          onClick(sp);
-        }}
-        className="block w-full rounded-[20px] border border-border bg-white px-4 py-4 text-left shadow-[0_8px_24px_rgba(28,25,23,0.04)] transition hover:border-brand-soft hover:bg-surface"
-      >
+      <div className="rounded-[20px] border border-border bg-white px-4 py-4 shadow-[0_8px_24px_rgba(28,25,23,0.04)]">
         <div className="flex flex-wrap items-start gap-3">
           <div className={`mt-1 h-2.5 w-2.5 rounded-full ${colorForId(sp.project_id)}`} />
 
-          <div className="min-w-[220px] flex-1">
+          <button
+            type="button"
+            onClick={() => onClick(sp)}
+            className="min-w-[220px] flex-1 text-left"
+          >
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-md font-semibold text-text">{sp.name}</p>
               <span
@@ -69,25 +59,26 @@ export default function SubProjectListItem({ sp, onClick, canEdit = false, onEdi
               </span>
               {sp.upload_done && (
                 <span className="rounded-full border border-verify-pass-bg bg-verify-pass-bg px-2.5 py-1 text-tiny font-bold uppercase tracking-[0.08em] text-verify-pass-fg">
-                  {TEXT.uploadDone}
+                  업로드 완료
                 </span>
               )}
             </div>
 
             {metaBits.length > 0 && (
               <p className="mt-1 text-micro text-text-muted">
-                {metaBits.join(TEXT.separator)}
+                {metaBits.join(' · ')}
               </p>
             )}
 
             {(first || inReview) && (
               <p className="mt-1 text-micro text-text-muted">
-                {TEXT.firstVerify}: {first ?? '-'}
-                {TEXT.separator}
-                {TEXT.inReview}: {inReview ?? '-'}
+                1차 검증: {first ?? '-'} · InReview: {inReview ?? '-'}
               </p>
             )}
-          </div>
+            <p className="mt-1 text-tiny font-semibold text-brand">
+              클릭하면 진행률 기록을 추가합니다.
+            </p>
+          </button>
 
           <div className="min-w-[150px] text-right">
             <p className="text-micro text-text-muted">
@@ -99,32 +90,38 @@ export default function SubProjectListItem({ sp, onClick, canEdit = false, onEdi
           </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-3 text-micro text-text-muted">
-          <div className="flex flex-1 items-center justify-between">
-            <span>{TEXT.progress}</span>
-            <span className="font-semibold text-text">
-              {sp.progress.toFixed(0)}%
-            </span>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-micro text-text-muted">
+          <div className="min-w-[160px] flex-1">
+            <div className="mb-1 flex items-center justify-between">
+              <span>진행률</span>
+              <span className="font-semibold text-text">
+                {sp.progress.toFixed(0)}%
+              </span>
+            </div>
+            <ProgressBar
+              value={sp.progress}
+              ariaLabel={`${sp.name} 진행률`}
+            />
           </div>
-          {canEdit && onEdit && (
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onEdit(sp);
-              }}
-              className="rounded-lg border border-brand-soft bg-white px-3 py-1.5 text-tiny font-bold text-brand hover:bg-brand-soft"
+              onClick={() => onClick(sp)}
+              className="rounded-lg bg-brand px-3 py-1.5 text-tiny font-bold text-white hover:bg-brand-hover"
             >
-              하위 프로젝트 수정
+              진행률 기록
             </button>
-          )}
+            {canEdit && onEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(sp)}
+                className="rounded-lg border border-brand-soft bg-white px-3 py-1.5 text-tiny font-bold text-brand hover:bg-brand-soft"
+              >
+                하위 프로젝트 수정
+              </button>
+            )}
+          </div>
         </div>
-
-        <ProgressBar
-          value={sp.progress}
-          className="mt-2"
-          ariaLabel={`${sp.name} ${TEXT.progress}`}
-        />
       </div>
     </li>
   );

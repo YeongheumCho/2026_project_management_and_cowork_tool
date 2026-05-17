@@ -202,13 +202,9 @@ export default function TeamModal({
     const templateName = nextSchema.section_label;
     const templateWeight = nextSchema.weight ?? 5;
     setF((prev) => ({
-      ...prev,
+      ...applyFieldDefaults(prev, nextSchema, false),
       name: templateName,
       weight: templateWeight,
-      customFields: {
-        ...withoutFieldSchemaMeta(prev.customFields),
-        [FIELD_SCHEMA_NAME_KEY]: templateName,
-      },
     }));
   }, [fieldSchemaOptions, mode, open, projectType]);
 
@@ -284,14 +280,11 @@ export default function TeamModal({
     setSelectedFieldSchemaType(nextType);
     const templateName = templateNameForType(nextType, fieldSchemas);
     const templateWeight = fieldSchemas[nextType]?.weight ?? 5;
+    const schema = fieldSchemas[nextType];
     setF((prev) => ({
-      ...prev,
+      ...(schema ? applyFieldDefaults(prev, schema, true) : prev),
       name: templateName,
       weight: templateWeight,
-      customFields: {
-        ...withoutFieldSchemaMeta(prev.customFields),
-        [FIELD_SCHEMA_NAME_KEY]: templateName,
-      },
     }));
   };
 
@@ -581,6 +574,31 @@ function withoutFieldSchemaMeta(fields: Record<string, string>) {
   const next = { ...fields };
   delete next[FIELD_SCHEMA_NAME_KEY];
   delete next[LEGACY_FIELD_SCHEMA_TYPE_KEY];
+  return next;
+}
+
+function applyFieldDefaults(
+  draft: FormState,
+  schema: ProjectFieldSchema,
+  overwrite: boolean,
+): FormState {
+  const next: FormState = {
+    ...draft,
+    customFields: {
+      ...withoutFieldSchemaMeta(draft.customFields),
+      [FIELD_SCHEMA_NAME_KEY]: schema.section_label,
+    },
+  };
+
+  for (const field of schema.fields) {
+    const value = field.default_value ?? '';
+    if (value === '') continue;
+
+    const currentValue = getFieldValues(next)[field.key] ?? '';
+    if (!overwrite && currentValue.trim() !== '') continue;
+    setFieldOnDraft(next, field.key, value);
+  }
+
   return next;
 }
 
