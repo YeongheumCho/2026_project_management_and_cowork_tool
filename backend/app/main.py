@@ -200,3 +200,8 @@ app.include_router(workflow_router)
 @app.get("/")
 def root():
     return {"message": "Backend is running"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
