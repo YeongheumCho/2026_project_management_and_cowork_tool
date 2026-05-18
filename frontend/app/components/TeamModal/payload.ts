@@ -23,7 +23,7 @@ export function buildSubProjectPayload(f: FormState) {
     verification_level: f.verificationLevel || null,
     vehicle_type: strOrNull(f.vehicleType),
     function_name: strOrNull(f.functionName),
-    function_owner: strOrNull(f.functionOwner),
+    function_owner: numOrUndef(f.functionOwner) ?? null,
     verifier_id: f.verifierId === '' ? null : f.verifierId,
     reviewer_id: f.reviewerId === '' ? null : f.reviewerId,
     seat_no: strOrNull(f.seatNo),

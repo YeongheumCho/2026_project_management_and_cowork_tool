@@ -10,8 +10,10 @@ import {
   type MajorProject,
   type Project,
   type ProjectType,
+  type ProjectVehicleSet,
 } from '../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
+import VehicleSetEditor, { normalizeVehicleSets } from './VehicleSetEditor';
 
 type Props = {
   majorProjects: MajorProject[];
@@ -29,6 +31,7 @@ export default function CreateProjectForm({ majorProjects, onCreated, onError }:
   const [type, setType] = useState<ProjectType>('official_inspection');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [vehicleSets, setVehicleSets] = useState<ProjectVehicleSet[]>([]);
   const [participantIds, setParticipantIds] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -79,6 +82,7 @@ export default function CreateProjectForm({ majorProjects, onCreated, onError }:
           participant_ids: participantIds,
           start_date: startDate || null,
           end_date: endDate || null,
+          vehicle_sets: normalizeVehicleSets(vehicleSets),
         }),
       });
       let templateError = '';
@@ -92,6 +96,7 @@ export default function CreateProjectForm({ majorProjects, onCreated, onError }:
       setType(availableProjectTypes[0] ?? 'general');
       setStartDate('');
       setEndDate('');
+      setVehicleSets([]);
       setParticipantIds([]);
       onCreated(created);
       if (templateError) {
@@ -160,6 +165,14 @@ export default function CreateProjectForm({ majorProjects, onCreated, onError }:
           <Field label="종료일">
             <DateInput value={endDate} onChange={setEndDate} />
           </Field>
+
+          <div className="sm:col-span-2">
+            <VehicleSetEditor
+              value={vehicleSets}
+              onChange={setVehicleSets}
+              disabled={busy}
+            />
+          </div>
 
           <div className="flex items-end justify-end sm:col-span-2">
             <button

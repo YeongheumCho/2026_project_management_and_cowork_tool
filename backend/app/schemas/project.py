@@ -123,6 +123,21 @@ class MajorProjectResponse(MajorProjectBrief):
     created_at: datetime
 
 
+class ProjectVehicleSet(BaseModel):
+    controller_name: str = Field(default="", max_length=100)
+    vehicle_type: str = Field(default="", max_length=50)
+    controller_country: str = Field(default="", max_length=50)
+    controller_version: str = Field(default="", max_length=100)
+
+    @model_validator(mode="after")
+    def _strip_values(self):
+        self.controller_name = self.controller_name.strip()
+        self.vehicle_type = self.vehicle_type.strip()
+        self.controller_country = self.controller_country.strip()
+        self.controller_version = self.controller_version.strip()
+        return self
+
+
 class ProjectCreate(BaseModel):
     major_project_id: int
     name: str = Field(min_length=1, max_length=200)
@@ -130,6 +145,7 @@ class ProjectCreate(BaseModel):
     participant_ids: list[int] = Field(min_length=1)
     start_date: date | None = None
     end_date: date | None = None
+    vehicle_sets: list[ProjectVehicleSet] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _check_dates(self):
@@ -149,6 +165,7 @@ class ProjectUpdate(BaseModel):
     participant_ids: list[int] = Field(min_length=1)
     start_date: date | None = None
     end_date: date | None = None
+    vehicle_sets: list[ProjectVehicleSet] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _check_dates(self):
@@ -169,6 +186,7 @@ class ProjectResponse(BaseModel):
     project_type: str
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    vehicle_sets: list[ProjectVehicleSet] = Field(default_factory=list)
     created_by: Optional[int] = None
     created_at: datetime
     participants: list[ProjectParticipantBrief] = []
@@ -178,6 +196,18 @@ class ProjectResponse(BaseModel):
     in_progress_subproject_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("vehicle_sets", mode="before")
+    @classmethod
+    def _parse_vehicle_sets(cls, value: Any) -> list[Any]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                return []
+        return value if isinstance(value, list) else []
 
 
 class ProjectMemberTimeSummary(BaseModel):
@@ -296,7 +326,7 @@ class _SubProjectKeficoFields(BaseModel):
     verification_level: Optional[VerificationLevel] = None
     vehicle_type: Optional[str] = Field(default=None, max_length=50)
     function_name: Optional[str] = Field(default=None, max_length=200)
-    function_owner: Optional[str] = Field(default=None, max_length=100)
+    function_owner: Optional[int] = None
     verifier_id: Optional[int] = None
     reviewer_id: Optional[int] = None
     seat_no: Optional[str] = Field(default=None, max_length=50)
@@ -405,7 +435,7 @@ class SubProjectResponse(BaseModel):
     verification_level: Optional[str] = None
     vehicle_type: Optional[str] = None
     function_name: Optional[str] = None
-    function_owner: Optional[str] = None
+    function_owner: Optional[int] = None
     verifier_id: Optional[int] = None
     verifier: Optional[AssigneeBrief] = None
     reviewer_id: Optional[int] = None

@@ -10,8 +10,10 @@ import {
   type MajorProject,
   type Project,
   type ProjectType,
+  type ProjectVehicleSet,
 } from '../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
+import VehicleSetEditor, { normalizeVehicleSets } from './VehicleSetEditor';
 
 type Props = {
   open: boolean;
@@ -35,6 +37,7 @@ export default function ProjectManageModal({
   const [type, setType] = useState<ProjectType>('official_inspection');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [vehicleSets, setVehicleSets] = useState<ProjectVehicleSet[]>([]);
   const [participantIds, setParticipantIds] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -45,6 +48,7 @@ export default function ProjectManageModal({
     setType(project.project_type as ProjectType);
     setStartDate(project.start_date ?? '');
     setEndDate(project.end_date ?? '');
+    setVehicleSets(project.vehicle_sets ?? []);
     setParticipantIds(project.participants.map((user) => user.id));
   }, [open, project]);
 
@@ -93,6 +97,7 @@ export default function ProjectManageModal({
           start_date: startDate || null,
           end_date: endDate || null,
           participant_ids: participantIds,
+          vehicle_sets: normalizeVehicleSets(vehicleSets),
         }),
       });
       await onSaved();
@@ -105,8 +110,8 @@ export default function ProjectManageModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} size="lg" ariaLabel="프로젝트 수정">
-      <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-5">
+    <Modal open={open} onClose={onClose} size="lg" scrollable ariaLabel="프로젝트 수정">
+      <form onSubmit={submit} className="flex min-h-0 flex-col gap-5">
         <div className="flex-shrink-0">
           <h2 className="text-xl font-semibold text-text">프로젝트 수정</h2>
           <p className="mt-1 text-sm text-text-subtle">
@@ -220,17 +225,25 @@ export default function ProjectManageModal({
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex flex-shrink-0 items-center justify-between">
+        <div className="flex-shrink-0">
+          <VehicleSetEditor
+            value={vehicleSets}
+            onChange={setVehicleSets}
+            disabled={busy}
+          />
+        </div>
+
+        <div className="flex flex-col">
+          <div className="flex items-center justify-between">
             <label className="block text-sm font-medium text-text">
               프로젝트 참여 인원
             </label>
             <span className="text-xs text-text-subtle">{participantIds.length}명 선택됨</span>
           </div>
-          <p className="mt-1 flex-shrink-0 text-xs text-text-subtle">
+          <p className="mt-1 text-xs text-text-subtle">
             이미 배정된 하위 프로젝트 담당자는 참여 인원에서 제외할 수 없습니다.
           </p>
-          <div className="mt-3 max-h-[320px] min-h-0 flex-1 overflow-y-auto rounded-2xl border border-border bg-surface-muted p-3">
+          <div className="mt-3 max-h-[360px] overflow-y-auto rounded-2xl border border-border bg-surface-muted p-3">
             <OrganizationMemberPicker
               users={selectableUsers}
               selectedIds={participantIds}

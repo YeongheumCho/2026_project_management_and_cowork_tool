@@ -134,7 +134,7 @@ export function fromSubProject(sp: SubProject): FormState {
     verificationLevel: (sp.verification_level ?? '') as VerificationLevel | '',
     vehicleType: sp.vehicle_type ?? '',
     functionName: sp.function_name ?? '',
-    functionOwner: sp.function_owner ?? '',
+    functionOwner: sp.function_owner != null ? String(sp.function_owner) : '',
     verifierId: sp.verifier_id ?? '',
     reviewerId: sp.reviewer_id ?? '',
     seatNo: sp.seat_no ?? '',

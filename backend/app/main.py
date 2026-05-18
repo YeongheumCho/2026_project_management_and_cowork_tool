@@ -47,6 +47,8 @@ def _ensure_additive_schema_updates() -> None:
             statements.append("ALTER TABLE projects ADD COLUMN start_date DATE")
         if "end_date" not in project_columns:
             statements.append("ALTER TABLE projects ADD COLUMN end_date DATE")
+        if "vehicle_sets" not in project_columns:
+            statements.append("ALTER TABLE projects ADD COLUMN vehicle_sets TEXT NOT NULL DEFAULT '[]'")
 
     if "project_field_schemas" in table_names:
         field_schema_columns = {

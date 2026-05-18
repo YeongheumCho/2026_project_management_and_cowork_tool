@@ -142,8 +142,8 @@ export default function TeamModal({
     }
     return new Set(selectedProject.participants.map((user) => user.id));
   }, [selectedProject, users]);
-  const availableFunctionOwnerNames = useMemo(
-    () => new Set(projectParticipants.map((user) => user.name)),
+  const availableFunctionOwnerIds = useMemo(
+    () => new Set(projectParticipants.map((user) => String(user.id))),
     [projectParticipants],
   );
   const fieldValues = useMemo(() => getFieldValues(f), [f]);
@@ -203,10 +203,13 @@ export default function TeamModal({
     const templateWeight = nextSchema.weight ?? 5;
     setF((prev) => ({
       ...applyFieldDefaults(prev, nextSchema, false),
-      name: templateName,
+      name:
+        selectedProject?.vehicle_sets?.length
+          ? prev.name
+          : templateName,
       weight: templateWeight,
     }));
-  }, [fieldSchemaOptions, mode, open, projectType]);
+  }, [fieldSchemaOptions, mode, open, projectType, selectedProject?.vehicle_sets?.length]);
 
   useEffect(() => {
     if (!open || mode !== 'edit' || !initial) return;
@@ -241,9 +244,9 @@ export default function TeamModal({
 
   useEffect(() => {
     if (!f.functionOwner.trim()) return;
-    if (availableFunctionOwnerNames.has(f.functionOwner)) return;
+    if (availableFunctionOwnerIds.has(f.functionOwner)) return;
     setF((prev) => ({ ...prev, functionOwner: '' }));
-  }, [availableFunctionOwnerNames, f.functionOwner]);
+  }, [availableFunctionOwnerIds, f.functionOwner]);
 
   useEffect(() => {
     if (f.verifierId === '') return;
@@ -283,7 +286,10 @@ export default function TeamModal({
     const schema = fieldSchemas[nextType];
     setF((prev) => ({
       ...(schema ? applyFieldDefaults(prev, schema, true) : prev),
-      name: templateName,
+      name:
+        mode === 'create' && selectedProject?.vehicle_sets?.length
+          ? prev.name
+          : templateName,
       weight: templateWeight,
     }));
   };
@@ -300,7 +306,7 @@ export default function TeamModal({
     if (field.options.length > 0) return field.options;
     if (field.key === 'function_owner') {
       return projectParticipants.map((user) => ({
-        value: user.name,
+        value: String(user.id),
         label: user.name,
       }));
     }
@@ -636,10 +642,10 @@ function setFieldOnDraft(draft: FormState, key: string, value: string) {
     draft.uploadDone = value === 'true';
     return;
   }
-  if (formKey === 'verifierId' || formKey === 'reviewerId') {
-    draft[formKey] = value === '' ? '' : Number(value);
-    return;
-  }
+    if (formKey === 'verifierId' || formKey === 'reviewerId') {
+      draft[formKey] = value === '' ? '' : Number(value);
+      return;
+    }
 
   (draft[formKey] as string) = value;
 }
