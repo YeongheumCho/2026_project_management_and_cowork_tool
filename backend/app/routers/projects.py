@@ -593,6 +593,7 @@ def _serialize_project_response(project: Project) -> ProjectResponse:
         project_type=project.project_type,
         start_date=project.start_date,
         end_date=project.end_date,
+        vehicle_sets=project.vehicle_sets,
         created_by=project.created_by,
         created_at=project.created_at,
         participants=list(project.participants or []),
@@ -767,6 +768,10 @@ def create_project(
         project_type=payload.project_type,
         start_date=payload.start_date,
         end_date=payload.end_date,
+        vehicle_sets=json.dumps(
+            [item.model_dump() for item in payload.vehicle_sets],
+            ensure_ascii=False,
+        ),
         created_by=current_user.id,
     )
     project.participants = participants
@@ -854,6 +859,10 @@ def update_project(
         project.start_date = payload.start_date
     if "end_date" in payload.model_fields_set:
         project.end_date = payload.end_date
+    project.vehicle_sets = json.dumps(
+        [item.model_dump() for item in payload.vehicle_sets],
+        ensure_ascii=False,
+    )
     project.participants = participants
     db.commit()
     project = db.scalar(
@@ -1111,7 +1120,7 @@ def update_subproject(
     _apply_kefico_fields(sp, payload)
 
     # verifier/reviewer FK 寃利?
-    for fk_name in ("verifier_id", "reviewer_id"):
+    for fk_name in ("function_owner", "verifier_id", "reviewer_id"):
         val = getattr(sp, fk_name)
         if val is not None:
             ref = db.get(User, val)

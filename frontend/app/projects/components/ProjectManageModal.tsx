@@ -10,8 +10,10 @@ import {
   type MajorProject,
   type Project,
   type ProjectType,
+  type ProjectVehicleSet,
 } from '../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
+import VehicleSetEditor, { normalizeVehicleSets } from './VehicleSetEditor';
 
 type Props = {
   open: boolean;
@@ -35,6 +37,7 @@ export default function ProjectManageModal({
   const [type, setType] = useState<ProjectType>('official_inspection');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [vehicleSets, setVehicleSets] = useState<ProjectVehicleSet[]>([]);
   const [participantIds, setParticipantIds] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -45,6 +48,7 @@ export default function ProjectManageModal({
     setType(project.project_type as ProjectType);
     setStartDate(project.start_date ?? '');
     setEndDate(project.end_date ?? '');
+    setVehicleSets(project.vehicle_sets ?? []);
     setParticipantIds(project.participants.map((user) => user.id));
   }, [open, project]);
 
@@ -93,6 +97,7 @@ export default function ProjectManageModal({
           start_date: startDate || null,
           end_date: endDate || null,
           participant_ids: participantIds,
+          vehicle_sets: normalizeVehicleSets(vehicleSets),
         }),
       });
       await onSaved();
@@ -218,6 +223,14 @@ export default function ProjectManageModal({
               className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             />
           </div>
+        </div>
+
+        <div className="flex-shrink-0">
+          <VehicleSetEditor
+            value={vehicleSets}
+            onChange={setVehicleSets}
+            disabled={busy}
+          />
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">

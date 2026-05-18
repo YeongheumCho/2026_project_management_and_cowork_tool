@@ -97,7 +97,7 @@ export type SubProject = {
   verification_level?: VerificationLevel | null;
   vehicle_type?: string | null;
   function_name?: string | null;
-  function_owner?: string | null;
+  function_owner?: number | null;
   verifier_id?: number | null;
   verifier?: { id: number; name: string } | null;
   reviewer_id?: number | null;
@@ -148,6 +148,7 @@ export type Project = {
   project_type: ProjectType | string;
   start_date?: string | null;
   end_date?: string | null;
+  vehicle_sets: ProjectVehicleSet[];
   created_by: number | null;
   created_at: string;
   participants: UserBrief[];
@@ -155,6 +156,13 @@ export type Project = {
   subproject_count: number;
   completed_subproject_count: number;
   in_progress_subproject_count: number;
+};
+
+export type ProjectVehicleSet = {
+  controller_name: string;
+  vehicle_type: string;
+  controller_country: string;
+  controller_version: string;
 };
 
 export type MajorProjectBrief = {

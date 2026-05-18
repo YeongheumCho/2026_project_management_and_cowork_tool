@@ -5,6 +5,7 @@ import {
   PROJECT_TYPE_LABEL,
   type Project,
   type ProjectFieldSchema,
+  type ProjectVehicleSet,
   type UserBrief,
 } from '../../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../../lib/dateInput';
@@ -52,12 +53,21 @@ export default function BasicSection({
     return selectedProject.participants;
   }, [selectedProject, users]);
   const configuredFieldCount = fieldSchema.fields.length;
+  const selectedVehicleSetIndex = useMemo(
+    () =>
+      selectedProject?.vehicle_sets?.findIndex((item) => vehicleSetMatchesForm(item, f)) ?? -1,
+    [f, selectedProject],
+  );
 
   const { projectId } = f;
   useEffect(() => {
     if (!selectedProject || mode === 'edit') return;
     set('startDate', selectedProject.start_date ?? '');
     set('endDate', selectedProject.end_date ?? '');
+    const firstVehicleSet = selectedProject.vehicle_sets?.[0];
+    if (firstVehicleSet) {
+      applyVehicleSet(firstVehicleSet, selectedProject.name, set);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, projectId]);
 
@@ -82,6 +92,29 @@ export default function BasicSection({
             ))}
           </select>
         </Field>
+
+        {mode === 'create' && !!selectedProject?.vehicle_sets?.length && (
+          <Field label="차종 세트" required>
+            <select
+              value={selectedVehicleSetIndex >= 0 ? String(selectedVehicleSetIndex) : ''}
+              onChange={(event) => {
+                const vehicleSet = selectedProject.vehicle_sets[Number(event.target.value)];
+                if (vehicleSet) {
+                  applyVehicleSet(vehicleSet, selectedProject.name, set);
+                }
+              }}
+              disabled={!isAdmin}
+              className="input"
+            >
+              <option value="">차종 세트를 선택하세요</option>
+              {selectedProject.vehicle_sets.map((vehicleSet, index) => (
+                <option key={index} value={index}>
+                  {vehicleSetLabel(vehicleSet)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
 
         {mode === 'edit' && (
           <Field label={isEtc ? '업무 제목' : '하위 프로젝트 / 기능명'} required>
@@ -206,4 +239,36 @@ export default function BasicSection({
       </div>
     </section>
   );
+}
+
+function vehicleSetLabel(vehicleSet: ProjectVehicleSet) {
+  return [
+    vehicleSet.vehicle_type || '차종 미입력',
+    vehicleSet.controller_name,
+    vehicleSet.controller_country,
+    vehicleSet.controller_version,
+  ]
+    .filter(Boolean)
+    .join(' / ');
+}
+
+function vehicleSetMatchesForm(vehicleSet: ProjectVehicleSet, f: FormState) {
+  return (
+    vehicleSet.controller_name === f.controllerName &&
+    vehicleSet.vehicle_type === f.vehicleType &&
+    vehicleSet.controller_country === f.controllerCountry &&
+    vehicleSet.controller_version === f.controllerVersion
+  );
+}
+
+function applyVehicleSet(
+  vehicleSet: ProjectVehicleSet,
+  projectName: string,
+  set: FormSetter,
+) {
+  set('controllerName', vehicleSet.controller_name);
+  set('vehicleType', vehicleSet.vehicle_type);
+  set('controllerCountry', vehicleSet.controller_country);
+  set('controllerVersion', vehicleSet.controller_version);
+  set('name', `${projectName} - ${vehicleSet.vehicle_type || '차종 미입력'}`);
 }
