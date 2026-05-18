@@ -110,8 +110,8 @@ export default function ProjectManageModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} size="lg" ariaLabel="프로젝트 수정">
-      <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-5">
+    <Modal open={open} onClose={onClose} size="lg" scrollable ariaLabel="프로젝트 수정">
+      <form onSubmit={submit} className="flex min-h-0 flex-col gap-5">
         <div className="flex-shrink-0">
           <h2 className="text-xl font-semibold text-text">프로젝트 수정</h2>
           <p className="mt-1 text-sm text-text-subtle">
@@ -233,17 +233,17 @@ export default function ProjectManageModal({
           />
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex flex-shrink-0 items-center justify-between">
+        <div className="flex flex-col">
+          <div className="flex items-center justify-between">
             <label className="block text-sm font-medium text-text">
               프로젝트 참여 인원
             </label>
             <span className="text-xs text-text-subtle">{participantIds.length}명 선택됨</span>
           </div>
-          <p className="mt-1 flex-shrink-0 text-xs text-text-subtle">
+          <p className="mt-1 text-xs text-text-subtle">
             이미 배정된 하위 프로젝트 담당자는 참여 인원에서 제외할 수 없습니다.
           </p>
-          <div className="mt-3 max-h-[320px] min-h-0 flex-1 overflow-y-auto rounded-2xl border border-border bg-surface-muted p-3">
+          <div className="mt-3 max-h-[360px] overflow-y-auto rounded-2xl border border-border bg-surface-muted p-3">
             <OrganizationMemberPicker
               users={selectableUsers}
               selectedIds={participantIds}

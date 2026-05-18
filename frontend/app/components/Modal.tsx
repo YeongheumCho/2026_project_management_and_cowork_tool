@@ -49,7 +49,7 @@ export default function Modal({
     // 비-scrollable 모드는 컨테이너 높이만 제한해 내부 레이아웃에 위임한다.
     'relative flex w-full flex-col rounded-2xl border border-border-strong bg-surface p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]',
     SIZE_CLASS[size],
-    scrollable ? 'max-h-[88vh] overflow-y-auto' : 'max-h-[90vh]',
+    scrollable ? 'max-h-[calc(100vh-2rem)] overflow-y-auto' : 'max-h-[90vh]',
   ]
     .filter(Boolean)
     .join(' ');
@@ -59,7 +59,9 @@ export default function Modal({
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel}
-      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/35 p-4"
+      className={`fixed inset-0 z-[300] flex justify-center bg-black/35 p-4 ${
+        scrollable ? 'items-start overflow-y-auto' : 'items-center'
+      }`}
       onClick={() => {
         if (closeOnBackdrop) onClose();
       }}
