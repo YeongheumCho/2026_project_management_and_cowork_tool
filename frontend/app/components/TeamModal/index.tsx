@@ -20,6 +20,10 @@ import BasicSection from './sections/BasicSection';
 import CustomFieldsSection from './sections/CustomFieldsSection';
 import { buildSubProjectPayload } from './payload';
 import { EMPTY_FORM, fromSubProject, type FormState } from './types';
+import {
+  isTemplateForMajorProject,
+  projectTemplatePrefix,
+} from '../../lib/templateScope';
 
 const TEXT = {
   deleteConfirm: '이 하위 프로젝트를 삭제하시겠습니까?',
@@ -71,14 +75,6 @@ const SYSTEM_FIELD_MAP: Record<string, keyof FormState> = {
 const FIELD_SCHEMA_NAME_KEY = '__field_schema_name';
 const LEGACY_FIELD_SCHEMA_TYPE_KEY = '__field_schema_type';
 
-function projectTemplatePrefix(projectId: number) {
-  return `project_${projectId}_template_`;
-}
-
-function isTemplateForProject(schema: ProjectFieldSchema, projectId: number) {
-  return String(schema.project_type).startsWith(projectTemplatePrefix(projectId));
-}
-
 type Props = {
   open: boolean;
   mode: 'create' | 'edit';
@@ -115,14 +111,21 @@ export default function TeamModal({
     () => projects.find((project) => project.id === f.projectId),
     [projects, f.projectId],
   );
+  const initialProject = useMemo(
+    () =>
+      initial
+        ? projects.find((project) => project.id === initial.project_id) ?? null
+        : null,
+    [initial, projects],
+  );
   const projectType = selectedProject?.project_type ?? 'general';
   const fieldSchemaType = selectedFieldSchemaType;
   const fieldSchemaOptions = useMemo(
     () =>
       selectedProject
-        ? orderedFieldSchemas(fieldSchemas, selectedProject.id)
+        ? orderedFieldSchemas(fieldSchemas, selectedProject, projects)
         : [],
-    [fieldSchemas, selectedProject],
+    [fieldSchemas, projects, selectedProject],
   );
   const effectiveSchema = useMemo(
     () => effectiveFieldSchema(
@@ -216,7 +219,8 @@ export default function TeamModal({
     const inferredType = inferFieldSchemaType(
       initial,
       fieldSchemas,
-      selectedProject?.id ?? initial.project_id,
+      selectedProject ?? initialProject,
+      projects,
       projectType,
     );
     setSelectedFieldSchemaType(inferredType);
@@ -227,7 +231,7 @@ export default function TeamModal({
         [FIELD_SCHEMA_NAME_KEY]: templateNameForType(inferredType, fieldSchemas),
       },
     }));
-  }, [fieldSchemas, initial, mode, open, projectType, selectedProject?.id]);
+  }, [fieldSchemas, initial, initialProject, mode, open, projectType, projects, selectedProject]);
 
   useEffect(() => {
     if (f.assigneeIds.length === 0) return;
@@ -510,10 +514,11 @@ function getFieldValues(f: FormState): Record<string, string> {
 function inferFieldSchemaType(
   subproject: SubProject,
   fieldSchemas: Record<string, ProjectFieldSchema>,
-  projectId: number,
+  project: Project | null,
+  projects: Project[],
   fallbackType: string,
 ) {
-  const projectSchemas = orderedFieldSchemas(fieldSchemas, projectId);
+  const projectSchemas = project ? orderedFieldSchemas(fieldSchemas, project, projects) : [];
   const savedName = subproject.custom_fields?.[FIELD_SCHEMA_NAME_KEY];
   if (typeof savedName === 'string' && savedName) {
     const typeByName = typeForTemplateName(savedName, projectSchemas);
@@ -622,10 +627,24 @@ function emptyProjectTemplateSchema(projectId: number): ProjectFieldSchema {
 
 function orderedFieldSchemas(
   fieldSchemas: Record<string, ProjectFieldSchema>,
-  projectId: number,
+  project: Project,
+  projects: Project[],
 ) {
-  return Object.values(fieldSchemas)
-    .filter((schema) => isTemplateForProject(schema, projectId))
+  const scopedTemplates = Object.values(fieldSchemas).filter(
+    (schema) =>
+      project.major_project_id !== null &&
+      project.major_project_id !== undefined &&
+      isTemplateForMajorProject(schema, project.major_project_id),
+  );
+  const legacyProjectIds = projects
+    .filter((item) => item.major_project_id === project.major_project_id)
+    .map((item) => item.id);
+  const legacyTemplates = Object.values(fieldSchemas).filter((schema) =>
+    legacyProjectIds.some((projectId) =>
+      String(schema.project_type).startsWith(projectTemplatePrefix(projectId)),
+    ),
+  );
+  return (scopedTemplates.length > 0 ? scopedTemplates : legacyTemplates)
     .sort((left, right) =>
       left.section_label.localeCompare(right.section_label, 'ko-KR'),
     );
