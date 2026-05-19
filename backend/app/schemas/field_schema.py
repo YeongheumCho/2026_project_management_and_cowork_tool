@@ -36,6 +36,10 @@ class ProjectFieldSchemaUpdate(BaseModel):
     weight: int | None = Field(default=None, ge=1, le=10)
 
 
+class ProjectFieldSchemaMove(BaseModel):
+    target_major_project_id: int = Field(gt=0)
+
+
 class ProjectFieldSchemaResponse(BaseModel):
     id: int
     project_type: str

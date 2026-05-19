@@ -7,9 +7,13 @@ import {
   type FieldDefinition,
   type FieldOption,
   type FieldType,
-  type Project,
+  type MajorProject,
   type ProjectFieldSchema,
 } from '../../lib/api';
+import {
+  isTemplateForMajorProject,
+  newMajorProjectTemplateKey,
+} from '../../lib/templateScope';
 
 const FIELD_TYPE_LABEL: Record<FieldType, string> = {
   text: '텍스트',
@@ -19,18 +23,6 @@ const FIELD_TYPE_LABEL: Record<FieldType, string> = {
   textarea: '긴 텍스트',
   checkbox: '체크박스',
 };
-
-function projectTemplatePrefix(projectId: number) {
-  return `project_${projectId}_template_`;
-}
-
-function newTemplateKey(projectId: number) {
-  return `${projectTemplatePrefix(projectId)}${Date.now().toString(36)}`;
-}
-
-function isTemplateForProject(schema: ProjectFieldSchema, projectId: number) {
-  return String(schema.project_type).startsWith(projectTemplatePrefix(projectId));
-}
 
 function newField(order: number): FieldDefinition {
   return {
@@ -70,9 +62,9 @@ function hasDefaultValue(field: FieldDefinition) {
 }
 
 export default function TemplateManager() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [majorProjects, setMajorProjects] = useState<MajorProject[]>([]);
   const [schemas, setSchemas] = useState<Record<string, ProjectFieldSchema>>({});
-  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
+  const [activeMajorProjectId, setActiveMajorProjectId] = useState<number | null>(null);
   const [activeKey, setActiveKey] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -82,22 +74,27 @@ export default function TemplateManager() {
   const [templateWeight, setTemplateWeight] = useState<number>(5);
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [reuseSourceKey, setReuseSourceKey] = useState('');
+  const [moveTargetMajorProjectId, setMoveTargetMajorProjectId] = useState<number | ''>('');
 
-  const activeProject = useMemo(
-    () => projects.find((project) => project.id === activeProjectId) ?? null,
-    [activeProjectId, projects],
+  const activeMajorProject = useMemo(
+    () =>
+      majorProjects.find((project) => project.id === activeMajorProjectId) ??
+      null,
+    [activeMajorProjectId, majorProjects],
   );
 
-  const projectTemplates = useMemo(
+  const majorProjectTemplates = useMemo(
     () =>
-      activeProject
+      activeMajorProject
         ? Object.values(schemas)
-            .filter((schema) => isTemplateForProject(schema, activeProject.id))
+            .filter((schema) =>
+              isTemplateForMajorProject(schema, activeMajorProject.id),
+            )
             .sort((left, right) =>
               left.section_label.localeCompare(right.section_label, 'ko-KR'),
             )
         : [],
-    [activeProject, schemas],
+    [activeMajorProject, schemas],
   );
 
   const sortedFields = useMemo(
@@ -120,23 +117,24 @@ export default function TemplateManager() {
   }, []);
 
   useEffect(() => {
-    if (activeProjectId !== null) return;
-    if (projects.length > 0) setActiveProjectId(projects[0].id);
-  }, [activeProjectId, projects]);
+    if (activeMajorProjectId !== null) return;
+    if (majorProjects.length > 0) setActiveMajorProjectId(majorProjects[0].id);
+  }, [activeMajorProjectId, majorProjects]);
 
   useEffect(() => {
-    if (!activeProject) return;
-    const nextActive = projectTemplates.some((schema) => schema.project_type === activeKey)
+    if (!activeMajorProject) return;
+    const nextActive = majorProjectTemplates.some((schema) => schema.project_type === activeKey)
       ? activeKey
-      : String(projectTemplates[0]?.project_type ?? '');
+      : String(majorProjectTemplates[0]?.project_type ?? '');
     setActiveKey(nextActive);
-  }, [activeKey, activeProject, projectTemplates]);
+  }, [activeKey, activeMajorProject, majorProjectTemplates]);
 
   useEffect(() => {
     const schema = activeKey ? schemas[activeKey] : null;
     setTemplateName(schema?.section_label ?? '');
     setTemplateWeight(schema?.weight ?? 5);
     setFields(schema ? cloneFields(schema.fields) : []);
+    setMoveTargetMajorProjectId('');
     setError('');
     setMessage('');
   }, [activeKey, schemas]);
@@ -145,10 +143,10 @@ export default function TemplateManager() {
     setLoading(true);
     try {
       const [projectRows, savedSchemas] = await Promise.all([
-        apiFetch<Project[]>('/projects'),
+        apiFetch<MajorProject[]>('/major-projects'),
         apiFetch<ProjectFieldSchema[]>('/field-schemas'),
       ]);
-      setProjects(projectRows);
+      setMajorProjects(projectRows);
       setSchemas(
         Object.fromEntries(
           savedSchemas.map((schema) => [String(schema.project_type), schema]),
@@ -237,9 +235,9 @@ export default function TemplateManager() {
   }
 
   function handleAddTemplate() {
-    if (!activeProject) return;
-    const key = newTemplateKey(activeProject.id);
-    const base = defaultFieldSchema(String(activeProject.project_type));
+    if (!activeMajorProject) return;
+    const key = newMajorProjectTemplateKey(activeMajorProject.id);
+    const base = defaultFieldSchema(String(activeMajorProject.project_types[0] ?? 'general'));
     const nextSchema: ProjectFieldSchema = {
       id: 0,
       project_type: key,
@@ -255,12 +253,12 @@ export default function TemplateManager() {
   }
 
   function handleReuseTemplate() {
-    if (!activeProject || !reuseSourceKey) return;
+    if (!activeMajorProject || !reuseSourceKey) return;
     const source = schemas[reuseSourceKey];
     if (!source) return;
 
-    const key = newTemplateKey(activeProject.id);
-    const copiedName = uniqueTemplateName(source.section_label, projectTemplates);
+    const key = newMajorProjectTemplateKey(activeMajorProject.id);
+    const copiedName = uniqueTemplateName(source.section_label, majorProjectTemplates);
     const nextSchema: ProjectFieldSchema = {
       id: 0,
       project_type: key,
@@ -278,7 +276,7 @@ export default function TemplateManager() {
   }
 
   async function handleSave() {
-    if (!activeProject || !activeKey) return;
+    if (!activeMajorProject || !activeKey) return;
     const normalizedFields = normalizeFields();
     const keys = normalizedFields.map((field) => field.key).filter(Boolean);
     const name = templateName.trim();
@@ -292,7 +290,7 @@ export default function TemplateManager() {
       return;
     }
     if (
-      projectTemplates.some(
+      majorProjectTemplates.some(
         (schema) => schema.project_type !== activeKey && schema.section_label === name,
       )
     ) {
@@ -357,9 +355,43 @@ export default function TemplateManager() {
     }
   }
 
+  async function handleMoveTemplate() {
+    if (!activeKey || moveTargetMajorProjectId === '') return;
+    const schema = schemas[activeKey];
+    if (!schema) return;
+    if (schema.id === 0) {
+      setError('새 템플릿은 저장한 뒤 이동할 수 있습니다.');
+      return;
+    }
+
+    try {
+      const moved = await apiFetch<ProjectFieldSchema>(
+        `/field-schemas/${encodeURIComponent(activeKey)}/move`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            target_major_project_id: moveTargetMajorProjectId,
+          }),
+        },
+      );
+      setSchemas((current) => {
+        const next = { ...current };
+        delete next[activeKey];
+        next[String(moved.project_type)] = moved;
+        return next;
+      });
+      setActiveMajorProjectId(moveTargetMajorProjectId);
+      setActiveKey(String(moved.project_type));
+      setMoveTargetMajorProjectId('');
+      setMessage('템플릿을 선택한 대프로젝트로 이동했습니다.');
+    } catch (nextError) {
+      setError((nextError as Error).message);
+    }
+  }
+
   function resetToProjectDefault() {
-    if (!activeProject) return;
-    const schema = defaultFieldSchema(String(activeProject.project_type));
+    if (!activeMajorProject) return;
+    const schema = defaultFieldSchema(String(activeMajorProject.project_types[0] ?? 'general'));
     setFields(cloneFields(schema.fields));
     setMessage('프로젝트 유형의 기본 필드 구성을 불러왔습니다. 저장해야 적용됩니다.');
   }
@@ -388,7 +420,7 @@ export default function TemplateManager() {
 
       {loading ? (
         <p className="py-8 text-center text-sm text-text-subtle">불러오는 중...</p>
-      ) : projects.length === 0 ? (
+      ) : majorProjects.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border-strong px-4 py-8 text-center text-sm text-text-subtle">
           등록된 프로젝트가 없습니다.
         </p>
@@ -397,17 +429,17 @@ export default function TemplateManager() {
           <aside className="rounded-2xl border border-border bg-surface-muted p-3">
             <p className="mb-2 px-2 text-xs font-bold text-text-subtle">프로젝트</p>
             <div className="max-h-[620px] space-y-1 overflow-y-auto pr-1">
-              {projects.map((project) => {
+              {majorProjects.map((project) => {
                 const count = Object.values(schemas).filter((schema) =>
-                  isTemplateForProject(schema, project.id),
+                  isTemplateForMajorProject(schema, project.id),
                 ).length;
                 return (
                   <button
                     key={project.id}
                     type="button"
-                    onClick={() => setActiveProjectId(project.id)}
+                    onClick={() => setActiveMajorProjectId(project.id)}
                     className={`w-full rounded-xl px-3 py-2 text-left text-xs font-bold transition ${
-                      activeProjectId === project.id
+                      activeMajorProjectId === project.id
                         ? 'bg-brand text-white'
                         : 'text-text-muted hover:bg-white'
                     }`}
@@ -427,7 +459,7 @@ export default function TemplateManager() {
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold text-text-subtle">선택 프로젝트</p>
-                  <h4 className="text-lg font-bold text-text">{activeProject?.name}</h4>
+                  <h4 className="text-lg font-bold text-text">{activeMajorProject?.name}</h4>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {activeKey && (
@@ -470,20 +502,56 @@ export default function TemplateManager() {
                 <button
                   type="button"
                   onClick={handleReuseTemplate}
-                  disabled={!reuseSourceKey || !activeProject}
+                  disabled={!reuseSourceKey || !activeMajorProject}
                   className="rounded-lg border border-brand-soft px-3 py-2 text-xs font-bold text-brand disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   선택 템플릿 복사
                 </button>
               </div>
 
+              {activeKey && (
+                <div className="mb-3 flex flex-wrap items-end gap-2 rounded-xl border border-border bg-surface-muted p-3">
+                  <label className="min-w-[220px] flex-1">
+                    <span className="mb-1 block text-xs font-bold text-text-subtle">
+                      템플릿 이동
+                    </span>
+                    <select
+                      value={moveTargetMajorProjectId}
+                      onChange={(event) =>
+                        setMoveTargetMajorProjectId(
+                          event.target.value ? Number(event.target.value) : '',
+                        )
+                      }
+                      className="input w-full"
+                    >
+                      <option value="">이동할 대프로젝트 선택</option>
+                      {majorProjects
+                        .filter((project) => project.id !== activeMajorProject?.id)
+                        .map((project) => (
+                          <option key={project.id} value={project.id}>
+                            {project.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void handleMoveTemplate()}
+                    disabled={moveTargetMajorProjectId === ''}
+                    className="rounded-lg border border-brand-soft px-3 py-2 text-xs font-bold text-brand disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    이동
+                  </button>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2">
-                {projectTemplates.length === 0 ? (
+                {majorProjectTemplates.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-border-strong px-4 py-4 text-sm text-text-subtle">
                     이 프로젝트에 할당된 템플릿이 없습니다. 템플릿을 추가해 주세요.
                   </p>
                 ) : (
-                  projectTemplates.map((schema) => (
+                  majorProjectTemplates.map((schema) => (
                     <button
                       key={schema.project_type}
                       type="button"

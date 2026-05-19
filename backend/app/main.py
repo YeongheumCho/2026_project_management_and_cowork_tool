@@ -18,6 +18,37 @@ from app.routers.workflow import router as workflow_router
 Base.metadata.create_all(bind=engine)
 
 
+def _migrate_legacy_project_templates_to_default_major_project(connection) -> None:
+    default_major_project_id = connection.execute(
+        text("SELECT id FROM major_projects WHERE is_default = TRUE LIMIT 1")
+    ).scalar()
+    if default_major_project_id is None:
+        return
+
+    rows = connection.execute(
+        text(
+            """
+            SELECT id, project_type
+            FROM project_field_schemas
+            WHERE project_type LIKE 'project\\_%\\_template\\_%' ESCAPE '\\'
+            """
+        )
+    ).all()
+    for row in rows:
+        schema_id = row._mapping["id"]
+        next_key = f"major_project_{default_major_project_id}_template_legacy_{schema_id}"
+        connection.execute(
+            text(
+                """
+                UPDATE project_field_schemas
+                SET project_type = :next_key
+                WHERE id = :schema_id
+                """
+            ),
+            {"next_key": next_key, "schema_id": schema_id},
+        )
+
+
 def _ensure_additive_schema_updates() -> None:
     """Apply tiny additive updates that create_all cannot add to existing tables."""
     inspector = inspect(engine)
@@ -159,6 +190,8 @@ def _ensure_additive_schema_updates() -> None:
                     """
                 )
             )
+            if "project_field_schemas" in inspect(engine).get_table_names():
+                _migrate_legacy_project_templates_to_default_major_project(connection)
         if "subproject_assignees" in inspect(engine).get_table_names():
             connection.execute(
                 text(
