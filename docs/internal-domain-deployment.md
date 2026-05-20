@@ -37,6 +37,19 @@ Reboot after changing the computer name.
 - Public to the 5th-floor network: `80`
 - Localhost only: `3000`, `8000`, `8001`, `8002`, `5432`, `6379`
 
+## Client IP restriction
+
+The default `Caddyfile` only allows clients in `10.10.222.0/24` plus localhost.
+Users outside that C-class range receive `403 Forbidden` even if they can reach
+the server IP through VPN.
+
+For stronger host-level enforcement on the Windows server, restrict inbound TCP
+80 to the same remote address range in Windows Defender Firewall:
+
+```powershell
+New-NetFirewallRule -DisplayName "KPI Cowork HTTP 80 - 10.10.222 only" -Direction Inbound -Protocol TCP -LocalPort 80 -RemoteAddress 10.10.222.0/24 -Action Allow
+```
+
 ## Required .env values
 
 ```env
