@@ -33,7 +33,7 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 // project_id를 같은 팔레트로 매핑 — colors.ts의 COLOR_PALETTE hex 값과 동일한 순서 유지
 // 전체 캘린더(A)와 담당자 캘린더(B) 모두 project_id 기준으로 색을 결정해 일관성 보장
-const PROJECT_BAR_COLORS = ['#2563EB', '#534AB7', '#0F6E56', '#854F0B', '#185FA5', '#993556'];
+const PROJECT_BAR_COLORS = ['#0048FF', '#002060', '#0F6E56', '#854F0B', '#185FA5', '#993556'];
 function projectColor(projectId: number): string {
   return PROJECT_BAR_COLORS[Math.abs(projectId) % PROJECT_BAR_COLORS.length];
 }
@@ -63,7 +63,7 @@ export default function MonthCalendar({
   rightAction,
   title = '캘린더',
   tag,
-  tagColor = '#534AB7',
+  tagColor = '#0048FF',
   filterSlot,
   continuousBars = false,
 }: Props) {

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -49,13 +50,15 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-6 border-b-[1.5px] border-brand bg-surface px-5">
-      <Link href="/dashboard" className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-[7px] bg-brand text-body font-bold text-white">
-          W
-        </span>
-        <span className="text-base font-bold tracking-[-0.3px] text-text">
-          WorkFlow <span className="text-brand">AI</span>
-        </span>
+      <Link href="/dashboard" className="flex items-center">
+        <Image
+          src="/logo.png"
+          alt="SureLog AI"
+          width={160}
+          height={50}
+          priority
+          className="h-10 w-auto"
+        />
       </Link>
 
       <nav className="flex items-center gap-0.5">
