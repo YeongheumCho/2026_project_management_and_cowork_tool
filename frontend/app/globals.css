@@ -4,17 +4,17 @@
   --background: #f8f8f5;
   --foreground: #1a1a1a;
 
-  --color-brand-50: #eeedfe;
-  --color-brand-100: #d9d7fb;
-  --color-brand-500: #6d66cf;
-  --color-brand-600: #534ab7;
-  --color-brand-700: #433a9a;
+  --color-brand-50: #eaf1ff;
+  --color-brand-100: #cfe0ff;
+  --color-brand-500: #0048ff;
+  --color-brand-600: #0048ff;
+  --color-brand-700: #0039cc;
   --color-brand-on: #ffffff;
 
   --color-surface: #ffffff;
   --color-surface-muted: #fafafa;
   --color-surface-subtle: #f1efe8;
-  --color-surface-strong: #26215c;
+  --color-surface-strong: #002060;
 
   --color-text: #1a1a1a;
   --color-text-muted: #5f5e5a;
@@ -52,7 +52,7 @@
   --radius-lg: 1rem;
   --radius-pill: 9999px;
 
-  --ring-focus: 0 0 0 3px rgb(83 74 183 / 0.18);
+  --ring-focus: 0 0 0 3px rgb(0 72 255 / 0.18);
 
   /* Typography scale — 임의 text-[Npx] 패턴 통합 */
   --text-nano: 0.5625rem;     /* 9px  — 매우 작은 라벨/주석 */

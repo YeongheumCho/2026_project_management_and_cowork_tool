@@ -334,7 +334,7 @@ export default function CsvImportModal({
                   type="button"
                   onClick={() => void handleImport()}
                   disabled={!canImport}
-                  className="rounded-[12px] bg-brand px-5 py-2 text-small font-bold text-white shadow-[0_4px_12px_rgba(83,74,183,0.24)] hover:bg-brand-hover disabled:opacity-50"
+                  className="rounded-[12px] bg-brand px-5 py-2 text-small font-bold text-white shadow-[0_4px_12px_rgba(0,72,255,0.24)] hover:bg-brand-hover disabled:opacity-50"
                 >
                   {importing ? '등록 중...' : `${validRows.length}건 일괄 등록`}
                 </button>

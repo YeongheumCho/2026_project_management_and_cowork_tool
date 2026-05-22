@@ -4,8 +4,12 @@ import ChatBot from "./components/ChatBot";
 import { WorkflowSelectionProvider } from "./lib/workflow-selection";
 
 export const metadata: Metadata = {
-  title: "KPI Tool - 프로젝트 관리 & 협업",
-  description: "사내 업무 협업 및 프로젝트 관리 서비스",
+  title: "SureLog AI",
+  description: "SureLog AI project management and collaboration tool",
+  icons: {
+    icon: [{ url: "/favicon.ico?v=20260522", type: "image/x-icon" }],
+    shortcut: "/favicon.ico?v=20260522",
+  },
 };
 
 export default function RootLayout({

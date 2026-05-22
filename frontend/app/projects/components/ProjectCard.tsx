@@ -200,7 +200,7 @@ export default function ProjectCard({
               <button
                 type="button"
                 onClick={() => onAddSub(project.id)}
-                className="rounded-[14px] bg-brand px-4 py-2 text-micro font-bold text-white shadow-[0_8px_20px_rgba(83,74,183,0.24)] transition hover:bg-brand-hover"
+                className="rounded-[14px] bg-brand px-4 py-2 text-micro font-bold text-white shadow-[0_8px_20px_rgba(0,72,255,0.24)] transition hover:bg-brand-hover"
               >
                 + 하위 프로젝트 추가
               </button>
