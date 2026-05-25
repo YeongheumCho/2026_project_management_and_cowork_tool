@@ -95,6 +95,11 @@ class RecommendationCandidate(BaseModel):
     availability_score: float
     capability_score: float
     remaining_minutes: int
+    average_history_minutes: int | None = None
+    history_time_score: float = 50.0
+    history_time_sample_count: int = 0
+    project_relevance_score: float = 0.0
+    project_relevance_evidence: list[str] = []
     keyword_experience_count: int
     history_experience_count: int = 0
     recommendation_source: str = "rule"
@@ -104,6 +109,7 @@ class RecommendationCandidate(BaseModel):
 class RecommendationResponse(BaseModel):
     request: RecommendationRequest
     candidates: list[RecommendationCandidate]
+    clarifying_questions: list[str] = []
     claude_used: bool = False
     claude_error: str | None = None
 

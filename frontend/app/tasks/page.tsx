@@ -302,6 +302,16 @@ export default function TasksPage() {
 
           {!busy && recommendation && recommendation.candidates.length > 0 && (
             <div className="space-y-4">
+              {recommendation.clarifying_questions.length > 0 && (
+                <div className="rounded-2xl border border-verify-warn-bg bg-verify-warn-bg p-4">
+                  <p className="text-sm font-semibold text-verify-warn-fg">AI 확인 질문</p>
+                  <ul className="mt-2 space-y-2 text-micro text-text-muted">
+                    {recommendation.clarifying_questions.map((question, index) => (
+                      <li key={`clarifying-${index}`}>{question}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {recommendation.candidates.map((candidate) => (
                 <article
                   key={candidate.user_id}
@@ -345,10 +355,22 @@ export default function TasksPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="mt-4 grid gap-3 md:grid-cols-5">
                     <MetricCard label="업무량" value={`${Math.round(candidate.availability_score)}점`} />
                     <MetricCard label="역량" value={`${Math.round(candidate.capability_score)}점`} />
                     <MetricCard label="잔여 업무" value={`${candidate.remaining_minutes}분`} />
+                    <MetricCard
+                      label="업무 연관성"
+                      value={`${Math.round(candidate.project_relevance_score)}점`}
+                    />
+                    <MetricCard
+                      label="이력 평균"
+                      value={
+                        candidate.average_history_minutes == null
+                          ? '이력 없음'
+                          : `${candidate.average_history_minutes}분`
+                      }
+                    />
                   </div>
 
                   <div className="mt-4 rounded-2xl bg-surface-muted p-4">

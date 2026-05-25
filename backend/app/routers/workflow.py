@@ -67,6 +67,8 @@ SCORE_WEIGHT_HISTORY_TYPE = 14    # 이력(ProjectExecutionHistory) 유형 일�
 SCORE_WEIGHT_HISTORY_KEYWORD = 16 # 이력 키워드 일치건당 가중치 (최고 신뢰도)
 SCORE_WEIGHT_RECENT_HISTORY = 6   # 최근 RECENT_HISTORY_DAYS 이내 이력건당 가중치
 SCORE_WEIGHT_COMPLETION_RATE = 0.2  # 평균 완료율 반영 비율 (0~100점 → 최대 20점 기여)
+SCORE_WEIGHT_HISTORY_TIME = 0.25  # 과거 평균 수행시간 효율 점수 반영 비율 (0~100점 → 최대 25점 기여)
+SCORE_WEIGHT_PROJECT_RELEVANCE = 0.25  # 신규 업무와 과거 업무의 연관성 점수 반영 비율
 SCORE_BASE = 20                   # 모든 후보에게 부여하는 기본 점수 (0점 방지용)
 
 # 최근 이력으로 간주할 기간(일). 6개월 ≒ 180일.
@@ -105,13 +107,149 @@ def _recommendation_reasons(
     remaining_minutes: int,
     keyword_hits: int,
     history_hits: int,
+    average_history_minutes: int | None,
+    history_time_score: float,
+    history_time_sample_count: int,
+    project_relevance_score: float,
+    project_relevance_evidence: list[str],
 ) -> list[str]:
     free_minutes = max(0, MAX_DAILY_WORKLOAD_MINUTES - remaining_minutes)
+    if average_history_minutes is None:
+        time_reason = "과거 수행시간 이력이 없어 전체 평균 대비 중립 점수로 반영했습니다."
+    else:
+        time_reason = (
+            f"과거 {history_time_sample_count}건의 평균 수행시간은 "
+            f"{average_history_minutes}분이며 시간 효율 점수 {history_time_score:.0f}점이 반영됐습니다."
+        )
+    relevance_reason = (
+        f"신규 업무와 과거 업무 연관성 점수는 {project_relevance_score:.0f}점입니다."
+    )
+    if project_relevance_evidence:
+        relevance_reason += f" 근거: {'; '.join(project_relevance_evidence[:2])}"
     return [
         f"예상 가용 시간이 약 {free_minutes}분으로 계산되어 가용성 점수가 {availability_score:.0f}점입니다.",
         f"유사 업무 경험치 {keyword_hits}건과 누적 수행 이력 {history_hits}건이 반영되어 역량 점수가 {capability_score:.0f}점입니다.",
+        relevance_reason,
+        time_reason,
         f"{user.name}님의 현재 잔여 업무량은 약 {remaining_minutes}분입니다.",
     ]
+
+
+def _average_history_minutes(rows: list[ProjectExecutionHistory]) -> int | None:
+    values = [int(row.worked_minutes) for row in rows if int(row.worked_minutes or 0) > 0]
+    if not values:
+        return None
+    return round(sum(values) / len(values))
+
+
+def _history_time_score(
+    average_minutes: int | None,
+    baseline_minutes: int | None,
+) -> float:
+    if average_minutes is None or baseline_minutes is None or baseline_minutes <= 0:
+        return 50.0
+
+    ratio = average_minutes / baseline_minutes
+    if ratio <= 1:
+        return max(50.0, min(100.0, 50 + (1 - ratio) * 100))
+    return max(0.0, 50 - (ratio - 1) * 50)
+
+
+def _normalize_relevance_terms(*values: object) -> list[str]:
+    terms: list[str] = []
+    for value in values:
+        if value is None:
+            continue
+        text = str(value).strip().lower()
+        if not text:
+            continue
+        for token in text.replace("/", " ").replace("_", " ").replace("-", " ").split():
+            token = token.strip(".,()[]{}:;")
+            if len(token) >= 2:
+                terms.append(token)
+    return list(dict.fromkeys(terms))
+
+
+def _subproject_relevance_terms(
+    payload: RecommendationRequest,
+    subproject: SubProject | None,
+) -> list[str]:
+    values: list[object] = [
+        payload.project_name,
+        payload.project_type,
+    ]
+    if subproject is not None:
+        values.extend(
+            [
+                subproject.name,
+                subproject.function_name,
+                subproject.controller_name,
+                subproject.controller_version,
+                subproject.controller_country,
+                subproject.vehicle_type,
+                subproject.verification_level,
+                subproject.priority,
+                subproject.cr_no,
+                subproject.etc_category,
+                subproject.etc_note,
+            ]
+        )
+    return _normalize_relevance_terms(*values)
+
+
+def _project_relevance_score(
+    target_terms: list[str],
+    history_rows: list[ProjectExecutionHistory],
+    work_logs: list[WorkLog],
+) -> tuple[float, list[str]]:
+    if not target_terms:
+        return 0.0, []
+
+    evidence: list[str] = []
+    matched_terms: set[str] = set()
+    for row in history_rows:
+        haystack = " ".join(
+            str(value).lower()
+            for value in (
+                row.project_name,
+                row.subproject_name,
+                row.project_type,
+                row.keyword_text,
+            )
+            if value
+        )
+        row_matches = [term for term in target_terms if term in haystack]
+        if row_matches:
+            matched_terms.update(row_matches)
+            if len(evidence) < 3:
+                evidence.append(
+                    f"{row.subproject_name}: {', '.join(row_matches[:3])}"
+                )
+
+    for log in work_logs:
+        haystack = (log.task_name or "").lower()
+        log_matches = [term for term in target_terms if term in haystack]
+        if log_matches:
+            matched_terms.update(log_matches)
+            if len(evidence) < 3:
+                evidence.append(f"{log.task_name}: {', '.join(log_matches[:3])}")
+
+    coverage_score = len(matched_terms) / len(target_terms) * 100
+    evidence_bonus = min(20, len(evidence) * 5)
+    return min(100.0, coverage_score + evidence_bonus), evidence
+
+
+def _rule_based_clarifying_questions(
+    target_terms: list[str],
+    candidates: list[RecommendationCandidate],
+) -> list[str]:
+    questions: list[str] = []
+    if len(target_terms) < 3:
+        questions.append("신규 업무의 기능명, 차종, 제어기명, 검증 레벨 중 추가로 확정된 정보가 있나요?")
+    top_relevance = max((candidate.project_relevance_score for candidate in candidates), default=0.0)
+    if top_relevance < 35:
+        questions.append("과거 이력과 직접 매칭되는 키워드가 적습니다. 유사 업무로 봐야 할 기준 키워드가 따로 있나요?")
+    return questions[:2]
 
 
 def _is_excluded_assignment_position(position: str | None) -> bool:
@@ -170,9 +308,10 @@ def _extract_json_block(text: str) -> dict | list | None:
 async def _rerank_candidates_with_claude(
     payload: RecommendationRequest,
     candidates: list[RecommendationCandidate],
-) -> tuple[list[RecommendationCandidate], bool]:
+    target_terms: list[str],
+) -> tuple[list[RecommendationCandidate], bool, list[str]]:
     if not settings.AI_ASSIGNMENT_USE_CLAUDE or not candidates:
-        return candidates, False
+        return candidates, False, []
 
     shortlist = [
         {
@@ -184,6 +323,11 @@ async def _rerank_candidates_with_claude(
             "availability_score": candidate.availability_score,
             "capability_score": candidate.capability_score,
             "remaining_minutes": candidate.remaining_minutes,
+            "average_history_minutes": candidate.average_history_minutes,
+            "history_time_score": candidate.history_time_score,
+            "history_time_sample_count": candidate.history_time_sample_count,
+            "project_relevance_score": candidate.project_relevance_score,
+            "project_relevance_evidence": candidate.project_relevance_evidence,
             "keyword_experience_count": candidate.keyword_experience_count,
             "history_experience_count": candidate.history_experience_count,
             "reasons": candidate.reasons,
@@ -194,13 +338,17 @@ async def _rerank_candidates_with_claude(
     prompt = (
         "당신은 프로젝트 업무 배정 추천을 돕는 분석가입니다.\n"
         "주어진 후보 5명 안에서 상위 3명을 다시 고르고, 각 사람의 추천 이유를 한국어로 3개씩 작성하세요.\n"
+        "project_relevance_score/evidence와 신규 업무 판단 키워드를 보고 과거 업무 연관성을 판단하세요.\n"
+        "연관성을 확신하기 어려우면 clarifying_questions에 관리자에게 물어볼 질문을 최대 2개 작성하세요.\n"
         "반드시 JSON만 반환하세요.\n"
         '{'
         '"candidates": ['
         '{"user_id": 1, "rank": 1, "reasons": ["...", "...", "..."]}'
-        "]"
+        "],"
+        '"clarifying_questions": ["..."]'
         '}\n\n'
         f"요청 정보: {json.dumps(payload.model_dump(mode='json'), ensure_ascii=False)}\n"
+        f"신규 업무 판단 키워드: {json.dumps(target_terms, ensure_ascii=False)}\n"
         f"후보 정보: {json.dumps(shortlist, ensure_ascii=False)}"
     )
 
@@ -262,7 +410,13 @@ async def _rerank_candidates_with_claude(
     ordered = (reranked + remaining)[:3]
     for index, candidate in enumerate(ordered, start=1):
         candidate.rank = index
-    return ordered, True
+    questions = parsed.get("clarifying_questions")
+    clarifying_questions = (
+        [str(question) for question in questions[:2]]
+        if isinstance(questions, list)
+        else []
+    )
+    return ordered, True, clarifying_questions
 
 
 @router.get("/work-queue/today", response_model=list[WorkQueueItem])
@@ -703,6 +857,7 @@ async def recommend_assignees(
     _: User = Depends(require_admin),
 ):
     project_participant_ids: set[int] | None = None
+    selected_subproject: SubProject | None = None
     if payload.project_id is not None:
         project = db.scalar(
             select(Project)
@@ -717,13 +872,13 @@ async def recommend_assignees(
         project_participant_ids = {participant.id for participant in project.participants}
 
     if payload.subproject_id is not None:
-        subproject = db.get(SubProject, payload.subproject_id)
-        if not subproject:
+        selected_subproject = db.get(SubProject, payload.subproject_id)
+        if not selected_subproject:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="하위 프로젝트를 찾을 수 없습니다.",
             )
-        if payload.project_id is not None and subproject.project_id != payload.project_id:
+        if payload.project_id is not None and selected_subproject.project_id != payload.project_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="선택한 하위 프로젝트가 프로젝트에 속하지 않습니다.",
@@ -742,6 +897,14 @@ async def recommend_assignees(
         select(WorkLog).where(WorkLog.status == WORKLOG_COMPLETED)
     ).all()
     history_rows = db.scalars(select(ProjectExecutionHistory)).all()
+    history_by_user: dict[int, list[ProjectExecutionHistory]] = {}
+    for row in history_rows:
+        history_by_user.setdefault(row.user_id, []).append(row)
+    completed_logs_by_user: dict[int, list[WorkLog]] = {}
+    for log in completed_logs:
+        completed_logs_by_user.setdefault(log.user_id, []).append(log)
+    baseline_history_minutes = _average_history_minutes(history_rows)
+    target_terms = _subproject_relevance_terms(payload, selected_subproject)
 
     keyword = payload.project_name.strip().lower()
     recent_history_cutoff = date.fromordinal(max(1, date.today().toordinal() - RECENT_HISTORY_DAYS))
@@ -776,9 +939,20 @@ async def recommend_assignees(
             for log in completed_logs
             if log.user_id == user.id and keyword and keyword[:6] in log.task_name.lower()
         )
-        history_for_user = [
-            row for row in history_rows if row.user_id == user.id
-        ]
+        history_for_user = history_by_user.get(user.id, [])
+        average_history_minutes = _average_history_minutes(history_for_user)
+        history_time_sample_count = len(
+            [row for row in history_for_user if int(row.worked_minutes or 0) > 0]
+        )
+        history_time_score = _history_time_score(
+            average_history_minutes,
+            baseline_history_minutes,
+        )
+        project_relevance_score, project_relevance_evidence = _project_relevance_score(
+            target_terms,
+            history_for_user,
+            completed_logs_by_user.get(user.id, []),
+        )
         history_type_count = sum(
             1 for row in history_for_user if row.project_type == payload.project_type
         )
@@ -798,8 +972,8 @@ async def recommend_assignees(
             else 0.0
         )
         history_experience_count = history_type_count + history_keyword_hits + recent_history_count
-        capability_score = min(
-            100.0,
+        capability_signal_score = min(
+            50.0,
             same_type_count * SCORE_WEIGHT_SAME_TYPE
             + keyword_hits * SCORE_WEIGHT_LOG_KEYWORD
             + history_type_count * SCORE_WEIGHT_HISTORY_TYPE
@@ -807,6 +981,12 @@ async def recommend_assignees(
             + recent_history_count * SCORE_WEIGHT_RECENT_HISTORY
             + average_completion_rate * SCORE_WEIGHT_COMPLETION_RATE
             + SCORE_BASE,
+        )
+        capability_score = min(
+            100.0,
+            capability_signal_score
+            + history_time_score * SCORE_WEIGHT_HISTORY_TIME
+            + project_relevance_score * SCORE_WEIGHT_PROJECT_RELEVANCE,
         )
         final_score = (
             payload.availability_weight * availability_score
@@ -824,6 +1004,11 @@ async def recommend_assignees(
                 availability_score=round(availability_score, 2),
                 capability_score=round(capability_score, 2),
                 remaining_minutes=remaining_minutes,
+                average_history_minutes=average_history_minutes,
+                history_time_score=round(history_time_score, 2),
+                history_time_sample_count=history_time_sample_count,
+                project_relevance_score=round(project_relevance_score, 2),
+                project_relevance_evidence=project_relevance_evidence,
                 keyword_experience_count=keyword_hits + same_type_count,
                 history_experience_count=history_experience_count,
                 recommendation_source="rule",
@@ -834,6 +1019,11 @@ async def recommend_assignees(
                     remaining_minutes=remaining_minutes,
                     keyword_hits=keyword_hits + same_type_count,
                     history_hits=history_experience_count,
+                    average_history_minutes=average_history_minutes,
+                    history_time_score=history_time_score,
+                    history_time_sample_count=history_time_sample_count,
+                    project_relevance_score=project_relevance_score,
+                    project_relevance_evidence=project_relevance_evidence,
                 ),
             )
         )
@@ -845,17 +1035,22 @@ async def recommend_assignees(
 
     claude_used = False
     claude_error: str | None = None
+    clarifying_questions = _rule_based_clarifying_questions(target_terms, top_candidates)
     try:
-        top_candidates, claude_used = await _rerank_candidates_with_claude(
+        top_candidates, claude_used, claude_questions = await _rerank_candidates_with_claude(
             payload,
             ranked_candidates,
+            target_terms,
         )
+        if claude_questions:
+            clarifying_questions = claude_questions
     except Exception as exc:
         claude_error = str(exc)
 
     return RecommendationResponse(
         request=payload,
         candidates=top_candidates,
+        clarifying_questions=clarifying_questions,
         claude_used=claude_used,
         claude_error=claude_error,
     )
