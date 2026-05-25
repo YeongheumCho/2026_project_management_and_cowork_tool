@@ -109,8 +109,12 @@ def _recalc_status_and_progress(sp: SubProject) -> None:
         sp.status = STATUS_PLANNED
 
 
-def _recalc_status_and_progress_from_logs(db: Session, sp: SubProject) -> None:
-    assignee_ids = sorted(_subproject_assignee_ids(sp))
+def _recalc_status_and_progress_from_logs(
+    db: Session,
+    sp: SubProject,
+    extra_user_ids: set[int] | None = None,
+) -> None:
+    assignee_ids = sorted(_subproject_assignee_ids(sp) | (extra_user_ids or set()))
     if not assignee_ids:
         sp.progress = 0
         sp.status = STATUS_PLANNED
@@ -397,6 +401,24 @@ def _ensure_subproject_access(sp: SubProject, current_user: User) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="?대떦 ?뚰봽濡쒖젥?몄뿉 ?묎렐?????놁뒿?덈떎.",
         )
+
+
+def _can_edit_subproject_progress(db: Session, sp: SubProject, current_user: User) -> bool:
+    if current_user.role == "admin":
+        return True
+    if current_user.id in _subproject_assignee_ids(sp):
+        return True
+    return (
+        db.scalar(
+            select(project_participants.c.project_id)
+            .where(
+                project_participants.c.project_id == sp.project_id,
+                project_participants.c.user_id == current_user.id,
+            )
+            .limit(1)
+        )
+        is not None
+    )
 
 
 def _validate_subproject_dates_within_project(
@@ -1498,10 +1520,10 @@ def create_subproject_progress_log(
 ):
     sp = _load_subproject(db, subproject_id)
     assignee_ids = _subproject_assignee_ids(sp)
-    if current_user.id not in assignee_ids:
+    if not _can_edit_subproject_progress(db, sp, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="蹂몄씤?먭쾶 諛곗젙???섏쐞 ?꾨줈?앺듃留?吏꾪뻾瑜좎쓣 湲곕줉?????덉뒿?덈떎.",
+            detail="등록된 프로젝트 참여 인원만 하위 프로젝트 진행률을 기록할 수 있습니다.",
         )
 
     progress_log = ProgressLog(
@@ -1514,7 +1536,8 @@ def create_subproject_progress_log(
     )
     db.add(progress_log)
     db.flush()
-    _recalc_status_and_progress_from_logs(db, sp)
+    extra_user_ids = set() if current_user.id in assignee_ids else {current_user.id}
+    _recalc_status_and_progress_from_logs(db, sp, extra_user_ids=extra_user_ids)
     project = db.get(Project, sp.project_id)
     if project is not None:
         _sync_subproject_execution_history(db, project, sp)
@@ -1533,10 +1556,10 @@ def list_subproject_progress_logs(
     current_user: User = Depends(get_current_user),
 ):
     sp = _load_subproject(db, subproject_id)
-    if current_user.role != "admin" and current_user.id not in _subproject_assignee_ids(sp):
+    if not _can_edit_subproject_progress(db, sp, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="蹂몄씤?먭쾶 諛곗젙???섏쐞 ?꾨줈?앺듃??吏꾪뻾瑜?湲곕줉留?蹂????덉뒿?덈떎.",
+            detail="등록된 프로젝트 참여 인원만 하위 프로젝트 진행률 기록을 볼 수 있습니다.",
         )
 
     stmt = select(ProgressLog).where(ProgressLog.subproject_id == subproject_id)

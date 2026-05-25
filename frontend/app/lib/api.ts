@@ -327,6 +327,11 @@ export type RecommendationCandidate = {
   availability_score: number;
   capability_score: number;
   remaining_minutes: number;
+  average_history_minutes: number | null;
+  history_time_score: number;
+  history_time_sample_count: number;
+  project_relevance_score: number;
+  project_relevance_evidence: string[];
   keyword_experience_count: number;
   history_experience_count: number;
   recommendation_source: 'rule' | 'claude' | string;
@@ -336,6 +341,7 @@ export type RecommendationCandidate = {
 export type RecommendationResponse = {
   request: RecommendationRequest;
   candidates: RecommendationCandidate[];
+  clarifying_questions: string[];
   claude_used: boolean;
   claude_error: string | null;
 };
