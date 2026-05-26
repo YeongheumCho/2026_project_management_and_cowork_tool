@@ -1,32 +1,94 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { apiFetch, type Project } from '../../lib/api';
+import { apiFetch, type MajorProject, type Project } from '../../lib/api';
+import ProjectManageModal from '../../projects/components/ProjectManageModal';
 
 type Props = {
   enabled: boolean;
 };
 
+type MajorProjectTab = number | 'unassigned' | null;
+
 export default function ProjectDeletionManager({ enabled }: Props) {
+  const [majorProjects, setMajorProjects] = useState<MajorProject[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [activeMajorProjectId, setActiveMajorProjectId] = useState<MajorProjectTab>(null);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const sortedProjects = useMemo(
+  const sortedMajorProjects = useMemo(
     () =>
-      [...projects].sort((left, right) =>
-        right.created_at.localeCompare(left.created_at),
+      [...majorProjects].sort((left, right) =>
+        left.name.localeCompare(right.name, 'ko-KR'),
       ),
+    [majorProjects],
+  );
+
+  const hasUnassignedProjects = useMemo(
+    () => projects.some((project) => project.major_project_id == null),
     [projects],
   );
+
+  const sortedProjects = useMemo(
+    () =>
+      projects
+        .filter((project) => {
+          if (activeMajorProjectId === null) return true;
+          if (activeMajorProjectId === 'unassigned') {
+            return project.major_project_id == null;
+          }
+          return project.major_project_id === activeMajorProjectId;
+        })
+        .sort((left, right) => right.created_at.localeCompare(left.created_at)),
+    [activeMajorProjectId, projects],
+  );
+
+  const activeMajorProject = useMemo(
+    () =>
+      typeof activeMajorProjectId === 'number'
+        ? majorProjects.find((project) => project.id === activeMajorProjectId) ?? null
+        : null,
+    [activeMajorProjectId, majorProjects],
+  );
+
+  const activeTitle =
+    activeMajorProject?.name ??
+    (activeMajorProjectId === 'unassigned' ? '대프로젝트 미분류' : '프로젝트');
 
   const load = useCallback(async () => {
     if (!enabled) return;
     setLoading(true);
     try {
-      const nextProjects = await apiFetch<Project[]>('/projects');
+      const [nextMajorProjects, nextProjects] = await Promise.all([
+        apiFetch<MajorProject[]>('/major-projects'),
+        apiFetch<Project[]>('/projects'),
+      ]);
+
+      setMajorProjects(nextMajorProjects);
       setProjects(nextProjects);
+      setActiveMajorProjectId((current) => {
+        if (
+          typeof current === 'number' &&
+          nextMajorProjects.some((majorProject) => majorProject.id === current)
+        ) {
+          return current;
+        }
+        if (
+          current === 'unassigned' &&
+          nextProjects.some((project) => project.major_project_id == null)
+        ) {
+          return current;
+        }
+        return (
+          nextMajorProjects[0]?.id ??
+          (nextProjects.some((project) => project.major_project_id == null)
+            ? 'unassigned'
+            : null)
+        );
+      });
       setMessage('');
     } catch (error) {
       setMessage((error as Error).message);
@@ -66,10 +128,10 @@ export default function ProjectDeletionManager({ enabled }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-heading font-bold text-text">
-            프로젝트 삭제 관리
+            프로젝트 수정 및 삭제 관리
           </h3>
           <p className="mt-1 text-small text-text-subtle">
-            대프로젝트에 속한 개별 프로젝트 삭제를 한 곳에서 처리합니다.
+            대프로젝트를 선택한 뒤 해당 대프로젝트에 속한 프로젝트만 수정하거나 삭제합니다.
           </p>
         </div>
       </div>
@@ -80,6 +142,38 @@ export default function ProjectDeletionManager({ enabled }: Props) {
         </p>
       )}
 
+      {!loading && (sortedMajorProjects.length > 0 || hasUnassignedProjects) && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {sortedMajorProjects.map((majorProject) => (
+            <button
+              key={majorProject.id}
+              type="button"
+              onClick={() => setActiveMajorProjectId(majorProject.id)}
+              className={`rounded-lg border px-3 py-2 text-small font-bold transition ${
+                activeMajorProjectId === majorProject.id
+                  ? 'border-brand bg-brand text-white'
+                  : 'border-border bg-white text-text-muted hover:border-brand hover:text-brand'
+              }`}
+            >
+              {majorProject.name}
+            </button>
+          ))}
+          {hasUnassignedProjects && (
+            <button
+              type="button"
+              onClick={() => setActiveMajorProjectId('unassigned')}
+              className={`rounded-lg border px-3 py-2 text-small font-bold transition ${
+                activeMajorProjectId === 'unassigned'
+                  ? 'border-brand bg-brand text-white'
+                  : 'border-border bg-white text-text-muted hover:border-brand hover:text-brand'
+              }`}
+            >
+              미분류
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="mt-4 overflow-hidden rounded-xl border border-border">
         {loading ? (
           <p className="px-4 py-6 text-center text-sm text-text-subtle">
@@ -87,10 +181,13 @@ export default function ProjectDeletionManager({ enabled }: Props) {
           </p>
         ) : sortedProjects.length === 0 ? (
           <p className="px-4 py-6 text-center text-sm text-text-subtle">
-            삭제할 프로젝트가 없습니다.
+            {activeTitle}에 등록된 프로젝트가 없습니다.
           </p>
         ) : (
           <div className="divide-y divide-surface-subtle">
+            <div className="bg-surface-muted px-4 py-3 text-small font-bold text-text">
+              {activeTitle} · {sortedProjects.length}건
+            </div>
             {sortedProjects.map((project) => (
               <div
                 key={project.id}
@@ -104,19 +201,37 @@ export default function ProjectDeletionManager({ enabled }: Props) {
                     하위 {project.subproject_count}건 · 참여 {project.participants.length}명 · 진행률 {Math.round(project.progress_percent)}%
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void deleteProject(project)}
-                  disabled={deletingId === project.id}
-                  className="rounded-lg border border-verify-fail-bg px-3 py-1.5 text-micro font-bold text-verify-fail-fg disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {deletingId === project.id ? '삭제 중...' : '삭제'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingProject(project)}
+                    className="rounded-lg border border-brand-soft px-3 py-1.5 text-micro font-bold text-brand hover:bg-brand-soft"
+                  >
+                    수정
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void deleteProject(project)}
+                    disabled={deletingId === project.id}
+                    className="rounded-lg border border-verify-fail-bg px-3 py-1.5 text-micro font-bold text-verify-fail-fg disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {deletingId === project.id ? '삭제 중...' : '삭제'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      <ProjectManageModal
+        open={editingProject !== null}
+        project={editingProject}
+        majorProjects={majorProjects}
+        onClose={() => setEditingProject(null)}
+        onSaved={load}
+        onError={setMessage}
+      />
     </section>
   );
 }

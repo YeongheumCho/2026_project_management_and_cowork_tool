@@ -75,9 +75,6 @@ export default function SubProjectListItem({
                 1차 검증: {first ?? '-'} · InReview: {inReview ?? '-'}
               </p>
             )}
-            <p className="mt-1 text-tiny font-semibold text-brand">
-              클릭하면 진행률 기록을 추가합니다.
-            </p>
           </button>
 
           <div className="min-w-[150px] text-right">

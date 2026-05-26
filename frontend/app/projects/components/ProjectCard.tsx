@@ -47,9 +47,6 @@ export default function ProjectCard({
   const done =
     project.completed_subproject_count ??
     subprojects.filter((sp) => sp.status === 'completed').length;
-  const inProgress =
-    project.in_progress_subproject_count ??
-    subprojects.filter((sp) => sp.status === 'in_progress').length;
   const progress = project.progress_percent ?? 0;
   const isCompleted = total > 0 && done >= total;
   const typeLabel = PROJECT_TYPE_LABEL[project.project_type] ?? project.project_type;
@@ -86,22 +83,12 @@ export default function ProjectCard({
               <span className="rounded-full border border-brand-soft bg-white px-2.5 py-1 text-tiny font-bold text-brand">
                 {typeLabel}
               </span>
-              <span
-                className={`rounded-full px-2.5 py-1 text-tiny font-bold ${
-                  isCompleted
-                    ? 'bg-verify-pass-bg text-verify-pass-fg'
-                    : 'bg-verify-info-bg text-verify-info-fg'
-                }`}
-              >
-                {isCompleted ? '프로젝트 완료' : '진행 중 프로젝트'}
-              </span>
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-micro text-text-muted">
               <span>생성일 {new Date(project.created_at).toLocaleDateString('ko-KR')}</span>
               <span>하위 프로젝트 {total}건</span>
               <span>완료 {done}건</span>
-              <span>진행 중 {inProgress}건</span>
               <span>참여 인원 {project.participants.length}명</span>
               <span>{periodLabel}</span>
             </div>
@@ -109,13 +96,13 @@ export default function ProjectCard({
 
           <SummaryPanel>
             <div className="flex items-center justify-between text-micro font-semibold text-text-muted">
-              <span>완료 항목</span>
+              <span>하위 프로젝트</span>
               <span className={isCompleted ? 'text-verify-pass-fg' : 'text-verify-info-fg'}>
                 {done}/{total}
               </span>
             </div>
             <div className="mt-2 flex items-center justify-between text-small font-bold text-text">
-              <span>{isCompleted ? '프로젝트 완료' : '진행 중 프로젝트'}</span>
+              <span>진행률</span>
               <span>{Math.round(progress)}%</span>
             </div>
             <ProgressBar
