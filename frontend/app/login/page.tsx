@@ -81,7 +81,7 @@ export default function LoginPage() {
       <div className="mx-auto max-w-md rounded-[28px] border border-border bg-surface p-8 shadow-sm">
         <div className="mb-8">
           <p className="text-tiny font-bold uppercase tracking-[1px] text-text-subtle">
-            WorkFlow AI
+            SureLog AI
           </p>
           <h1 className="mt-2 text-3xl font-bold">로그인</h1>
           <p className="mt-2 text-sm text-text-subtle">
