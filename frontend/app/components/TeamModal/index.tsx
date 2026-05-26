@@ -130,10 +130,11 @@ export default function TeamModal({
   const effectiveSchema = useMemo(
     () => effectiveFieldSchema(
       fieldSchemas[fieldSchemaType] ??
+        fallbackFieldSchemaFromInitial(initial, fieldSchemaType) ??
         fieldSchemaOptions[0] ??
         emptyProjectTemplateSchema(selectedProject?.id ?? 0),
     ),
-    [fieldSchemaOptions, fieldSchemaType, fieldSchemas, selectedProject?.id],
+    [fieldSchemaOptions, fieldSchemaType, fieldSchemas, initial, selectedProject?.id],
   );
   const projectParticipants = useMemo(
     () => selectedProject?.participants ?? [],
@@ -223,12 +224,16 @@ export default function TeamModal({
       projects,
       projectType,
     );
+    const templateName =
+      templateNameForType(inferredType, fieldSchemas) ??
+      savedFieldSchemaName(initial) ??
+      defaultFieldSchema(inferredType).section_label;
     setSelectedFieldSchemaType(inferredType);
     setF((prev) => ({
       ...prev,
       customFields: {
         ...withoutFieldSchemaMeta(prev.customFields),
-        [FIELD_SCHEMA_NAME_KEY]: templateNameForType(inferredType, fieldSchemas),
+        [FIELD_SCHEMA_NAME_KEY]: templateName,
       },
     }));
   }, [fieldSchemas, initial, initialProject, mode, open, projectType, projects, selectedProject]);
@@ -285,7 +290,9 @@ export default function TeamModal({
 
   const handleFieldSchemaTypeChange = (nextType: string) => {
     setSelectedFieldSchemaType(nextType);
-    const templateName = templateNameForType(nextType, fieldSchemas);
+    const templateName =
+      templateNameForType(nextType, fieldSchemas) ??
+      defaultFieldSchema(nextType).section_label;
     const templateWeight = fieldSchemas[nextType]?.weight ?? 5;
     const schema = fieldSchemas[nextType];
     setF((prev) => ({
@@ -566,10 +573,7 @@ function templateNameForType(
   projectType: string,
   fieldSchemas: Record<string, ProjectFieldSchema>,
 ) {
-  return (
-    fieldSchemas[projectType]?.section_label ||
-    defaultFieldSchema(projectType).section_label
-  );
+  return fieldSchemas[projectType]?.section_label ?? null;
 }
 
 function typeForTemplateName(
@@ -579,6 +583,37 @@ function typeForTemplateName(
   return String(
     schemas.find((schema) => schema.section_label === templateName)?.project_type ?? '',
   ) || null;
+}
+
+function fallbackFieldSchemaFromInitial(
+  subproject: SubProject | null | undefined,
+  selectedType: string,
+): ProjectFieldSchema | null {
+  const savedName = subproject?.custom_fields?.[FIELD_SCHEMA_NAME_KEY];
+  if (
+    !selectedType ||
+    typeof savedName !== 'string' ||
+    savedName.trim() === ''
+  ) {
+    return null;
+  }
+
+  return {
+    id: 0,
+    project_type: selectedType,
+    section_label: savedName,
+    fields: [],
+    weight: subproject?.weight ?? 5,
+    created_by: null,
+    updated_at: subproject?.updated_at ?? '',
+  };
+}
+
+function savedFieldSchemaName(subproject: SubProject | null | undefined) {
+  const savedName = subproject?.custom_fields?.[FIELD_SCHEMA_NAME_KEY];
+  return typeof savedName === 'string' && savedName.trim() !== ''
+    ? savedName
+    : null;
 }
 
 function withoutFieldSchemaMeta(fields: Record<string, string>) {

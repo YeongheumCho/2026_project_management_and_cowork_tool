@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import OrganizationMemberPicker from '../../components/OrganizationMemberPicker';
 import {
   apiFetch,
@@ -44,18 +44,21 @@ export default function MajorProjectManager({ users }: Props) {
   const [typeDraft, setTypeDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [messageTone, setMessageTone] = useState<'error' | 'success'>('error');
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const editing = useMemo(
     () => items.find((item) => item.id === editingId) ?? null,
     [editingId, items],
   );
 
-  async function load() {
+  async function load(options: { keepMessage?: boolean } = {}) {
     setLoading(true);
     try {
       setItems(await apiFetch<MajorProject[]>('/major-projects'));
-      setMessage('');
+      if (!options.keepMessage) setMessage('');
     } catch (error) {
+      setMessageTone('error');
       setMessage((error as Error).message);
     } finally {
       setLoading(false);
@@ -76,6 +79,9 @@ export default function MajorProjectManager({ users }: Props) {
       project_types: item.project_types?.length ? item.project_types : [...PROJECT_TYPE_OPTIONS],
       member_ids: item.members.map((member) => member.id),
     });
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
   }
 
   function reset() {
@@ -88,6 +94,7 @@ export default function MajorProjectManager({ users }: Props) {
     const nextType = typeDraft.trim();
     if (!nextType) return;
     if (form.project_types.includes(nextType)) {
+      setMessageTone('error');
       setMessage('이미 추가된 프로젝트 유형입니다.');
       return;
     }
@@ -113,10 +120,12 @@ export default function MajorProjectManager({ users }: Props) {
     event.preventDefault();
     if (!form.name.trim()) return;
     if (form.start_date && form.end_date && form.end_date < form.start_date) {
+      setMessageTone('error');
       setMessage('종료일은 시작일 이후여야 합니다.');
       return;
     }
     if (form.project_types.length === 0) {
+      setMessageTone('error');
       setMessage('프로젝트 유형을 1개 이상 추가해주세요.');
       return;
     }
@@ -140,9 +149,12 @@ export default function MajorProjectManager({ users }: Props) {
           body: JSON.stringify(payload),
         });
       }
+      setMessageTone('success');
+      setMessage(editingId ? '대프로젝트를 수정했습니다.' : '대프로젝트를 추가했습니다.');
       reset();
-      await load();
+      await load({ keepMessage: true });
     } catch (error) {
+      setMessageTone('error');
       setMessage((error as Error).message);
     }
   }
@@ -154,6 +166,7 @@ export default function MajorProjectManager({ users }: Props) {
       await load();
       if (editingId === item.id) reset();
     } catch (error) {
+      setMessageTone('error');
       setMessage((error as Error).message);
     }
   }
@@ -168,12 +181,18 @@ export default function MajorProjectManager({ users }: Props) {
       </div>
 
       {message && (
-        <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p
+          className={`mb-3 rounded-lg px-3 py-2 text-sm ${
+            messageTone === 'success'
+              ? 'bg-verify-pass-bg text-verify-pass-fg'
+              : 'bg-red-50 text-red-600'
+          }`}
+        >
           {message}
         </p>
       )}
 
-      <form onSubmit={submit} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <form ref={formRef} onSubmit={submit} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="grid gap-3 md:grid-cols-2">
           <label className="block md:col-span-2">
             <span className="text-small font-semibold text-text-subtle">대프로젝트명</span>

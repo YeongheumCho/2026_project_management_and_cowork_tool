@@ -112,10 +112,16 @@ def _recalc_status_and_progress(sp: SubProject) -> None:
 def _recalc_status_and_progress_from_logs(
     db: Session,
     sp: SubProject,
-    extra_user_ids: set[int] | None = None,
 ) -> None:
-    assignee_ids = sorted(_subproject_assignee_ids(sp) | (extra_user_ids or set()))
-    if not assignee_ids:
+    progress_user_ids = set(
+        db.scalars(
+            select(ProgressLog.user_id)
+            .where(ProgressLog.subproject_id == sp.id)
+            .distinct()
+        ).all()
+    )
+    progress_owner_ids = sorted(_subproject_assignee_ids(sp) | progress_user_ids)
+    if not progress_owner_ids:
         sp.progress = 0
         sp.status = STATUS_PLANNED
         return
@@ -124,7 +130,7 @@ def _recalc_status_and_progress_from_logs(
         select(ProgressLog)
         .where(
             ProgressLog.subproject_id == sp.id,
-            ProgressLog.user_id.in_(assignee_ids),
+            ProgressLog.user_id.in_(progress_owner_ids),
         )
         .order_by(
             ProgressLog.user_id.asc(),
@@ -137,10 +143,10 @@ def _recalc_status_and_progress_from_logs(
         if log.user_id not in latest_by_user:
             latest_by_user[log.user_id] = log.progress_percent
 
-    per_assignee_share = 100 / len(assignee_ids)
+    per_assignee_share = 100 / len(progress_owner_ids)
     contributed_progress = sum(
         per_assignee_share * (latest_by_user.get(user_id, 0) / 100)
-        for user_id in assignee_ids
+        for user_id in progress_owner_ids
     )
     sp.progress = round(contributed_progress, 2)
     if sp.progress >= 100:
@@ -695,8 +701,6 @@ def update_major_project(
             detail="??꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
         )
 
-    members = _load_major_project_members(db, payload.member_ids)
-    member_ids = {user.id for user in members}
     next_project_types = list(dict.fromkeys(payload.project_types))
     project_types_in_use = {
         project.project_type
@@ -708,19 +712,19 @@ def update_major_project(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미 해당 유형의 프로젝트가 있어 유형을 삭제할 수 없습니다.",
         )
-    invalid_projects = [
-        project.name
+
+    # Existing project participants must remain valid members of the major
+    # project. Preserve them automatically so name/date/type edits are not
+    # blocked by older or partially synced membership data.
+    required_member_ids = {
+        participant.id
         for project in major_project.projects
-        if any(participant.id not in member_ids for participant in project.participants)
-    ]
-    if invalid_projects:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "?섏쐞 以묓봽濡쒖젥??李몄뿬?먭? ????꾨줈?앺듃 李몄뿬??紐⑸줉???ы븿?섏뼱???⑸땲?? "
-                + ", ".join(invalid_projects[:3])
-            ),
-        )
+        for participant in project.participants
+    }
+    members = _load_major_project_members(
+        db,
+        list(dict.fromkeys([*payload.member_ids, *required_member_ids])),
+    )
 
     major_project.name = payload.name
     major_project.start_date = payload.start_date
@@ -1536,8 +1540,7 @@ def create_subproject_progress_log(
     )
     db.add(progress_log)
     db.flush()
-    extra_user_ids = set() if current_user.id in assignee_ids else {current_user.id}
-    _recalc_status_and_progress_from_logs(db, sp, extra_user_ids=extra_user_ids)
+    _recalc_status_and_progress_from_logs(db, sp)
     project = db.get(Project, sp.project_id)
     if project is not None:
         _sync_subproject_execution_history(db, project, sp)

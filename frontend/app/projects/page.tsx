@@ -77,10 +77,6 @@ export default function ProjectsPage() {
   };
 
   const openSubProject = (sp: SubProject) => {
-    if (isAdmin) {
-      openEditSub(sp);
-      return;
-    }
     setProgressTarget(sp);
   };
 

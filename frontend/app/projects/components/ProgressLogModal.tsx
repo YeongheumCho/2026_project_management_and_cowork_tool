@@ -13,6 +13,9 @@ type Props = {
   initialProgressPercent?: number;
 };
 
+const FIELD_SCHEMA_NAME_KEY = '__field_schema_name';
+const LEGACY_FIELD_SCHEMA_TYPE_KEY = '__field_schema_type';
+
 export default function ProgressLogModal({
   open,
   subproject,
@@ -27,6 +30,7 @@ export default function ProgressLogModal({
   const [progressPercent, setProgressPercent] = useState('');
   const [workDate, setWorkDate] = useState(toISODate(new Date()));
   const [comment, setComment] = useState('');
+  const appliedTemplateName = getAppliedTemplateName(subproject);
 
   const loadLogs = useCallback(async () => {
     if (!open || !subproject) return;
@@ -103,6 +107,11 @@ export default function ProgressLogModal({
           {subproject && (
             <p className="mt-1 text-xs text-text-subtle">
               {subproject.start_date} ~ {subproject.end_date} · 현재 {Math.round(subproject.progress)}%
+            </p>
+          )}
+          {appliedTemplateName && (
+            <p className="mt-2 inline-flex rounded-full border border-brand-soft bg-brand-soft px-2.5 py-1 text-tiny font-bold text-brand">
+              적용 템플릿: {appliedTemplateName}
             </p>
           )}
         </div>
@@ -194,4 +203,19 @@ export default function ProgressLogModal({
       </div>
     </Modal>
   );
+}
+
+function getAppliedTemplateName(subproject: SubProject | null) {
+  const customFields = subproject?.custom_fields;
+  const savedName = customFields?.[FIELD_SCHEMA_NAME_KEY];
+  if (typeof savedName === 'string' && savedName.trim() !== '') {
+    return savedName;
+  }
+
+  const legacyType = customFields?.[LEGACY_FIELD_SCHEMA_TYPE_KEY];
+  if (typeof legacyType === 'string' && legacyType.trim() !== '') {
+    return legacyType;
+  }
+
+  return null;
 }

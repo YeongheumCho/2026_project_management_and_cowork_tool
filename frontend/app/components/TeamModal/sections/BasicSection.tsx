@@ -53,6 +53,9 @@ export default function BasicSection({
     return selectedProject.participants;
   }, [selectedProject, users]);
   const configuredFieldCount = fieldSchema.fields.length;
+  const selectedSchemaInOptions = fieldSchemaOptions.some(
+    (schema) => String(schema.project_type) === selectedFieldSchemaType,
+  );
   const selectedVehicleSetIndex = useMemo(
     () =>
       selectedProject?.vehicle_sets?.findIndex((item) => vehicleSetMatchesForm(item, f)) ?? -1,
@@ -151,7 +154,7 @@ export default function BasicSection({
           </div>
         </Field>
 
-        <Field label="시작일 ~ 종료일" span={2}>
+        <Field label="시작일 ~ 종료일" span={2} required>
           <div className="flex gap-2">
             <input
               type="date"
@@ -215,11 +218,19 @@ export default function BasicSection({
             <select
               value={selectedFieldSchemaType}
               onChange={(event) => onFieldSchemaTypeChange(event.target.value)}
-              disabled={!isAdmin || fieldSchemaOptions.length === 0}
+              disabled={
+                !isAdmin ||
+                (fieldSchemaOptions.length === 0 && !selectedFieldSchemaType)
+              }
               className="input"
             >
               {fieldSchemaOptions.length === 0 && (
                 <option value="">템플릿 없음</option>
+              )}
+              {selectedFieldSchemaType && !selectedSchemaInOptions && (
+                <option value={selectedFieldSchemaType}>
+                  {fieldSchema.section_label} · {fieldSchema.fields.length}개 필드
+                </option>
               )}
               {fieldSchemaOptions.map((schema) => (
                 <option key={schema.project_type} value={schema.project_type}>
