@@ -478,6 +478,16 @@ export default function TemplateManager() {
                   >
                     템플릿 추가
                   </button>
+                  {activeKey && (
+                    <button
+                      type="button"
+                      onClick={() => void handleSave()}
+                      disabled={saving}
+                      className="rounded-lg bg-brand px-3 py-2 text-xs font-bold text-white hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {saving ? '저장 중...' : '템플릿 저장'}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -656,16 +666,6 @@ export default function TemplateManager() {
                     + 필드 추가
                   </button>
 
-                  <div className="flex justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => void handleSave()}
-                      disabled={saving}
-                      className="rounded-lg bg-brand px-5 py-2 text-xs font-bold text-white hover:bg-brand-hover disabled:opacity-50"
-                    >
-                      {saving ? '저장 중...' : '저장'}
-                    </button>
-                  </div>
                 </div>
 
                 <TemplatePreview templateName={templateName} fields={sortedFields} />
