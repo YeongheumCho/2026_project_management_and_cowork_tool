@@ -27,7 +27,11 @@ class LLMService:
         user_email: str | None = None,
     ) -> ChatResponse:
         base_prompt = system_prompt or settings.SYSTEM_PROMPT
-        db_context = fetch_context_for_user(user_email)
+        latest_user_message = next(
+            (msg.content for msg in reversed(messages) if msg.role.value == "user"),
+            None,
+        )
+        db_context = fetch_context_for_user(user_email, latest_user_message)
         full_system = f"{base_prompt}\n{db_context}"
 
         response = await self.client.messages.create(
