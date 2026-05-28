@@ -1,11 +1,5 @@
 :80 {
-    @allowed_clients remote_ip 10.10.222.0/24 127.0.0.1 ::1
-
     encode gzip zstd
 
-    handle @allowed_clients {
-        reverse_proxy frontend:3000
-    }
-
-    respond "Forbidden" 403
+    reverse_proxy frontend:3000
 }
