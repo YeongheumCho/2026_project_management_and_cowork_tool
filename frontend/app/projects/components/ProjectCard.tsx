@@ -11,6 +11,7 @@ import {
 import ProgressBar from '../../components/ProgressBar';
 import { colorForId } from '../../components/AppShell/colors';
 import SubProjectListItem from './SubProjectListItem';
+import { exportSubprojectsCsv, exportSubprojectsXlsx } from '../lib/subprojectExport';
 
 type Props = {
   project: Project;
@@ -183,6 +184,12 @@ export default function ProjectCard({
               </ActionButton>
               <ActionButton onClick={() => onCsvImport(project.id)}>
                 CSV 업무 가져오기
+              </ActionButton>
+              <ActionButton onClick={() => exportSubprojectsCsv(project, subprojects)}>
+                CSV 추출
+              </ActionButton>
+              <ActionButton onClick={() => exportSubprojectsXlsx(project, subprojects)}>
+                XLSX 추출
               </ActionButton>
               <button
                 type="button"

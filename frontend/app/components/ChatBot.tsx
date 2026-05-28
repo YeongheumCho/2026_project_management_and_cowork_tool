@@ -4,11 +4,29 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import TypingIndicator from './TypingIndicator';
 
 const AI_CHATBOT_URL = process.env.NEXT_PUBLIC_AI_CHATBOT_URL ?? '/ai';
+const DEFAULT_CHAT_SIZE = { width: 380, height: 520 };
+const MIN_CHAT_SIZE = { width: 360, height: 420 };
+const VIEWPORT_MARGIN = 24;
+const CHAT_TOP_GAP = 112;
 
 type Message = {
   role: 'user' | 'assistant';
   content: string;
 };
+
+type ChatSize = typeof DEFAULT_CHAT_SIZE;
+
+type ResizeSnapshot = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  width: number;
+  height: number;
+};
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
 
 export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,8 +34,10 @@ export default function ChatBot() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [hasGreeted, setHasGreeted] = useState(false);
+  const [chatSize, setChatSize] = useState<ChatSize>(DEFAULT_CHAT_SIZE);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const resizeRef = useRef<ResizeSnapshot | null>(null);
 
   // 자동 스크롤
   const scrollToBottom = useCallback(() => {
@@ -112,6 +132,38 @@ export default function ChatBot() {
     }
   };
 
+  const handleResizeStart = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    resizeRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      width: chatSize.width,
+      height: chatSize.height,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handleResizeMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const snapshot = resizeRef.current;
+    if (!snapshot || snapshot.pointerId !== e.pointerId) return;
+
+    const maxWidth = Math.max(MIN_CHAT_SIZE.width, window.innerWidth - VIEWPORT_MARGIN * 2);
+    const maxHeight = Math.max(MIN_CHAT_SIZE.height, window.innerHeight - CHAT_TOP_GAP);
+    setChatSize({
+      width: clampNumber(snapshot.width - (e.clientX - snapshot.startX), MIN_CHAT_SIZE.width, maxWidth),
+      height: clampNumber(snapshot.height - (e.clientY - snapshot.startY), MIN_CHAT_SIZE.height, maxHeight),
+    });
+  };
+
+  const handleResizeEnd = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (resizeRef.current?.pointerId !== e.pointerId) return;
+    resizeRef.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
   // 마크다운 간이 렌더링 (볼드, 줄바꿈)
   const renderContent = (text: string) => {
     return text.split('\n').map((line, i) => {
@@ -157,7 +209,26 @@ export default function ChatBot() {
 
       {/* 채팅 창 */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 flex h-[520px] w-[380px] flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
+        <div
+          className="fixed bottom-24 right-6 z-50 flex max-h-[calc(100vh-7rem)] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl"
+          style={{ width: chatSize.width, height: chatSize.height }}
+        >
+          <button
+            type="button"
+            onPointerDown={handleResizeStart}
+            onPointerMove={handleResizeMove}
+            onPointerUp={handleResizeEnd}
+            onPointerCancel={handleResizeEnd}
+            aria-label="챗봇 창 크기 조절"
+            title="창 크기 조절"
+            className="absolute left-0 top-0 z-10 flex h-6 w-6 cursor-nwse-resize items-start justify-start rounded-tl-2xl text-white/80 transition-colors hover:text-white"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path d="M4 2H2V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M2 2L8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M2 7L11 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.75" />
+            </svg>
+          </button>
           {/* 헤더 */}
           <div className="flex items-center gap-3 bg-blue-600 px-5 py-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20">

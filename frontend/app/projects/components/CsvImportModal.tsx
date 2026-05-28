@@ -14,6 +14,7 @@ import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 type ParsedRow = {
   function_name: string;
   avg_expected_minutes: number | null;
+  weight: number | null;
   assignee_name: string;
   assignee_id: number | null;
   verification_level: VerificationLevel | null;
@@ -41,6 +42,7 @@ const MINUTE_HEADERS = [
   'minutes',
 ];
 const ASSIGNEE_HEADERS = ['담당자', '담당자명', 'assignee', 'assignee_name'];
+const WEIGHT_HEADERS = ['가중치', 'weight'];
 const LEVEL_HEADERS = [
   'Lv',
   'LV',
@@ -54,6 +56,7 @@ const LEVEL_HEADERS = [
 const LEVEL_ALIASES: Record<string, VerificationLevel> = {
   basic: 'basic',
   기초: 'basic',
+  기초검증: 'basic',
   lv1: 'LV1',
   lv2: 'LV2',
   bsw: 'BSW',
@@ -100,11 +103,19 @@ function findHeaderIndex(headers: string[], aliases: string[]): number {
 }
 
 function parseMinutes(raw: string): number | null {
-  const normalized = raw.trim().replace(/분/g, '');
+  const normalized = raw.trim().replace(/분/g, '').replace(/,/g, '');
   if (!normalized) return null;
   const value = Number(normalized);
-  if (!Number.isFinite(value) || value <= 0 || !Number.isInteger(value)) return null;
-  return value;
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.round(value);
+}
+
+function parseWeight(raw: string): number | null {
+  const normalized = raw.trim();
+  if (!normalized) return null;
+  const value = Number(normalized);
+  if (!Number.isFinite(value) || value < 1 || value > 10) return null;
+  return Math.round(value);
 }
 
 function normalizeLevel(raw: string): VerificationLevel | null {
@@ -124,6 +135,7 @@ function parseCsv(text: string, assigneeOptions: UserBrief[]): ParsedRow[] {
   const functionIndex = findHeaderIndex(headers, FUNCTION_HEADERS);
   const minuteIndex = findHeaderIndex(headers, MINUTE_HEADERS);
   const assigneeIndex = findHeaderIndex(headers, ASSIGNEE_HEADERS);
+  const weightIndex = findHeaderIndex(headers, WEIGHT_HEADERS);
   const levelIndex = findHeaderIndex(headers, LEVEL_HEADERS);
 
   return lines.slice(1).map((line) => {
@@ -131,13 +143,16 @@ function parseCsv(text: string, assigneeOptions: UserBrief[]): ParsedRow[] {
     const functionName = (cols[functionIndex >= 0 ? functionIndex : 0] ?? '').trim();
     const minutes = parseMinutes(cols[minuteIndex >= 0 ? minuteIndex : 1] ?? '');
     const assigneeName = (cols[assigneeIndex >= 0 ? assigneeIndex : 2] ?? '').trim();
+    const weightRaw = weightIndex >= 0 ? (cols[weightIndex] ?? '') : '';
+    const weight = parseWeight(weightRaw);
     const levelRaw = cols[levelIndex >= 0 ? levelIndex : 3] ?? '';
     const assigneeMatches = assigneeOptions.filter((user) => user.name.trim() === assigneeName);
     const verificationLevel = normalizeLevel(levelRaw);
     const errors: string[] = [];
 
     if (!functionName) errors.push('기능명 누락');
-    if (minutes === null) errors.push('평균 소요 시간은 1분 이상의 정수로 입력');
+    if (minutes === null) errors.push('평균 소요 시간은 1분 이상의 숫자로 입력');
+    if (weightRaw.trim() && weight === null) errors.push('가중치는 1~10 사이 숫자로 입력');
     if (!assigneeName) errors.push('담당자 누락');
     else if (assigneeMatches.length === 0) errors.push(`담당자 없음: ${assigneeName}`);
     else if (assigneeMatches.length > 1) errors.push(`동명이인 담당자: ${assigneeName}`);
@@ -147,6 +162,7 @@ function parseCsv(text: string, assigneeOptions: UserBrief[]): ParsedRow[] {
     return {
       function_name: functionName,
       avg_expected_minutes: minutes,
+      weight,
       assignee_name: assigneeName,
       assignee_id: assigneeMatches.length === 1 ? assigneeMatches[0].id : null,
       verification_level: verificationLevel,
@@ -203,7 +219,7 @@ export default function CsvImportModal({
       const parsed = parseCsv(text, assigneeOptions);
       setRows(parsed);
       if (parsed.length === 0) {
-        setFileError('불러온 행이 없습니다. 기능명, 평균소요시간(분), 담당자, Lv 컬럼을 확인해주세요.');
+        setFileError('불러온 행이 없습니다. 기능명, 평균소요시간(분), 가중치, 담당자, Lv 컬럼을 확인해주세요.');
       }
     };
     reader.readAsText(file, 'UTF-8');
@@ -228,6 +244,7 @@ export default function CsvImportModal({
             name: row.function_name,
             function_name: row.function_name,
             avg_expected_minutes: row.avg_expected_minutes,
+            ...(row.weight === null ? {} : { weight: row.weight }),
             verification_level: row.verification_level,
             start_date: startDate,
             end_date: endDate,
@@ -262,7 +279,7 @@ export default function CsvImportModal({
   };
 
   const downloadSample = () => {
-    const csv = '\uFEFF기능명,평균소요시간(분),담당자,Lv\nTST+RGR,120,홍길동,LV2\n02_Diagnosis,90,김철수,LV3\n';
+    const csv = '\uFEFF기능명,평균소요시간(분),가중치,담당자,Lv\nTST+RGR,120,5,홍길동,LV2\n02_Diagnosis,90,3,김철수,LV3\n';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -280,7 +297,7 @@ export default function CsvImportModal({
             CSV로 검증 기능 일괄 등록
           </h2>
           <p className="mt-1 text-micro text-text-subtle">
-            CSV에는 검증할 기능명, 평균 소요 시간, 담당자, Lv를 입력하고 기간은 아래 기본값으로 일괄 적용합니다.
+            CSV에는 검증할 기능명, 평균 소요 시간, 가중치, 담당자, Lv를 입력하고 기간은 아래 기본값으로 일괄 적용합니다.
           </p>
         </div>
 
@@ -308,7 +325,7 @@ export default function CsvImportModal({
             양식 다운로드
           </button>
           <p className="text-micro text-text-subtle">
-            컬럼: 기능명 / 평균소요시간(분) / 담당자 / Lv
+            컬럼: 기능명 / 평균소요시간(분) / 가중치(선택) / 담당자 / Lv
           </p>
         </div>
 
@@ -416,6 +433,7 @@ function PreviewTable({
             <TableHead>#</TableHead>
             <TableHead>검증 기능</TableHead>
             <TableHead>평균 소요(분)</TableHead>
+            <TableHead>가중치</TableHead>
             <TableHead>담당자</TableHead>
             <TableHead>Lv</TableHead>
             <TableHead>기간</TableHead>
@@ -428,6 +446,7 @@ function PreviewTable({
               <TableCell muted>{index + 1}</TableCell>
               <TableCell strong>{row.function_name || '-'}</TableCell>
               <TableCell>{row.avg_expected_minutes ?? '-'}</TableCell>
+              <TableCell>{row.weight ?? '-'}</TableCell>
               <TableCell>{row.assignee_name || '-'}</TableCell>
               <TableCell>{row.verification_level ?? '-'}</TableCell>
               <TableCell>{period}</TableCell>
@@ -466,6 +485,7 @@ function ResultTable({ results }: { results: ResultRow[] }) {
             <TableHead>#</TableHead>
             <TableHead>검증 기능</TableHead>
             <TableHead>평균 소요(분)</TableHead>
+            <TableHead>가중치</TableHead>
             <TableHead>담당자</TableHead>
             <TableHead>Lv</TableHead>
             <TableHead>결과</TableHead>
@@ -477,6 +497,7 @@ function ResultTable({ results }: { results: ResultRow[] }) {
               <TableCell muted>{index + 1}</TableCell>
               <TableCell strong>{row.function_name || '-'}</TableCell>
               <TableCell>{row.avg_expected_minutes ?? '-'}</TableCell>
+              <TableCell>{row.weight ?? '-'}</TableCell>
               <TableCell>{row.assignee_name || '-'}</TableCell>
               <TableCell>{row.verification_level ?? '-'}</TableCell>
               <TableCell>
