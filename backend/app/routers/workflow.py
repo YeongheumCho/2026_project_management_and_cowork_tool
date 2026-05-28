@@ -155,6 +155,27 @@ def _history_time_score(
     return max(0.0, 50 - (ratio - 1) * 50)
 
 
+def _positive_minutes(value: object) -> int | None:
+    try:
+        minutes = int(value or 0)
+    except (TypeError, ValueError):
+        return None
+    return minutes if minutes > 0 else None
+
+
+def _history_row_search_text(row: ProjectExecutionHistory) -> str:
+    return " ".join(
+        str(value).lower()
+        for value in (
+            row.project_name,
+            row.subproject_name,
+            row.project_type,
+            row.keyword_text,
+        )
+        if value
+    )
+
+
 def _normalize_relevance_terms(*values: object) -> list[str]:
     terms: list[str] = []
     for value in values:
@@ -168,6 +189,66 @@ def _normalize_relevance_terms(*values: object) -> list[str]:
             if len(token) >= 2:
                 terms.append(token)
     return list(dict.fromkeys(terms))
+
+
+def _history_time_match_terms(
+    payload: RecommendationRequest,
+    subproject: SubProject | None,
+) -> list[str]:
+    values: list[object] = []
+    if subproject is not None:
+        values.extend(
+            [
+                subproject.function_name,
+                subproject.name,
+                subproject.controller_name,
+                subproject.controller_version,
+                subproject.controller_country,
+                subproject.vehicle_type,
+                subproject.verification_level,
+                subproject.priority,
+                subproject.cr_no,
+                subproject.etc_category,
+                subproject.etc_note,
+            ]
+        )
+    else:
+        values.append(payload.project_name)
+    return _normalize_relevance_terms(*values)
+
+
+def _history_rows_matching_terms(
+    rows: list[ProjectExecutionHistory],
+    target_terms: list[str],
+) -> list[ProjectExecutionHistory]:
+    if not target_terms:
+        return []
+    required_matches = 2 if len(target_terms) >= 2 else 1
+    return [
+        row
+        for row in rows
+        if sum(
+            1
+            for term in target_terms
+            if term in _history_row_search_text(row)
+        )
+        >= required_matches
+    ]
+
+
+def _target_standard_minutes(
+    subproject: SubProject | None,
+    relevant_rows: list[ProjectExecutionHistory],
+) -> int | None:
+    if subproject is not None:
+        for value in (
+            subproject.avg_expected_minutes,
+            subproject.total_minutes,
+        ):
+            minutes = _positive_minutes(value)
+            if minutes is not None:
+                return minutes
+    return _average_history_minutes(relevant_rows)
 
 
 def _subproject_relevance_terms(
@@ -250,6 +331,16 @@ def _rule_based_clarifying_questions(
     if top_relevance < 35:
         questions.append("과거 이력과 직접 매칭되는 키워드가 적습니다. 유사 업무로 봐야 할 기준 키워드가 따로 있나요?")
     return questions[:2]
+
+
+def _top_candidates_by_score(
+    candidates: list[RecommendationCandidate],
+    limit: int = 3,
+) -> list[RecommendationCandidate]:
+    top_candidates = sorted(candidates, key=lambda item: item.score, reverse=True)[:limit]
+    for index, candidate in enumerate(top_candidates, start=1):
+        candidate.rank = index
+    return top_candidates
 
 
 def _is_excluded_assignment_position(position: str | None) -> bool:
@@ -903,8 +994,13 @@ async def recommend_assignees(
     completed_logs_by_user: dict[int, list[WorkLog]] = {}
     for log in completed_logs:
         completed_logs_by_user.setdefault(log.user_id, []).append(log)
-    baseline_history_minutes = _average_history_minutes(history_rows)
     target_terms = _subproject_relevance_terms(payload, selected_subproject)
+    history_time_terms = _history_time_match_terms(payload, selected_subproject)
+    relevant_history_rows = _history_rows_matching_terms(history_rows, history_time_terms)
+    baseline_history_minutes = _target_standard_minutes(
+        selected_subproject,
+        relevant_history_rows,
+    )
 
     keyword = payload.project_name.strip().lower()
     recent_history_cutoff = date.fromordinal(max(1, date.today().toordinal() - RECENT_HISTORY_DAYS))
@@ -940,9 +1036,13 @@ async def recommend_assignees(
             if log.user_id == user.id and keyword and keyword[:6] in log.task_name.lower()
         )
         history_for_user = history_by_user.get(user.id, [])
-        average_history_minutes = _average_history_minutes(history_for_user)
+        relevant_history_for_user = _history_rows_matching_terms(
+            history_for_user,
+            history_time_terms,
+        )
+        average_history_minutes = _average_history_minutes(relevant_history_for_user)
         history_time_sample_count = len(
-            [row for row in history_for_user if int(row.worked_minutes or 0) > 0]
+            [row for row in relevant_history_for_user if int(row.worked_minutes or 0) > 0]
         )
         history_time_score = _history_time_score(
             average_history_minutes,
@@ -1029,9 +1129,7 @@ async def recommend_assignees(
         )
 
     ranked_candidates = sorted(candidates, key=lambda item: item.score, reverse=True)
-    top_candidates = ranked_candidates[:3]
-    for index, candidate in enumerate(top_candidates, start=1):
-        candidate.rank = index
+    top_candidates = _top_candidates_by_score(ranked_candidates)
 
     claude_used = False
     claude_error: str | None = None
@@ -1046,6 +1144,8 @@ async def recommend_assignees(
             clarifying_questions = claude_questions
     except Exception as exc:
         claude_error = str(exc)
+
+    top_candidates = _top_candidates_by_score(ranked_candidates)
 
     return RecommendationResponse(
         request=payload,

@@ -252,7 +252,7 @@ export default function TemplateManager() {
     setMessage('새 템플릿을 추가했습니다. 이름과 필드를 설정한 뒤 저장해 주세요.');
   }
 
-  function handleReuseTemplate() {
+  async function handleReuseTemplate() {
     if (!activeMajorProject || !reuseSourceKey) return;
     const source = schemas[reuseSourceKey];
     if (!source) return;
@@ -269,10 +269,34 @@ export default function TemplateManager() {
       updated_at: new Date().toISOString(),
     };
 
-    setSchemas((current) => ({ ...current, [key]: nextSchema }));
-    setActiveKey(key);
-    setReuseSourceKey('');
-    setMessage('저장된 템플릿을 현재 프로젝트로 복사했습니다.');
+    setSaving(true);
+    setError('');
+    setMessage('');
+    try {
+      const saved = await apiFetch<ProjectFieldSchema>(
+        `/field-schemas/${key}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            project_type: key,
+            section_label: nextSchema.section_label,
+            fields: nextSchema.fields,
+            weight: nextSchema.weight,
+          }),
+        },
+      );
+      setSchemas((current) => ({ ...current, [String(saved.project_type)]: saved }));
+      setActiveKey(String(saved.project_type));
+      setTemplateName(saved.section_label);
+      setTemplateWeight(saved.weight);
+      setFields(cloneFields(saved.fields));
+      setReuseSourceKey('');
+      setMessage('저장된 템플릿을 현재 프로젝트로 복사하고 저장했습니다.');
+    } catch (nextError) {
+      setError((nextError as Error).message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleSave() {
@@ -511,11 +535,11 @@ export default function TemplateManager() {
                 </label>
                 <button
                   type="button"
-                  onClick={handleReuseTemplate}
-                  disabled={!reuseSourceKey || !activeMajorProject}
+                  onClick={() => void handleReuseTemplate()}
+                  disabled={!reuseSourceKey || !activeMajorProject || saving}
                   className="rounded-lg border border-brand-soft px-3 py-2 text-xs font-bold text-brand disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  선택 템플릿 복사
+                  {saving ? '복사 중...' : '선택 템플릿 복사'}
                 </button>
               </div>
 
