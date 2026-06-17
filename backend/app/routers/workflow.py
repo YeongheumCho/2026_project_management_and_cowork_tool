@@ -807,9 +807,10 @@ def _sync_completed_subproject_history(
     auto_by_user = {
         row.user_id: row for row in existing_rows if not row.manual_override
     }
-    for row in auto_by_user.values():
-        if row.user_id not in target_user_ids:
-            db.delete(row)
+    if completed_user_ids is None:
+        for row in auto_by_user.values():
+            if row.user_id not in target_user_ids:
+                db.delete(row)
 
     fallback_minutes = (
         subproject.total_minutes
@@ -862,6 +863,29 @@ def _complete_linked_subproject(
     if subproject is None:
         return
 
+    assignee_ids = _subproject_assignee_ids(subproject)
+    completed_assignee_ids = set[int]()
+    if assignee_ids:
+        completed_assignee_ids = set(
+            db.scalars(
+                select(WorkLog.user_id).where(
+                    WorkLog.subproject_id == subproject.id,
+                    WorkLog.status == WORKLOG_COMPLETED,
+                    WorkLog.user_id.in_(assignee_ids),
+                )
+            ).all()
+        ) | (completed_user_ids & assignee_ids)
+        project = db.get(Project, subproject.project_id)
+        if project is not None:
+            _sync_completed_subproject_history(
+                db,
+                project,
+                subproject,
+                completed_user_ids=completed_user_ids,
+            )
+        if not assignee_ids.issubset(completed_assignee_ids):
+            return
+
     if subproject.status != STATUS_COMPLETED:
         for task in subproject.subtasks:
             task.is_done = True
@@ -879,7 +903,7 @@ def _complete_linked_subproject(
             db,
             project,
             subproject,
-            completed_user_ids=completed_user_ids,
+            completed_user_ids=completed_assignee_ids or completed_user_ids,
         )
 
 

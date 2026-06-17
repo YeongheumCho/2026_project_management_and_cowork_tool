@@ -19,6 +19,7 @@ type Props = {
   timeSummary: ProjectTimeSummary;
   historySummary: ProjectHistorySummary;
   isAdmin: boolean;
+  canManageSubprojects: boolean;
   isOpen: boolean;
   onToggle: (projectId: number) => void;
   onAddSub: (projectId: number) => void;
@@ -35,6 +36,7 @@ export default function ProjectCard({
   timeSummary,
   historySummary,
   isAdmin,
+  canManageSubprojects,
   isOpen,
   onToggle,
   onAddSub,
@@ -174,23 +176,27 @@ export default function ProjectCard({
             </div>
           </SummaryPanel>
 
-          {isAdmin && (
+          {(isAdmin || canManageSubprojects) && (
             <div className="flex flex-wrap gap-2">
-              <ActionButton onClick={() => onEditProject(project)}>
-                프로젝트 수정
-              </ActionButton>
-              <ActionButton tone="danger" onClick={() => onDeleteProject(project)}>
-                프로젝트 삭제
-              </ActionButton>
-              <ActionButton onClick={() => onCsvImport(project.id)}>
-                CSV 업무 가져오기
-              </ActionButton>
-              <ActionButton onClick={() => exportSubprojectsCsv(project, subprojects)}>
-                CSV 추출
-              </ActionButton>
-              <ActionButton onClick={() => exportSubprojectsXlsx(project, subprojects)}>
-                XLSX 추출
-              </ActionButton>
+              {isAdmin && (
+                <>
+                  <ActionButton onClick={() => onEditProject(project)}>
+                    프로젝트 수정
+                  </ActionButton>
+                  <ActionButton tone="danger" onClick={() => onDeleteProject(project)}>
+                    프로젝트 삭제
+                  </ActionButton>
+                  <ActionButton onClick={() => onCsvImport(project.id)}>
+                    CSV 업무 가져오기
+                  </ActionButton>
+                  <ActionButton onClick={() => exportSubprojectsCsv(project, subprojects)}>
+                    CSV 추출
+                  </ActionButton>
+                  <ActionButton onClick={() => exportSubprojectsXlsx(project, subprojects)}>
+                    XLSX 추출
+                  </ActionButton>
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => onAddSub(project.id)}
@@ -208,7 +214,7 @@ export default function ProjectCard({
           {subprojects.length === 0 ? (
             <p className="rounded-[18px] border border-dashed border-border-strong bg-white px-5 py-8 text-center text-sm text-text-subtle">
               아직 등록된 하위 프로젝트가 없습니다.
-              {isAdmin ? ' 오른쪽 버튼에서 바로 추가할 수 있습니다.' : ''}
+              {canManageSubprojects ? ' 오른쪽 버튼에서 바로 추가할 수 있습니다.' : ''}
             </p>
           ) : (
             <ul className="space-y-3">
@@ -217,7 +223,7 @@ export default function ProjectCard({
                   key={sp.id}
                   sp={sp}
                   onClick={onOpenSubProgress}
-                  canEdit={isAdmin}
+                  canEdit={canManageSubprojects}
                   onEdit={onEditSub}
                 />
               ))}

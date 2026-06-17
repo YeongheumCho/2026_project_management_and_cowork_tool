@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import AppShell from '../components/AppShell';
 import TeamModal from '../components/TeamModal';
 import {
@@ -45,6 +45,17 @@ export default function ProjectsPage() {
   const [modalProjectId, setModalProjectId] = useState<number | undefined>();
   const [modalInitial, setModalInitial] = useState<SubProject | null>(null);
   const [progressTarget, setProgressTarget] = useState<SubProject | null>(null);
+  const modalFunctionNameOptionsByLevel = useMemo(
+    () => buildFunctionNameOptionsByLevel(byProject.get(modalProjectId ?? -1) ?? []),
+    [byProject, modalProjectId],
+  );
+
+  const canManageProjectSubprojects = (projectId: number) => {
+    if (isAdmin) return true;
+    if (!me) return false;
+    const project = projects.find((item) => item.id === projectId);
+    return !!project?.participants.some((participant) => participant.id === me.id);
+  };
 
   const toggleExpand = (id: number) =>
     setExpanded((prev) => {
@@ -55,7 +66,7 @@ export default function ProjectsPage() {
     });
 
   const openCreateSub = (projectId: number) => {
-    if (!isAdmin) return;
+    if (!canManageProjectSubprojects(projectId)) return;
     setModalMode('create');
     setModalProjectId(projectId);
     setModalInitial(null);
@@ -69,7 +80,7 @@ export default function ProjectsPage() {
   };
 
   const openEditSub = (sp: SubProject) => {
-    if (!isAdmin) return;
+    if (!canManageProjectSubprojects(sp.project_id)) return;
     setModalMode('edit');
     setModalProjectId(sp.project_id);
     setModalInitial(sp);
@@ -149,6 +160,7 @@ export default function ProjectsPage() {
             timeSummary={timeByProject.get(project.id) ?? emptyTimeSummary(project.id)}
             historySummary={historyByProject.get(project.id) ?? emptyHistorySummary(project.id)}
             isAdmin={!!isAdmin}
+            canManageSubprojects={canManageProjectSubprojects(project.id)}
             isOpen={expanded.has(project.id)}
             onToggle={toggleExpand}
             onAddSub={openCreateSub}
@@ -184,11 +196,17 @@ export default function ProjectsPage() {
       <TeamModal
         open={modalOpen}
         mode={modalMode}
-        isAdmin={!!isAdmin}
+        isAdmin={
+          modalProjectId != null
+            ? canManageProjectSubprojects(modalProjectId)
+            : !!isAdmin
+        }
+        canDelete={!!isAdmin}
         users={users}
         projects={projects}
         lockedProjectId={modalMode === 'create' ? modalProjectId : undefined}
         initial={modalInitial}
+        functionNameOptionsByLevel={modalFunctionNameOptionsByLevel}
         onClose={() => setModalOpen(false)}
         onSaved={reload}
       />
@@ -217,4 +235,23 @@ function emptyHistorySummary(projectId: number): ProjectHistorySummary {
     total_completed_count: 0,
     members: [],
   };
+}
+
+function buildFunctionNameOptionsByLevel(subprojects: SubProject[]) {
+  const grouped = new Map<string, Set<string>>();
+  for (const subproject of subprojects) {
+    const level = subproject.verification_level?.trim();
+    const functionName = (subproject.function_name || subproject.name).trim();
+    if (!level || !functionName) continue;
+    const names = grouped.get(level) ?? new Set<string>();
+    names.add(functionName);
+    grouped.set(level, names);
+  }
+
+  return Object.fromEntries(
+    [...grouped.entries()].map(([level, names]) => [
+      level,
+      [...names].sort((left, right) => left.localeCompare(right, 'ko-KR')),
+    ]),
+  );
 }

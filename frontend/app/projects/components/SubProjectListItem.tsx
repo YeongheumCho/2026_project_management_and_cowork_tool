@@ -38,6 +38,8 @@ export default function SubProjectListItem({
   const assigneeLabel = sp.assignees?.length
     ? sp.assignees.map((assignee) => assignee.name).join(', ')
     : (sp.assignee?.name ?? '미지정');
+  const verifierLabel = sp.verifier?.name ?? '미지정';
+  const reviewerLabel = sp.reviewer?.name ?? '미지정';
 
   return (
     <li>
@@ -75,6 +77,10 @@ export default function SubProjectListItem({
                 1차 검증: {first ?? '-'} · InReview: {inReview ?? '-'}
               </p>
             )}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <RoleBadge label="검증" value={verifierLabel} />
+              <RoleBadge label="리뷰" value={reviewerLabel} />
+            </div>
           </button>
 
           <div className="min-w-[150px] text-right">
@@ -121,5 +127,13 @@ export default function SubProjectListItem({
         </div>
       </div>
     </li>
+  );
+}
+
+function RoleBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="rounded-full border border-border bg-surface-muted px-2 py-0.5 text-tiny font-semibold text-text-muted">
+      {label}: <span className="text-text">{value}</span>
+    </span>
   );
 }

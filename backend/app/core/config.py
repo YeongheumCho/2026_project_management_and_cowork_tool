@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     BACKEND_CORS_ORIGINS: str = "http://localhost:3000"
     AI_CHATBOT_URL: str = "http://ai-chatbot:8002/api/chat/"
     AI_ASSIGNMENT_USE_CLAUDE: bool = True

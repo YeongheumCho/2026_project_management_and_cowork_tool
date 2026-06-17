@@ -360,24 +360,7 @@ def _get_visible_project_ids_for_user(db: Session, current_user: User) -> set[in
             db.scalars(select(Project.id)).all()
         )
 
-    major_project_ids = set(
-        db.scalars(
-            select(Project.id)
-            .join(MajorProject, MajorProject.id == Project.major_project_id)
-            .join(MajorProject.members)
-            .where(User.id == current_user.id)
-        ).all()
-    )
-
-    # Use whole-project membership as the primary visibility rule. Keep assigned
-    # subprojects as a fallback for older data that may not have participants.
-    participant_project_ids = set(
-        db.scalars(
-            select(project_participants.c.project_id).where(
-                project_participants.c.user_id == current_user.id
-            )
-        ).all()
-    )
+    member_project_ids = _get_member_project_ids_for_user(db, current_user)
     assigned_project_ids = set(
         db.scalars(
             select(SubProject.project_id)
@@ -396,17 +379,42 @@ def _get_visible_project_ids_for_user(db: Session, current_user: User) -> set[in
             .distinct()
         ).all()
     )
-    return major_project_ids | participant_project_ids | assigned_project_ids
+    return member_project_ids | assigned_project_ids
 
 
-def _ensure_subproject_access(sp: SubProject, current_user: User) -> None:
+def _get_member_project_ids_for_user(db: Session, current_user: User) -> set[int]:
+    major_project_ids = set(
+        db.scalars(
+            select(Project.id)
+            .join(MajorProject, MajorProject.id == Project.major_project_id)
+            .join(MajorProject.members)
+            .where(User.id == current_user.id)
+        ).all()
+    )
+
+    # Use whole-project membership as the primary visibility rule. Keep assigned
+    # subprojects as a fallback for older data that may not have participants.
+    participant_project_ids = set(
+        db.scalars(
+            select(project_participants.c.project_id).where(
+                project_participants.c.user_id == current_user.id
+            )
+        ).all()
+    )
+    return major_project_ids | participant_project_ids
+
+
+def _ensure_subproject_access(db: Session, sp: SubProject, current_user: User) -> None:
     if current_user.role == "admin":
         return
-    if current_user.id not in _subproject_assignee_ids(sp):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="?대떦 ?뚰봽濡쒖젥?몄뿉 ?묎렐?????놁뒿?덈떎.",
-        )
+    if current_user.id in _subproject_assignee_ids(sp):
+        return
+    if sp.project_id in _get_visible_project_ids_for_user(db, current_user):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="?대떦 ?뚰봽濡쒖젥?몄뿉 ?묎렐?????놁뒿?덈떎.",
+    )
 
 
 def _can_edit_subproject_progress(db: Session, sp: SubProject, current_user: User) -> bool:
@@ -424,6 +432,20 @@ def _can_edit_subproject_progress(db: Session, sp: SubProject, current_user: Use
             .limit(1)
         )
         is not None
+    )
+
+
+def _ensure_project_participant_write_access(
+    project: Project | None,
+    current_user: User,
+) -> None:
+    if current_user.role == "admin":
+        return
+    if project and current_user.id in {user.id for user in project.participants or []}:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="프로젝트 참여자만 하위 프로젝트를 추가하거나 수정할 수 있습니다.",
     )
 
 
@@ -995,7 +1017,7 @@ def list_project_time_summary(
 def create_subproject(
     payload: SubProjectCreate,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ):
     project = db.scalar(
         select(Project)
@@ -1008,6 +1030,7 @@ def create_subproject(
             detail="?꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
         )
 
+    _ensure_project_participant_write_access(project, current_user)
     _validate_subproject_dates_within_project(
         project,
         payload.start_date,
@@ -1063,20 +1086,29 @@ def list_subprojects(
         selectinload(SubProject.reviewer),
     )
     if current_user.role != "admin":
-        visible_project_ids = _get_visible_project_ids_for_user(db, current_user)
-        if not visible_project_ids:
-            return []
-        stmt = stmt.where(
-            or_(
-                SubProject.assignee_id == current_user.id,
-                SubProject.id.in_(
-                    select(subproject_assignees.c.subproject_id).where(
-                        subproject_assignees.c.user_id == current_user.id
-                    )
-                ),
-            ),
-            SubProject.project_id.in_(visible_project_ids),
+        member_project_ids = _get_member_project_ids_for_user(db, current_user)
+        assigned_subproject_ids = set(
+            db.scalars(
+                select(SubProject.id)
+                .where(SubProject.assignee_id == current_user.id)
+                .distinct()
+            ).all()
         )
+        assigned_subproject_ids |= set(
+            db.scalars(
+                select(subproject_assignees.c.subproject_id)
+                .where(subproject_assignees.c.user_id == current_user.id)
+                .distinct()
+            ).all()
+        )
+        if not member_project_ids and not assigned_subproject_ids:
+            return []
+        visibility_filters = []
+        if member_project_ids:
+            visibility_filters.append(SubProject.project_id.in_(member_project_ids))
+        if assigned_subproject_ids:
+            visibility_filters.append(SubProject.id.in_(assigned_subproject_ids))
+        stmt = stmt.where(or_(*visibility_filters))
     if project_id is not None:
         stmt = stmt.where(SubProject.project_id == project_id)
     if assignee_id is not None and current_user.role == "admin":
@@ -1101,7 +1133,7 @@ def get_subproject(
     current_user: User = Depends(get_current_user),
 ):
     sp = _load_subproject(db, subproject_id)
-    _ensure_subproject_access(sp, current_user)
+    _ensure_subproject_access(db, sp, current_user)
     return SubProjectResponse.from_orm_with_custom(sp)
 
 
@@ -1110,7 +1142,7 @@ def update_subproject(
     subproject_id: int,
     payload: SubProjectUpdate,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ):
     sp = _load_subproject(db, subproject_id)
     project = db.scalar(
@@ -1118,6 +1150,7 @@ def update_subproject(
         .options(selectinload(Project.participants))
         .where(Project.id == sp.project_id)
     )
+    _ensure_project_participant_write_access(project, current_user)
 
     new_start = payload.start_date or sp.start_date
     new_end = payload.end_date or sp.end_date
