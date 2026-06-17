@@ -134,17 +134,31 @@ function FieldInput({
         </Field>
       );
 
-    default:
+    default: {
+      const listId = options.length > 0 ? `field-options-${field.key}` : undefined;
       return (
         <Field label={label} required={field.required}>
-          <input
-            type="text"
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            disabled={disabled}
-            className="input"
-          />
+          <>
+            <input
+              type="text"
+              value={value}
+              list={listId}
+              onChange={(event) => onChange(event.target.value)}
+              disabled={disabled}
+              className="input"
+            />
+            {listId && (
+              <datalist id={listId}>
+                {options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </datalist>
+            )}
+          </>
         </Field>
       );
+    }
   }
 }

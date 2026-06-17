@@ -112,7 +112,13 @@ export default function InspectionMetaSection({
         <Field label="기능명(상세)">
           <input
             value={f.functionName}
-            onChange={(e) => set('functionName', e.target.value)}
+            onChange={(e) => {
+              const nextFunctionName = e.target.value;
+              set('functionName', nextFunctionName);
+              if (!f.name.trim()) {
+                set('name', nextFunctionName);
+              }
+            }}
             className="input"
           />
         </Field>

@@ -84,6 +84,8 @@ type Props = {
   defaultDate?: string;
   lockedProjectId?: number;
   initial?: SubProject | null;
+  canDelete?: boolean;
+  functionNameOptionsByLevel?: Record<string, string[]>;
   onClose: () => void;
   onSaved: () => void;
 };
@@ -97,6 +99,8 @@ export default function TeamModal({
   defaultDate,
   lockedProjectId,
   initial,
+  canDelete = isAdmin,
+  functionNameOptionsByLevel = {},
   onClose,
   onSaved,
 }: Props) {
@@ -154,6 +158,7 @@ export default function TeamModal({
   const requiredFieldMissing = effectiveSchema.fields.some(
     (field) => field.required && !fieldValues[field.key]?.trim(),
   );
+  const derivedName = deriveSubprojectName(f, effectiveSchema);
 
   useEffect(() => {
     if (!open) return;
@@ -275,7 +280,7 @@ export default function TeamModal({
       (!!selectedProject.end_date && !!f.endDate && f.endDate > selectedProject.end_date));
 
   const invalid =
-    !f.name.trim() ||
+    !derivedName ||
     (mode === 'create' && fieldSchemaOptions.length === 0) ||
     !f.projectId ||
     f.assigneeIds.length === 0 ||
@@ -321,6 +326,15 @@ export default function TeamModal({
         label: user.name,
       }));
     }
+    if (field.key === 'function_name' && f.verificationLevel) {
+      const functionNames = functionNameOptionsByLevel[f.verificationLevel] ?? [];
+      if (functionNames.length > 0) {
+        return functionNames.map((name) => ({
+          value: name,
+          label: name,
+        }));
+      }
+    }
     if (field.key === 'verifier_id' || field.key === 'reviewer_id') {
       return projectParticipants.map((user) => ({
         value: String(user.id),
@@ -338,7 +352,7 @@ export default function TeamModal({
     setError('');
 
     try {
-      const payload = buildSubProjectPayload(f);
+      const payload = buildSubProjectPayload({ ...f, name: derivedName });
 
       if (mode === 'create') {
         await apiFetch('/subprojects', {
@@ -364,7 +378,7 @@ export default function TeamModal({
   };
 
   const handleDelete = async () => {
-    if (!initial || !isAdmin) return;
+    if (!initial || !canDelete) return;
     if (!window.confirm(TEXT.deleteConfirm)) return;
 
     setSaving(true);
@@ -392,9 +406,7 @@ export default function TeamModal({
       <ModalHeader
         mode={mode}
         selectedProject={selectedProject}
-        canDelete={
-          mode === 'edit' && isAdmin
-        }
+        canDelete={mode === 'edit' && canDelete}
         onDelete={handleDelete}
       />
 
@@ -574,6 +586,14 @@ function templateNameForType(
   fieldSchemas: Record<string, ProjectFieldSchema>,
 ) {
   return fieldSchemas[projectType]?.section_label ?? null;
+}
+
+function deriveSubprojectName(f: FormState, schema: ProjectFieldSchema) {
+  return (
+    f.name.trim() ||
+    f.functionName.trim() ||
+    schema.section_label.trim()
+  );
 }
 
 function typeForTemplateName(
