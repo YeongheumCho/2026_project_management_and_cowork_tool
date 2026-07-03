@@ -100,8 +100,16 @@ export type SubProject = {
   function_owner?: number | null;
   verifier_id?: number | null;
   verifier?: { id: number; name: string } | null;
+  verifier_ids?: number[];
+  verifiers?: { id: number; name: string }[];
   reviewer_id?: number | null;
   reviewer?: { id: number; name: string } | null;
+  reviewer_ids?: number[];
+  reviewers?: { id: number; name: string }[];
+  inreviewer_id?: number | null;
+  inreviewer?: { id: number; name: string } | null;
+  inreviewer_ids?: number[];
+  inreviewers?: { id: number; name: string }[];
   seat_no?: string | null;
   controller_no?: string | null;
   avg_expected_minutes?: number | null;
@@ -479,20 +487,21 @@ const inspectionFields: FieldDefinition[] = [
   field(10, 'function_owner', '기능 담당자', 'select'),
   field(11, 'verifier_id', '검증 담당자', 'select'),
   field(12, 'reviewer_id', '리뷰 담당자', 'select'),
-  field(13, 'seat_no', '검증 자리'),
-  field(14, 'controller_no', '제어기 번호'),
-  field(15, 'avg_expected_minutes', '평균 예상 소요(분)', 'number'),
-  field(16, 'first_verify_status', '1차 검증 상태', 'select', verifyStateOptions),
-  field(17, 'first_setup_min', '1차 Setup(분)', 'number'),
-  field(18, 'first_aud_min', '1차 AUD(분)', 'number'),
-  field(19, 'first_review_min', '1차 Review(분)', 'number'),
-  field(20, 'inreview_status', 'InReview 상태', 'select', verifyStateOptions),
-  field(21, 'inreview_setup_min', 'InReview Setup(분)', 'number'),
-  field(22, 'inreview_aud_min', 'InReview AUD(분)', 'number'),
-  field(23, 'inreview_feedback_min', 'InReview 반영(분)', 'number'),
-  field(24, 'upload_done', '업로드 완료', 'checkbox'),
-  field(25, 'special_note', '특이사항', 'textarea'),
-  field(26, 'issue_note', '이슈 / 진행 상황', 'textarea'),
+  field(13, 'inreviewer_id', 'InReview 담당자', 'select'),
+  field(14, 'seat_no', '검증 자리'),
+  field(15, 'controller_no', '제어기 번호'),
+  field(16, 'avg_expected_minutes', '평균 예상 소요(분)', 'number'),
+  field(17, 'first_verify_status', '1차 검증 상태', 'select', verifyStateOptions),
+  field(18, 'first_setup_min', '1차 Setup(분)', 'number'),
+  field(19, 'first_aud_min', '1차 AUD(분)', 'number'),
+  field(20, 'first_review_min', '1차 Review(분)', 'number'),
+  field(21, 'inreview_status', 'InReview 상태', 'select', verifyStateOptions),
+  field(22, 'inreview_setup_min', 'InReview Setup(분)', 'number'),
+  field(23, 'inreview_aud_min', 'InReview AUD(분)', 'number'),
+  field(24, 'inreview_feedback_min', 'InReview 반영(분)', 'number'),
+  field(25, 'upload_done', '업로드 완료', 'checkbox'),
+  field(26, 'special_note', '특이사항', 'textarea'),
+  field(27, 'issue_note', '이슈 / 진행 상황', 'textarea'),
 ];
 
 export const DEFAULT_PROJECT_FIELD_SCHEMAS: Record<string, ProjectFieldSchema> = {

@@ -177,6 +177,25 @@ export default function InspectionMetaSection({
             ))}
           </select>
         </Field>
+        <Field label="InReview 담당">
+          <select
+            value={f.inreviewerId}
+            onChange={(e) =>
+              set(
+                'inreviewerId',
+                e.target.value === '' ? '' : Number(e.target.value),
+              )
+            }
+            className="input"
+          >
+            <option value="">선택</option>
+            {projectParticipants.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+        </Field>
         <Field label="검증 자리">
           <input
             value={f.seatNo}

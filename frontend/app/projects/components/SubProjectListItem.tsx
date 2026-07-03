@@ -38,8 +38,9 @@ export default function SubProjectListItem({
   const assigneeLabel = sp.assignees?.length
     ? sp.assignees.map((assignee) => assignee.name).join(', ')
     : (sp.assignee?.name ?? '미지정');
-  const verifierLabel = sp.verifier?.name ?? '미지정';
-  const reviewerLabel = sp.reviewer?.name ?? '미지정';
+  const verifierLabel = roleNames(sp.verifiers, sp.verifier);
+  const reviewerLabel = roleNames(sp.reviewers, sp.reviewer);
+  const inreviewerLabel = roleNames(sp.inreviewers, sp.inreviewer);
 
   return (
     <li>
@@ -80,6 +81,7 @@ export default function SubProjectListItem({
             <div className="mt-2 flex flex-wrap gap-1.5">
               <RoleBadge label="검증" value={verifierLabel} />
               <RoleBadge label="리뷰" value={reviewerLabel} />
+              <RoleBadge label="InReview" value={inreviewerLabel} />
             </div>
           </button>
 
@@ -136,4 +138,12 @@ function RoleBadge({ label, value }: { label: string; value: string }) {
       {label}: <span className="text-text">{value}</span>
     </span>
   );
+}
+
+function roleNames(
+  members: Array<{ id: number; name: string }> | undefined,
+  legacyMember: { id: number; name: string } | null | undefined,
+) {
+  if (members?.length) return members.map((member) => member.name).join(', ');
+  return legacyMember?.name ?? '미지정';
 }

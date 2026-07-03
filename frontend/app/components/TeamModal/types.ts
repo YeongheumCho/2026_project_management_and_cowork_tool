@@ -29,7 +29,11 @@ export type FormState = {
   functionName: string;
   functionOwner: string;
   verifierId: number | '';
+  verifierIds: number[];
   reviewerId: number | '';
+  reviewerIds: number[];
+  inreviewerId: number | '';
+  inreviewerIds: number[];
   seatNo: string;
   controllerNo: string;
   avgExpectedMinutes: string;
@@ -84,7 +88,11 @@ export const EMPTY_FORM: FormState = {
   functionName: '',
   functionOwner: '',
   verifierId: '',
+  verifierIds: [],
   reviewerId: '',
+  reviewerIds: [],
+  inreviewerId: '',
+  inreviewerIds: [],
   seatNo: '',
   controllerNo: '',
   avgExpectedMinutes: '',
@@ -136,7 +144,17 @@ export function fromSubProject(sp: SubProject): FormState {
     functionName: sp.function_name ?? '',
     functionOwner: sp.function_owner != null ? String(sp.function_owner) : '',
     verifierId: sp.verifier_id ?? '',
+    verifierIds: sp.verifier_ids?.length
+      ? sp.verifier_ids
+      : sp.verifier_id == null ? [] : [sp.verifier_id],
     reviewerId: sp.reviewer_id ?? '',
+    reviewerIds: sp.reviewer_ids?.length
+      ? sp.reviewer_ids
+      : sp.reviewer_id == null ? [] : [sp.reviewer_id],
+    inreviewerId: sp.inreviewer_id ?? '',
+    inreviewerIds: sp.inreviewer_ids?.length
+      ? sp.inreviewer_ids
+      : sp.inreviewer_id == null ? [] : [sp.inreviewer_id],
     seatNo: sp.seat_no ?? '',
     controllerNo: sp.controller_no ?? '',
     avgExpectedMinutes:

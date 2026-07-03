@@ -65,6 +65,10 @@ def _ensure_additive_schema_updates() -> None:
         statements.append("ALTER TABLE subprojects ADD COLUMN custom_fields TEXT")
     if "weight" not in subproject_columns:
         statements.append("ALTER TABLE subprojects ADD COLUMN weight INTEGER")
+    if "inreviewer_id" not in subproject_columns:
+        statements.append(
+            "ALTER TABLE subprojects ADD COLUMN inreviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL"
+        )
 
     if "projects" in table_names:
         project_columns = {
@@ -205,6 +209,30 @@ def _ensure_additive_schema_updates() -> None:
                         FROM subproject_assignees sa
                         WHERE sa.subproject_id = sp.id
                           AND sa.user_id = sp.assignee_id
+                      )
+                    """
+                )
+            )
+        role_tables = (
+            ("subproject_verifiers", "verifier_id"),
+            ("subproject_reviewers", "reviewer_id"),
+            ("subproject_inreviewers", "inreviewer_id"),
+        )
+        available_tables = set(inspect(engine).get_table_names())
+        for table_name, column_name in role_tables:
+            if table_name not in available_tables:
+                continue
+            connection.execute(
+                text(
+                    f"""
+                    INSERT INTO {table_name} (subproject_id, user_id)
+                    SELECT sp.id, sp.{column_name}
+                    FROM subprojects sp
+                    WHERE sp.{column_name} IS NOT NULL
+                      AND NOT EXISTS (
+                        SELECT 1 FROM {table_name} role_members
+                        WHERE role_members.subproject_id = sp.id
+                          AND role_members.user_id = sp.{column_name}
                       )
                     """
                 )

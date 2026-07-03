@@ -1,6 +1,7 @@
 'use client';
 
-import type { FieldDefinition, FieldOption, ProjectFieldSchema } from '../../../lib/api';
+import type { FieldDefinition, FieldOption, ProjectFieldSchema, UserBrief } from '../../../lib/api';
+import OrganizationMemberPicker from '../../OrganizationMemberPicker';
 import Field from '../../form/Field';
 
 type Props = {
@@ -9,6 +10,9 @@ type Props = {
   onChange: (key: string, value: string) => void;
   optionsForField?: (field: FieldDefinition) => FieldOption[] | undefined;
   disabled?: boolean;
+  roleUsers?: UserBrief[];
+  roleSelections?: Record<string, number[]>;
+  onRoleSelectionChange?: (key: string, userIds: number[]) => void;
 };
 
 export default function CustomFieldsSection({
@@ -17,6 +21,9 @@ export default function CustomFieldsSection({
   onChange,
   optionsForField,
   disabled = false,
+  roleUsers = [],
+  roleSelections = {},
+  onRoleSelectionChange,
 }: Props) {
   if (schema.fields.length === 0) return null;
 
@@ -28,19 +35,39 @@ export default function CustomFieldsSection({
         {schema.section_label}
       </h4>
       <div className="grid gap-3 sm:grid-cols-3">
-        {sorted.map((field) => (
-          <FieldInput
-            key={field.key}
-            field={field}
-            value={values[field.key] ?? ''}
-            options={optionsForField?.(field) ?? field.options ?? []}
-            onChange={(value) => onChange(field.key, value)}
-            disabled={disabled}
-          />
-        ))}
+        {sorted.map((field) => {
+          if (isMultiRoleField(field.key) && onRoleSelectionChange) {
+            return (
+              <Field key={field.key} label={field.label} full required={field.required}>
+                <div className="max-h-[240px] overflow-y-auto rounded-xl border border-border bg-surface-muted p-3">
+                  <OrganizationMemberPicker
+                    users={roleUsers}
+                    selectedIds={roleSelections[field.key] ?? []}
+                    onChange={(userIds) => onRoleSelectionChange(field.key, userIds)}
+                    disabled={disabled}
+                  />
+                </div>
+              </Field>
+            );
+          }
+          return (
+            <FieldInput
+              key={field.key}
+              field={field}
+              value={values[field.key] ?? ''}
+              options={optionsForField?.(field) ?? field.options ?? []}
+              onChange={(value) => onChange(field.key, value)}
+              disabled={disabled}
+            />
+          );
+        })}
       </div>
     </section>
   );
+}
+
+function isMultiRoleField(key: string) {
+  return key === 'verifier_id' || key === 'reviewer_id' || key === 'inreviewer_id';
 }
 
 type FieldInputProps = {
