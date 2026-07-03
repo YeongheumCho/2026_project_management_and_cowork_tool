@@ -56,6 +56,27 @@ subproject_assignees = Table(
     Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
 )
 
+subproject_verifiers = Table(
+    "subproject_verifiers",
+    Base.metadata,
+    Column("subproject_id", ForeignKey("subprojects.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+)
+
+subproject_reviewers = Table(
+    "subproject_reviewers",
+    Base.metadata,
+    Column("subproject_id", ForeignKey("subprojects.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+)
+
+subproject_inreviewers = Table(
+    "subproject_inreviewers",
+    Base.metadata,
+    Column("subproject_id", ForeignKey("subprojects.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+)
+
 
 # SubProject 상위 상태
 STATUS_PLANNED = "planned"
@@ -205,6 +226,9 @@ class SubProject(Base):
     reviewer_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )  # 리뷰 담당자/리뷰 작성자
+    inreviewer_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )  # InReview 담당자
     seat_no: Mapped[str] = mapped_column(String(50), nullable=True)             # 검증 자리
     controller_no: Mapped[str] = mapped_column(String(50), nullable=True)       # 제어기 번호
     avg_expected_minutes: Mapped[int] = mapped_column(Integer, nullable=True)   # 평균 소요(분)
@@ -267,6 +291,10 @@ class SubProject(Base):
     )
     verifier = relationship("User", foreign_keys=[verifier_id])
     reviewer = relationship("User", foreign_keys=[reviewer_id])
+    inreviewer = relationship("User", foreign_keys=[inreviewer_id])
+    verifiers = relationship("User", secondary=subproject_verifiers)
+    reviewers = relationship("User", secondary=subproject_reviewers)
+    inreviewers = relationship("User", secondary=subproject_inreviewers)
     subtasks = relationship(
         "SubTask",
         back_populates="subproject",
@@ -286,6 +314,18 @@ class SubProject(Base):
         if self.assignees:
             return [user.id for user in self.assignees]
         return [] if self.assignee_id is None else [self.assignee_id]
+
+    @property
+    def verifier_ids(self) -> list[int]:
+        return [user.id for user in self.verifiers] or ([] if self.verifier_id is None else [self.verifier_id])
+
+    @property
+    def reviewer_ids(self) -> list[int]:
+        return [user.id for user in self.reviewers] or ([] if self.reviewer_id is None else [self.reviewer_id])
+
+    @property
+    def inreviewer_ids(self) -> list[int]:
+        return [user.id for user in self.inreviewers] or ([] if self.inreviewer_id is None else [self.inreviewer_id])
 
     @property
     def inreview_total_min(self) -> int:

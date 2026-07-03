@@ -47,6 +47,7 @@ const SYSTEM_FIELD_MAP: Record<string, keyof FormState> = {
   function_owner: 'functionOwner',
   verifier_id: 'verifierId',
   reviewer_id: 'reviewerId',
+  inreviewer_id: 'inreviewerId',
   seat_no: 'seatNo',
   controller_no: 'controllerNo',
   avg_expected_minutes: 'avgExpectedMinutes',
@@ -263,16 +264,26 @@ export default function TeamModal({
   }, [availableFunctionOwnerIds, f.functionOwner]);
 
   useEffect(() => {
-    if (f.verifierId === '') return;
-    if (availableAssigneeIds.has(f.verifierId)) return;
-    setF((prev) => ({ ...prev, verifierId: '' }));
-  }, [availableAssigneeIds, f.verifierId]);
-
-  useEffect(() => {
-    if (f.reviewerId === '') return;
-    if (availableAssigneeIds.has(f.reviewerId)) return;
-    setF((prev) => ({ ...prev, reviewerId: '' }));
-  }, [availableAssigneeIds, f.reviewerId]);
+    setF((prev) => {
+      const verifierIds = prev.verifierIds.filter((id) => availableAssigneeIds.has(id));
+      const reviewerIds = prev.reviewerIds.filter((id) => availableAssigneeIds.has(id));
+      const inreviewerIds = prev.inreviewerIds.filter((id) => availableAssigneeIds.has(id));
+      if (
+        verifierIds.length === prev.verifierIds.length &&
+        reviewerIds.length === prev.reviewerIds.length &&
+        inreviewerIds.length === prev.inreviewerIds.length
+      ) return prev;
+      return {
+        ...prev,
+        verifierIds,
+        verifierId: verifierIds[0] ?? '',
+        reviewerIds,
+        reviewerId: reviewerIds[0] ?? '',
+        inreviewerIds,
+        inreviewerId: inreviewerIds[0] ?? '',
+      };
+    });
+  }, [availableAssigneeIds]);
 
   const outsideProjectRange =
     !!selectedProject &&
@@ -335,7 +346,11 @@ export default function TeamModal({
         }));
       }
     }
-    if (field.key === 'verifier_id' || field.key === 'reviewer_id') {
+    if (
+      field.key === 'verifier_id' ||
+      field.key === 'reviewer_id' ||
+      field.key === 'inreviewer_id'
+    ) {
       return projectParticipants.map((user) => ({
         value: String(user.id),
         label: user.name,
@@ -442,6 +457,22 @@ export default function TeamModal({
           optionsForField={optionsForField}
           onChange={updateDynamicField}
           disabled={!isAdmin}
+          roleUsers={projectParticipants}
+          roleSelections={{
+            verifier_id: f.verifierIds,
+            reviewer_id: f.reviewerIds,
+            inreviewer_id: f.inreviewerIds,
+          }}
+          onRoleSelectionChange={(key, userIds) => {
+            const roleKey = key === 'verifier_id'
+              ? 'verifier'
+              : key === 'reviewer_id' ? 'reviewer' : 'inreviewer';
+            setF((prev) => ({
+              ...prev,
+              [`${roleKey}Ids`]: userIds,
+              [`${roleKey}Id`]: userIds[0] ?? '',
+            }));
+          }}
         />
 
         {error && (
@@ -504,6 +535,7 @@ function getFieldValues(f: FormState): Record<string, string> {
     function_owner: f.functionOwner,
     verifier_id: f.verifierId === '' ? '' : String(f.verifierId),
     reviewer_id: f.reviewerId === '' ? '' : String(f.reviewerId),
+    inreviewer_id: f.inreviewerId === '' ? '' : String(f.inreviewerId),
     seat_no: f.seatNo,
     controller_no: f.controllerNo,
     avg_expected_minutes: f.avgExpectedMinutes,
@@ -716,7 +748,11 @@ function setFieldOnDraft(draft: FormState, key: string, value: string) {
     draft.uploadDone = value === 'true';
     return;
   }
-    if (formKey === 'verifierId' || formKey === 'reviewerId') {
+    if (
+      formKey === 'verifierId' ||
+      formKey === 'reviewerId' ||
+      formKey === 'inreviewerId'
+    ) {
       draft[formKey] = value === '' ? '' : Number(value);
       return;
     }

@@ -328,7 +328,11 @@ class _SubProjectKeficoFields(BaseModel):
     function_name: Optional[str] = Field(default=None, max_length=200)
     function_owner: Optional[int] = None
     verifier_id: Optional[int] = None
+    verifier_ids: list[int] | None = None
     reviewer_id: Optional[int] = None
+    reviewer_ids: list[int] | None = None
+    inreviewer_id: Optional[int] = None
+    inreviewer_ids: list[int] | None = None
     seat_no: Optional[str] = Field(default=None, max_length=50)
     controller_no: Optional[str] = Field(default=None, max_length=50)
     avg_expected_minutes: Optional[int] = Field(default=None, ge=0)
@@ -438,8 +442,16 @@ class SubProjectResponse(BaseModel):
     function_owner: Optional[int] = None
     verifier_id: Optional[int] = None
     verifier: Optional[AssigneeBrief] = None
+    verifier_ids: list[int] = []
+    verifiers: list[AssigneeBrief] = []
     reviewer_id: Optional[int] = None
     reviewer: Optional[AssigneeBrief] = None
+    reviewer_ids: list[int] = []
+    reviewers: list[AssigneeBrief] = []
+    inreviewer_id: Optional[int] = None
+    inreviewer: Optional[AssigneeBrief] = None
+    inreviewer_ids: list[int] = []
+    inreviewers: list[AssigneeBrief] = []
     seat_no: Optional[str] = None
     controller_no: Optional[str] = None
     avg_expected_minutes: Optional[int] = None

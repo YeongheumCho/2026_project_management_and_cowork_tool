@@ -83,7 +83,7 @@ _TEMPLATE_BY_TYPE = {
 _KEFICO_COPY_FIELDS = (
     "priority", "controller_name", "controller_version", "controller_country",
     "to_number", "to_assignee", "verification_level", "vehicle_type",
-    "function_name", "function_owner", "verifier_id", "reviewer_id",
+    "function_name", "function_owner", "verifier_id", "reviewer_id", "inreviewer_id",
     "seat_no", "controller_no", "avg_expected_minutes", "issue_note",
     "upload_done", "special_note", "completed_on",
     "first_verify_status", "first_setup_min", "first_aud_min", "first_review_min",
@@ -177,6 +177,10 @@ def _load_subproject(db: Session, subproject_id: int) -> SubProject:
             selectinload(SubProject.assignees),
             selectinload(SubProject.verifier),
             selectinload(SubProject.reviewer),
+            selectinload(SubProject.inreviewer),
+            selectinload(SubProject.verifiers),
+            selectinload(SubProject.reviewers),
+            selectinload(SubProject.inreviewers),
         )
         .where(SubProject.id == subproject_id)
     )
@@ -241,6 +245,47 @@ def _load_valid_assignees(
 def _set_subproject_assignees(sp: SubProject, assignees: list[User]) -> None:
     sp.assignees = assignees
     sp.assignee_id = assignees[0].id if assignees else None
+
+
+def _payload_role_ids(payload, plural_name: str, singular_name: str) -> list[int] | None:
+    if plural_name in payload.model_fields_set:
+        return list(dict.fromkeys(getattr(payload, plural_name) or []))
+    if singular_name in payload.model_fields_set:
+        singular_id = getattr(payload, singular_name)
+        return [] if singular_id is None else [singular_id]
+    return None
+
+
+def _load_valid_role_members(
+    db: Session,
+    project: Project,
+    user_ids: list[int],
+) -> list[User]:
+    if not user_ids:
+        return []
+    members = db.scalars(
+        select(User).where(User.id.in_(user_ids), User.is_active.is_(True))
+    ).all()
+    if len(members) != len(user_ids):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="유효하지 않은 담당자가 포함되어 있습니다.")
+    if project.participants:
+        participant_ids = {member.id for member in project.participants}
+        if any(member.id not in participant_ids for member in members):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="담당자는 프로젝트 참여 인원 중에서만 선택할 수 있습니다.")
+    order = {user_id: index for index, user_id in enumerate(user_ids)}
+    return sorted(members, key=lambda member: order[member.id])
+
+
+def _set_role_members(sp: SubProject, role: str, members: list[User]) -> None:
+    setattr(sp, f"{role}s", members)
+    setattr(sp, f"{role}_id", members[0].id if members else None)
+
+
+def _apply_role_assignments(db: Session, project: Project, sp: SubProject, payload) -> None:
+    for role in ("verifier", "reviewer", "inreviewer"):
+        user_ids = _payload_role_ids(payload, f"{role}_ids", f"{role}_id")
+        if user_ids is not None:
+            _set_role_members(sp, role, _load_valid_role_members(db, project, user_ids))
 
 
 def _serialize_major_project_response(major_project: MajorProject) -> MajorProjectResponse:
@@ -1055,6 +1100,7 @@ def create_subproject(
 
     # KEFICO ?꾨뱶 蹂듭궗
     _apply_kefico_fields(sp, payload)
+    _apply_role_assignments(db, project, sp, payload)
 
     # ?몃? ?쒖뒪?? ?꾨줈?앺듃 ?좏삎蹂?肄붾뱶 ?댁옣 ?쒗뵆由??곸슜
     task_source = [(name, float(w)) for name, w in _TEMPLATE_BY_TYPE.get(project.project_type, DEFAULT_SUBTASK_TEMPLATE)]
@@ -1084,6 +1130,10 @@ def list_subprojects(
         selectinload(SubProject.assignees),
         selectinload(SubProject.verifier),
         selectinload(SubProject.reviewer),
+        selectinload(SubProject.inreviewer),
+        selectinload(SubProject.verifiers),
+        selectinload(SubProject.reviewers),
+        selectinload(SubProject.inreviewers),
     )
     if current_user.role != "admin":
         member_project_ids = _get_member_project_ids_for_user(db, current_user)
@@ -1177,9 +1227,10 @@ def update_subproject(
 
     # KEFICO ?꾨뱶 諛섏쁺
     _apply_kefico_fields(sp, payload)
+    _apply_role_assignments(db, project, sp, payload)
 
     # verifier/reviewer FK 寃利?
-    for fk_name in ("function_owner", "verifier_id", "reviewer_id"):
+    for fk_name in ("function_owner", "verifier_id", "reviewer_id", "inreviewer_id"):
         val = getattr(sp, fk_name)
         if val is not None:
             ref = db.get(User, val)
