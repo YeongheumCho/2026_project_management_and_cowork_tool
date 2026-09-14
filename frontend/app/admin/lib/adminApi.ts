@@ -32,6 +32,13 @@ export type UserCreatePayload = {
   phone?: string | null;
 };
 
+export type UserProfileUpdatePayload = {
+  center?: string | null;
+  office?: string | null;
+  team?: string | null;
+  position?: string | null;
+};
+
 export type ProjectHistoryEntry = {
   id: number;
   user_id: number;
@@ -75,6 +82,18 @@ export async function patchUserRole({ token }: FetchOptions, idnum: string, role
     method: 'PATCH',
     headers: authHeaders(token, true),
     body: JSON.stringify({ role }),
+  });
+}
+
+export async function patchUserProfile(
+  { token }: FetchOptions,
+  idnum: string,
+  payload: UserProfileUpdatePayload,
+) {
+  return fetch(`${API_BASE_URL}/auth/users/${idnum}`, {
+    method: 'PATCH',
+    headers: authHeaders(token, true),
+    body: JSON.stringify(payload),
   });
 }
 

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import type { UserResponse } from '../lib/adminApi';
+import type { UserProfileUpdatePayload, UserResponse } from '../lib/adminApi';
+import { ORG_DATA } from '../lib/orgData';
+import ComboBox from './ComboBox';
 
 type Props = {
   member: UserResponse;
@@ -13,7 +15,24 @@ type Props = {
   onDelete?: (member: UserResponse) => void;
   onOpenHistory?: (member: UserResponse) => void;
   onPasswordReset?: (member: UserResponse, newPassword: string) => Promise<boolean>;
+  onProfileSave?: (member: UserResponse, payload: UserProfileUpdatePayload) => Promise<boolean>;
 };
+
+type ProfileForm = {
+  center: string;
+  office: string;
+  team: string;
+  position: string;
+};
+
+function profileFormFrom(member: UserResponse): ProfileForm {
+  return {
+    center: member.center ?? '',
+    office: member.office ?? '',
+    team: member.team ?? '',
+    position: member.position ?? '',
+  };
+}
 
 export default function UserRoleRow({
   member,
@@ -25,6 +44,7 @@ export default function UserRoleRow({
   onDelete,
   onOpenHistory,
   onPasswordReset,
+  onProfileSave,
 }: Props) {
   const isSaving = savingId === member.idnum;
   const isDeleting = deletingId === member.idnum;
@@ -36,10 +56,49 @@ export default function UserRoleRow({
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState('');
 
+  const [showProfilePanel, setShowProfilePanel] = useState(false);
+  const [profileForm, setProfileForm] = useState<ProfileForm>(() => profileFormFrom(member));
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState('');
+
   const affiliation = [member.center, member.office, member.team]
     .map((value) => (value ?? '').trim())
     .filter(Boolean)
     .join(' · ');
+
+  const updateProfileField = (key: keyof ProfileForm, value: string) => {
+    setProfileForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === 'office' && value !== prev.office) next.team = '';
+      return next;
+    });
+  };
+
+  const openProfilePanel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowResetPanel(false);
+    setProfileForm(profileFormFrom(member));
+    setProfileError('');
+    setShowProfilePanel((prev) => !prev);
+  };
+
+  const handleProfileSubmit = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setProfileError('');
+    setProfileSaving(true);
+    const ok = await onProfileSave?.(member, {
+      center: profileForm.center.trim() || null,
+      office: profileForm.office.trim() || null,
+      team: profileForm.team.trim() || null,
+      position: profileForm.position.trim() || null,
+    });
+    setProfileSaving(false);
+    if (ok) {
+      setShowProfilePanel(false);
+    } else {
+      setProfileError('소속 정보 수정에 실패했습니다.');
+    }
+  };
 
   const handleResetSubmit = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -115,11 +174,22 @@ export default function UserRoleRow({
             >
               {isSaving ? '저장 중...' : '저장'}
             </button>
+            {onProfileSave && (
+              <button
+                type="button"
+                onClick={openProfilePanel}
+                disabled={disabled}
+                className="rounded-lg border border-border-strong bg-white px-3 py-1.5 text-micro font-semibold text-text-muted transition hover:bg-surface-subtle disabled:cursor-not-allowed disabled:border-border disabled:text-text-faint"
+              >
+                소속 수정
+              </button>
+            )}
             {onPasswordReset && (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  setShowProfilePanel(false);
                   setShowResetPanel((prev) => !prev);
                   setNewPassword('');
                   setConfirmPassword('');
@@ -195,6 +265,82 @@ export default function UserRoleRow({
               </div>
               {resetError && (
                 <span className="text-micro text-verify-fail-fg">{resetError}</span>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+      {showProfilePanel && (
+        <tr className="border-b border-surface-subtle bg-surface-muted">
+          <td colSpan={6} className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex w-[180px] flex-col gap-1">
+                <label className="text-tiny font-semibold text-text-subtle">센터</label>
+                <ComboBox
+                  value={profileForm.center}
+                  onChange={(v) => updateProfileField('center', v)}
+                  options={ORG_DATA.centers}
+                  placeholder="센터"
+                  disabled={profileSaving}
+                />
+              </div>
+              <div className="flex w-[180px] flex-col gap-1">
+                <label className="text-tiny font-semibold text-text-subtle">실</label>
+                <ComboBox
+                  value={profileForm.office}
+                  onChange={(v) => updateProfileField('office', v)}
+                  options={ORG_DATA.offices}
+                  placeholder="실"
+                  disabled={profileSaving}
+                />
+              </div>
+              <div className="flex w-[180px] flex-col gap-1">
+                <label className="text-tiny font-semibold text-text-subtle">팀</label>
+                <ComboBox
+                  value={profileForm.team}
+                  onChange={(v) => updateProfileField('team', v)}
+                  options={
+                    profileForm.office
+                      ? (ORG_DATA.officeTeams[profileForm.office] ?? ORG_DATA.allTeams)
+                      : ORG_DATA.allTeams
+                  }
+                  placeholder="팀"
+                  disabled={profileSaving}
+                />
+              </div>
+              <div className="flex w-[150px] flex-col gap-1">
+                <label className="text-tiny font-semibold text-text-subtle">직급</label>
+                <ComboBox
+                  value={profileForm.position}
+                  onChange={(v) => updateProfileField('position', v)}
+                  options={ORG_DATA.positions}
+                  placeholder="직급"
+                  disabled={profileSaving}
+                />
+              </div>
+              <div className="flex items-end gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => void handleProfileSubmit(e)}
+                  disabled={profileSaving}
+                  className="rounded-lg bg-brand px-4 py-1.5 text-micro font-semibold text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-border-strong"
+                >
+                  {profileSaving ? '저장 중...' : '저장'}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowProfilePanel(false);
+                    setProfileError('');
+                  }}
+                  className="rounded-lg border border-border-strong px-4 py-1.5 text-micro font-semibold text-text-muted transition hover:bg-surface-subtle"
+                >
+                  취소
+                </button>
+              </div>
+              {profileError && (
+                <span className="text-micro text-verify-fail-fg">{profileError}</span>
               )}
             </div>
           </td>

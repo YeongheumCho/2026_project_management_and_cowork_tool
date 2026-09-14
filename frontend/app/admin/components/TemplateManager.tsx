@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   apiFetch,
   defaultFieldSchema,
+  PROJECT_TYPE_OPTIONS,
   type FieldDefinition,
   type FieldOption,
   type FieldType,
@@ -22,7 +23,18 @@ const FIELD_TYPE_LABEL: Record<FieldType, string> = {
   select: '선택',
   textarea: '긴 텍스트',
   checkbox: '체크박스',
+  members: '프로젝트원 선택',
 };
+
+const MULTI_ROLE_KEYS = new Set(['verifier_id', 'reviewer_id', 'inreviewer_id']);
+
+// 내장 KEFICO 컬럼 키는 하위 프로젝트 폼에서 전용 상태로 라우팅되므로
+// '프로젝트원 선택' 값(쉼표로 이은 id)을 담을 수 없다. 역할 3종은 전용 다중 선택이 있어 예외.
+const RESERVED_MEMBER_FIELD_KEYS = new Set(
+  PROJECT_TYPE_OPTIONS.flatMap((type) =>
+    defaultFieldSchema(type).fields.map((field) => field.key),
+  ).filter((key) => !MULTI_ROLE_KEYS.has(key)),
+);
 
 function newField(order: number): FieldDefinition {
   return {
@@ -331,6 +343,15 @@ export default function TemplateManager() {
     }
     if (normalizedFields.some((field) => !field.label)) {
       setError('모든 필드의 표시 이름을 입력해 주세요.');
+      return;
+    }
+    const reservedMemberField = normalizedFields.find(
+      (field) => field.field_type === 'members' && RESERVED_MEMBER_FIELD_KEYS.has(field.key),
+    );
+    if (reservedMemberField) {
+      setError(
+        `'${reservedMemberField.key}' 키는 내장 필드라 '프로젝트원 선택' 유형으로 쓸 수 없습니다. 다른 키를 입력해 주세요.`,
+      );
       return;
     }
 
@@ -877,6 +898,14 @@ function DefaultValueInput({
   value: string;
   onChange: (value: string) => void;
 }) {
+  if (field.field_type === 'members') {
+    return (
+      <p className="rounded-lg border border-dashed border-border bg-white px-3 py-2 text-sm text-text-subtle">
+        하위 프로젝트 생성 시 해당 프로젝트 참여 인원 중에서 여러 명을 선택합니다. 기본값은 없습니다.
+      </p>
+    );
+  }
+
   if (field.field_type === 'checkbox') {
     return (
       <label className="flex h-10 items-center gap-2 rounded-lg border border-border bg-white px-3">
@@ -981,7 +1010,11 @@ function PreviewField({ field }: { field: FieldDefinition }) {
           </span>
         )}
       </span>
-      {field.field_type === 'select' ? (
+      {field.field_type === 'members' ? (
+        <div className="rounded-lg border border-dashed border-border bg-white px-3 py-2 text-sm text-text-subtle">
+          프로젝트 참여 인원에서 여러 명 선택
+        </div>
+      ) : field.field_type === 'select' ? (
         <select className="input w-full" disabled value={field.default_value ?? ''}>
           <option value="">{field.options[0]?.label || '선택'}</option>
           {field.options.map((option) => (

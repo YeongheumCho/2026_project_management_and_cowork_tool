@@ -116,7 +116,38 @@ function jsonOrEmpty(value: Record<string, unknown> | null | undefined) {
   return JSON.stringify(value);
 }
 
-function rowsForProject(project: Project, subprojects: SubProject[]): ExportRow[] {
+export type ExportOptions = {
+  /** '프로젝트원 선택' 유형 필드 키 — 값(쉼표로 이은 사용자 id)을 이름으로 바꿔 내보낸다. */
+  memberFieldKeys?: Iterable<string>;
+  users?: Array<{ id: number; name: string }>;
+};
+
+function withMemberNames(
+  customFields: Record<string, unknown> | null | undefined,
+  options: ExportOptions,
+) {
+  const memberKeys = new Set(options.memberFieldKeys ?? []);
+  if (!customFields || memberKeys.size === 0) return customFields;
+  const nameById = new Map((options.users ?? []).map((user) => [user.id, user.name]));
+  const next: Record<string, unknown> = { ...customFields };
+  for (const key of memberKeys) {
+    const raw = next[key];
+    if (typeof raw !== 'string' || raw.trim() === '') continue;
+    next[key] = raw
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((id) => nameById.get(Number(id)) ?? id)
+      .join(', ');
+  }
+  return next;
+}
+
+function rowsForProject(
+  project: Project,
+  subprojects: SubProject[],
+  options: ExportOptions,
+): ExportRow[] {
   const majorProjectName = project.major_project?.name ?? '';
   const projectTypeLabel = PROJECT_TYPE_LABEL[project.project_type] ?? project.project_type;
 
@@ -167,7 +198,7 @@ function rowsForProject(project: Project, subprojects: SubProject[]): ExportRow[
     valueOrEmpty(sp.etc_note),
     valueOrEmpty(sp.special_note),
     valueOrEmpty(sp.issue_note),
-    jsonOrEmpty(sp.custom_fields),
+    jsonOrEmpty(withMemberNames(sp.custom_fields, options)),
   ]);
 }
 
@@ -291,8 +322,12 @@ function createZip(files: Array<{ path: string; content: string }>) {
   });
 }
 
-export function exportSubprojectsCsv(project: Project, subprojects: SubProject[]) {
-  const rows = rowsForProject(project, subprojects);
+export function exportSubprojectsCsv(
+  project: Project,
+  subprojects: SubProject[],
+  options: ExportOptions = {},
+) {
+  const rows = rowsForProject(project, subprojects, options);
   const csv = `\uFEFF${[EXPORT_HEADERS, ...rows]
     .map((row) => row.map(csvCell).join(','))
     .join('\n')}`;
@@ -302,8 +337,12 @@ export function exportSubprojectsCsv(project: Project, subprojects: SubProject[]
   );
 }
 
-export function exportSubprojectsXlsx(project: Project, subprojects: SubProject[]) {
-  const rows = rowsForProject(project, subprojects);
+export function exportSubprojectsXlsx(
+  project: Project,
+  subprojects: SubProject[],
+  options: ExportOptions = {},
+) {
+  const rows = rowsForProject(project, subprojects, options);
   const blob = createZip([
     ...XLSX_FILES,
     { path: 'xl/worksheets/sheet1.xml', content: worksheetXml(rows) },

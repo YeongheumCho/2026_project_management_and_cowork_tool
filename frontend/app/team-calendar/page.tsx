@@ -7,6 +7,7 @@ import TeamModal from '../components/TeamModal';
 import ProgressBar from '../components/ProgressBar';
 import TeamMemberFilter from '../components/TeamMemberFilter';
 import CreateProjectModal from '../projects/components/CreateProjectModal';
+import { collectVehicleSuggestions } from '../projects/lib/vehicleSuggestions';
 import {
   colorForId,
   softColorForId,
@@ -43,6 +44,10 @@ export default function TeamCalendarPage() {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [modalInitial, setModalInitial] = useState<SubProject | null>(null);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const vehicleSuggestions = useMemo(
+    () => collectVehicleSuggestions(projects, subprojects),
+    [projects, subprojects],
+  );
   const [projectModalDate, setProjectModalDate] = useState<string | undefined>(undefined);
 
   const load = useCallback(async () => {
@@ -285,6 +290,7 @@ export default function TeamCalendarPage() {
         users={users}
         projects={projects}
         initial={modalInitial}
+        vehicleSuggestions={vehicleSuggestions}
         onClose={() => setModalOpen(false)}
         onSaved={load}
       />
@@ -292,6 +298,7 @@ export default function TeamCalendarPage() {
       <CreateProjectModal
         open={projectModalOpen}
         defaultDate={projectModalDate}
+        vehicleSuggestions={vehicleSuggestions}
         onClose={() => {
           setProjectModalOpen(false);
           setProjectModalDate(undefined);

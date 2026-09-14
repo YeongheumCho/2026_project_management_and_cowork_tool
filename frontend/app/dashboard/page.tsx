@@ -6,6 +6,7 @@ import type { SubProject } from '../lib/api';
 import { useMe } from '../lib/useMe';
 import CreateProjectModal from '../projects/components/CreateProjectModal';
 import ProgressLogModal from '../projects/components/ProgressLogModal';
+import { collectVehicleSuggestions } from '../projects/lib/vehicleSuggestions';
 import { useWorkflowSelection } from '../lib/workflow-selection';
 import DashboardHeader from './components/DashboardHeader';
 import KpiGrid from './components/KpiGrid';
@@ -84,6 +85,11 @@ export default function DashboardPage() {
     );
   }, [subprojects, me, todayIso]);
 
+  const vehicleSuggestions = useMemo(
+    () => collectVehicleSuggestions(projects, subprojects),
+    [projects, subprojects],
+  );
+
   const handleProjectSelect = (projectId: number) => {
     const hasVisibleTask = filteredSubprojects.some(
       (subproject) => subproject.project_id === projectId,
@@ -153,6 +159,7 @@ export default function DashboardPage() {
 
       <CreateProjectModal
         open={createOpen}
+        vehicleSuggestions={vehicleSuggestions}
         onClose={() => {
           setModalError('');
           setCreateOpen(false);

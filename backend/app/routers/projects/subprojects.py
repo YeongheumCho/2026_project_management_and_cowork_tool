@@ -79,6 +79,7 @@ def create_subproject(
         end_date=payload.end_date,
         status=STATUS_PLANNED,
         progress=0,
+        created_by=current_user.id,
     )
     _set_subproject_assignees(sp, assignees)
 
@@ -118,6 +119,7 @@ def list_subprojects(
         selectinload(SubProject.verifiers),
         selectinload(SubProject.reviewers),
         selectinload(SubProject.inreviewers),
+        selectinload(SubProject.creator),
     )
     if current_user.role != "admin":
         member_project_ids = _get_member_project_ids_for_user(db, current_user)

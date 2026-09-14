@@ -53,6 +53,13 @@ class UserPasswordReset(BaseModel):
     password: str = Field(min_length=8, max_length=128)
 
 
+class UserProfileUpdate(BaseModel):
+    center: str | None = Field(default=None, max_length=100)
+    office: str | None = Field(default=None, max_length=100)
+    team: str | None = Field(default=None, max_length=100)
+    position: str | None = Field(default=None, max_length=50)
+
+
 class UserBrief(BaseModel):
     id: int
     idnum: str

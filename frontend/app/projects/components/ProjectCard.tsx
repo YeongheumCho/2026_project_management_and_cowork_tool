@@ -1,23 +1,34 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import {
   PROJECT_TYPE_LABEL,
   type Project,
+  type ProjectFieldSchema,
   type ProjectHistorySummary,
   type ProjectTimeSummary,
   type SubProject,
+  type UserBrief,
 } from '../../lib/api';
 import ProgressBar from '../../components/ProgressBar';
 import { colorForId } from '../../components/AppShell/colors';
+import {
+  isLegacyTemplateForProject,
+  isTemplateForMajorProject,
+} from '../../lib/templateScope';
 import SubProjectListItem from './SubProjectListItem';
 import { exportSubprojectsCsv, exportSubprojectsXlsx } from '../lib/subprojectExport';
+
+const MULTI_ROLE_KEYS = new Set(['verifier_id', 'reviewer_id', 'inreviewer_id']);
 
 type Props = {
   project: Project;
   subprojects: SubProject[];
   timeSummary: ProjectTimeSummary;
   historySummary: ProjectHistorySummary;
+  /** 내보내기 시 '프로젝트원 선택' 필드의 id 를 이름으로 바꾸기 위한 템플릿·사용자 목록 */
+  fieldSchemas?: ProjectFieldSchema[];
+  users?: UserBrief[];
   isAdmin: boolean;
   canManageSubprojects: boolean;
   isOpen: boolean;
@@ -35,6 +46,8 @@ export default function ProjectCard({
   subprojects,
   timeSummary,
   historySummary,
+  fieldSchemas = [],
+  users = [],
   isAdmin,
   canManageSubprojects,
   isOpen,
@@ -46,6 +59,22 @@ export default function ProjectCard({
   onEditProject,
   onDeleteProject,
 }: Props) {
+  const exportOptions = useMemo(() => {
+    const memberFieldKeys = new Set<string>();
+    for (const schema of fieldSchemas) {
+      const scoped =
+        (project.major_project_id != null &&
+          isTemplateForMajorProject(schema, project.major_project_id)) ||
+        isLegacyTemplateForProject(schema, project.id);
+      if (!scoped) continue;
+      for (const field of schema.fields) {
+        if (field.field_type === 'members' && !MULTI_ROLE_KEYS.has(field.key)) {
+          memberFieldKeys.add(field.key);
+        }
+      }
+    }
+    return { memberFieldKeys, users };
+  }, [fieldSchemas, project.id, project.major_project_id, users]);
   const total = project.subproject_count ?? subprojects.length;
   const done =
     project.completed_subproject_count ??
@@ -189,10 +218,14 @@ export default function ProjectCard({
                   <ActionButton onClick={() => onCsvImport(project.id)}>
                     CSV 업무 가져오기
                   </ActionButton>
-                  <ActionButton onClick={() => exportSubprojectsCsv(project, subprojects)}>
+                  <ActionButton
+                    onClick={() => exportSubprojectsCsv(project, subprojects, exportOptions)}
+                  >
                     CSV 추출
                   </ActionButton>
-                  <ActionButton onClick={() => exportSubprojectsXlsx(project, subprojects)}>
+                  <ActionButton
+                    onClick={() => exportSubprojectsXlsx(project, subprojects, exportOptions)}
+                  >
                     XLSX 추출
                   </ActionButton>
                 </>

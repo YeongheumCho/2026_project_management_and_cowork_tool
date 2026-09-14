@@ -100,6 +100,9 @@ export default function SubProjectListItem({
             <p className="mt-1 text-micro font-semibold text-text-muted">
               {assigneeLabel}
             </p>
+            {sp.created_by_name && (
+              <p className="mt-1 text-tiny text-text-subtle">생성: {sp.created_by_name}</p>
+            )}
           </div>
         </div>
 

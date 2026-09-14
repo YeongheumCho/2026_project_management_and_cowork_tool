@@ -13,12 +13,14 @@ import {
   type ProjectVehicleSet,
 } from '../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
+import type { VehicleSuggestions } from '../lib/vehicleSuggestions';
 import VehicleSetEditor, { normalizeVehicleSets } from './VehicleSetEditor';
 
 type Props = {
   open: boolean;
   project: Project | null;
   majorProjects: MajorProject[];
+  vehicleSuggestions?: VehicleSuggestions;
   onClose: () => void;
   onSaved: () => Promise<void> | void;
   onError: (message: string) => void;
@@ -28,6 +30,7 @@ export default function ProjectManageModal({
   open,
   project,
   majorProjects,
+  vehicleSuggestions,
   onClose,
   onSaved,
   onError,
@@ -233,6 +236,7 @@ export default function ProjectManageModal({
             value={vehicleSets}
             onChange={setVehicleSets}
             disabled={busy}
+            suggestions={vehicleSuggestions}
           />
         </div>
 

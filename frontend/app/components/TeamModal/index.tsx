@@ -17,13 +17,18 @@ import ProgressBar from '../ProgressBar';
 import ModalFooter from './parts/ModalFooter';
 import ModalHeader from './parts/ModalHeader';
 import BasicSection from './sections/BasicSection';
-import CustomFieldsSection from './sections/CustomFieldsSection';
+import CustomFieldsSection, { parseMemberIds } from './sections/CustomFieldsSection';
 import { buildSubProjectPayload } from './payload';
 import { EMPTY_FORM, fromSubProject, type FormState } from './types';
 import {
   isTemplateForMajorProject,
   projectTemplatePrefix,
 } from '../../lib/templateScope';
+import {
+  collectVehicleSuggestions,
+  isVehicleSuggestionKey,
+  type VehicleSuggestions,
+} from '../../projects/lib/vehicleSuggestions';
 
 const TEXT = {
   deleteConfirm: '이 하위 프로젝트를 삭제하시겠습니까?',
@@ -87,6 +92,8 @@ type Props = {
   initial?: SubProject | null;
   canDelete?: boolean;
   functionNameOptionsByLevel?: Record<string, string[]>;
+  /** 제어기·차종·지역·버전 입력란 자동완성 후보 (프로젝트 차종 세트와 합쳐서 사용) */
+  vehicleSuggestions?: VehicleSuggestions;
   onClose: () => void;
   onSaved: () => void;
 };
@@ -102,6 +109,7 @@ export default function TeamModal({
   initial,
   canDelete = isAdmin,
   functionNameOptionsByLevel = {},
+  vehicleSuggestions,
   onClose,
   onSaved,
 }: Props) {
@@ -109,8 +117,9 @@ export default function TeamModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [fieldSchemas, setFieldSchemas] = useState<Record<string, ProjectFieldSchema>>({});
-  const [selectedFieldSchemaType, setSelectedFieldSchemaType] =
-    useState('general');
+  // 빈 값으로 시작해 프로젝트에 할당된 템플릿(fieldSchemaOptions)으로 채운다.
+  // 'general' 같은 내장 키로 시작하면 내장 "추가 정보" 스키마가 잘못 적용된다.
+  const [selectedFieldSchemaType, setSelectedFieldSchemaType] = useState('');
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === f.projectId),
@@ -144,6 +153,10 @@ export default function TeamModal({
   const projectParticipants = useMemo(
     () => selectedProject?.participants ?? [],
     [selectedProject],
+  );
+  const fieldValueSuggestions = useMemo(
+    () => collectVehicleSuggestions(projects, [], vehicleSuggestions),
+    [projects, vehicleSuggestions],
   );
   const availableAssigneeIds = useMemo(() => {
     if (!selectedProject || selectedProject.participants.length === 0) {
@@ -206,7 +219,11 @@ export default function TeamModal({
       setSelectedFieldSchemaType('');
       setF((prev) => ({
         ...prev,
-        name: '',
+        // 템플릿 목록이 아직 없더라도 차종 세트로 만든 이름이나 직접 입력한 이름은 지우지 않는다.
+        name:
+          nameTouchedRef.current || selectedProject?.vehicle_sets?.length
+            ? prev.name
+            : '',
         customFields: withoutFieldSchemaMeta(prev.customFields),
       }));
       return;
@@ -288,6 +305,34 @@ export default function TeamModal({
     });
   }, [availableAssigneeIds]);
 
+  // '프로젝트원 선택' 필드: 프로젝트에서 빠진 인원의 id 가 남아 있으면 정리한다 (역할 필드와 동일한 규칙).
+  useEffect(() => {
+    const memberFieldKeys = effectiveSchema.fields
+      .filter(
+        (field) =>
+          field.field_type === 'members' &&
+          !['verifier_id', 'reviewer_id', 'inreviewer_id'].includes(field.key),
+      )
+      .map((field) => field.key);
+    if (memberFieldKeys.length === 0) return;
+    setF((prev) => {
+      const customFields = { ...prev.customFields };
+      let changed = false;
+      for (const key of memberFieldKeys) {
+        const current = customFields[key];
+        if (!current) continue;
+        const next = parseMemberIds(current)
+          .filter((id) => availableAssigneeIds.has(id))
+          .join(',');
+        if (next !== current) {
+          customFields[key] = next;
+          changed = true;
+        }
+      }
+      return changed ? { ...prev, customFields } : prev;
+    });
+  }, [availableAssigneeIds, effectiveSchema]);
+
   const outsideProjectRange =
     !!selectedProject &&
     ((!!selectedProject.start_date && !!f.startDate && f.startDate < selectedProject.start_date) ||
@@ -364,6 +409,12 @@ export default function TeamModal({
         value: String(user.id),
         label: user.name,
       }));
+    }
+    if (isVehicleSuggestionKey(field.key) && field.field_type === 'text') {
+      const values = fieldValueSuggestions[field.key];
+      if (values.length > 0) {
+        return values.map((value) => ({ value, label: value }));
+      }
     }
     return undefined;
   }
@@ -519,6 +570,7 @@ function ProgressSummary({ subproject }: { subproject: SubProject }) {
         <p className="text-xs font-medium text-text-muted">
           {subproject.start_date} - {subproject.end_date}
           {totalTasks > 0 ? ` · 세부 항목 ${doneTasks}/${totalTasks}` : ''}
+          {subproject.created_by_name ? ` · 생성: ${subproject.created_by_name}` : ''}
         </p>
       </div>
       <ProgressBar

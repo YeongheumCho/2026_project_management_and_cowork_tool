@@ -10,6 +10,7 @@ from app.schemas.auth import TokenResponse
 from app.schemas.user import (
     UserCreate,
     UserPasswordReset,
+    UserProfileUpdate,
     UserResponse,
     UserRoleUpdate,
     UserSignupCreate,
@@ -105,6 +106,28 @@ def create_user(
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.patch("/users/{idnum}", response_model=UserResponse)
+def update_user_profile(
+    idnum: str,
+    payload: UserProfileUpdate,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    target_user = db.scalar(select(User).where(User.idnum == idnum))
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다.",
+        )
+
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        normalized = value.strip() if isinstance(value, str) else value
+        setattr(target_user, key, normalized or None)
+    db.commit()
+    db.refresh(target_user)
+    return target_user
 
 
 @router.patch("/users/{idnum}/role", response_model=UserResponse)

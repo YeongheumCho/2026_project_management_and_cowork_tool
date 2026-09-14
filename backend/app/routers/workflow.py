@@ -1255,6 +1255,7 @@ def assign_recommended_work(
         end_date=payload.end_date,
         status="planned",
         progress=0,
+        created_by=admin.id,
     )
     db.add(subproject)
     db.flush()

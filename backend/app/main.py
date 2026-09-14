@@ -69,6 +69,10 @@ def _ensure_additive_schema_updates() -> None:
         statements.append(
             "ALTER TABLE subprojects ADD COLUMN inreviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL"
         )
+    if "created_by" not in subproject_columns:
+        statements.append(
+            "ALTER TABLE subprojects ADD COLUMN created_by INTEGER REFERENCES users(id) ON DELETE SET NULL"
+        )
 
     if "projects" in table_names:
         project_columns = {
