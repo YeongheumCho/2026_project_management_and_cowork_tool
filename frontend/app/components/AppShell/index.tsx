@@ -18,6 +18,8 @@ type Props = {
   onProjectSelect?: (projectId: number) => void;
   onMemberSelect?: (memberId: number) => void;
   onSubprojectSelect?: (subproject: SubProject) => void;
+  /** shell 내장 진행률 기록 모달 저장 후 호출 — onSubprojectSelect 미지정 시에만 사용 */
+  onProgressLogSaved?: () => Promise<void> | void;
   sidebarProjects?: Project[];
   sidebarMajorProjects?: MajorProject[];
   sidebarSubprojects?: SubProject[];
@@ -50,13 +52,14 @@ export default function AppShell({
   onProjectSelect,
   onMemberSelect,
   onSubprojectSelect,
+  onProgressLogSaved,
   sidebarProjects,
   sidebarMajorProjects,
   sidebarSubprojects,
   sidebarUsers,
 }: Props) {
   const router = useRouter();
-  const { majorProjects, projects, subprojects, users } = useSidebarData();
+  const { majorProjects, projects, subprojects, users, reload } = useSidebarData();
   const [shellProgressTarget, setShellProgressTarget] = useState<SubProject | null>(null);
   const handleSubprojectSelect = onSubprojectSelect ?? setShellProgressTarget;
 
@@ -90,7 +93,9 @@ export default function AppShell({
           open={shellProgressTarget !== null}
           subproject={shellProgressTarget}
           onClose={() => setShellProgressTarget(null)}
-          onSaved={() => {}}
+          onSaved={async () => {
+            await Promise.all([reload(), onProgressLogSaved?.()]);
+          }}
         />
       )}
     </main>

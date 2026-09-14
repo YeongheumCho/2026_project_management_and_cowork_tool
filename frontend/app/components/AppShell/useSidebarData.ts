@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   apiFetch,
   type MajorProject,
@@ -15,6 +15,7 @@ type State = {
   subprojects: SubProject[];
   users: UserBrief[];
   loading: boolean;
+  reload: () => Promise<void>;
 };
 
 /**
@@ -32,32 +33,28 @@ export function useSidebarData(): State {
   const [users, setUsers] = useState<UserBrief[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const [mps, ps, sps, us] = await Promise.all([
-          apiFetch<MajorProject[]>('/major-projects'),
-          apiFetch<Project[]>('/projects'),
-          apiFetch<SubProject[]>('/subprojects'),
-          apiFetch<UserBrief[]>('/users'),
-        ]);
-        if (cancelled) return;
-        setMajorProjects(mps);
-        setProjects(ps);
-        setSubprojects(sps);
-        setUsers(us);
-      } catch {
-        // 사이드바는 부가 정보라 실패 시 조용히 빈 목록으로 둔다.
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
+  const reload = useCallback(async () => {
+    try {
+      const [mps, ps, sps, us] = await Promise.all([
+        apiFetch<MajorProject[]>('/major-projects'),
+        apiFetch<Project[]>('/projects'),
+        apiFetch<SubProject[]>('/subprojects'),
+        apiFetch<UserBrief[]>('/users'),
+      ]);
+      setMajorProjects(mps);
+      setProjects(ps);
+      setSubprojects(sps);
+      setUsers(us);
+    } catch {
+      // 사이드바는 부가 정보라 실패 시 조용히 빈 목록으로 둔다.
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { majorProjects, projects, subprojects, users, loading };
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  return { majorProjects, projects, subprojects, users, loading, reload };
 }

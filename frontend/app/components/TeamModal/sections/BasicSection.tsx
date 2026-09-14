@@ -16,6 +16,7 @@ import type { FormSetter, FormState } from '../types';
 type Props = {
   f: FormState;
   set: FormSetter;
+  onNameChange: (value: string) => void;
   users: UserBrief[];
   projects: Project[];
   isAdmin: boolean;
@@ -31,6 +32,7 @@ type Props = {
 export default function BasicSection({
   f,
   set,
+  onNameChange,
   users,
   projects,
   isAdmin,
@@ -119,17 +121,15 @@ export default function BasicSection({
           </Field>
         )}
 
-        {mode === 'edit' && (
-          <Field label={isEtc ? '업무 제목' : '하위 프로젝트 / 기능명'} required>
-            <input
-              value={f.name}
-              onChange={(e) => set('name', e.target.value)}
-              disabled={!isAdmin}
-              className="input"
-              placeholder={isEtc ? '예: 4월 교육' : '예: 로그 분석 기능 개발'}
-            />
-          </Field>
-        )}
+        <Field label={isEtc ? '업무 제목' : '하위 프로젝트 / 기능명'} required>
+          <input
+            value={f.name}
+            onChange={(e) => onNameChange(e.target.value)}
+            disabled={!isAdmin}
+            className="input"
+            placeholder={isEtc ? '예: 4월 교육' : '예: 로그 분석 기능 개발'}
+          />
+        </Field>
 
         <Field
           label="담당자"

@@ -24,8 +24,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.dev
     command: npm run dev
-    ports:
-      - "3000:3000"
+    # ports 는 의도적으로 정의하지 않는다.
+    # compose 는 ports 리스트를 덮어쓰지 않고 이어붙이므로, 여기에 매핑을 두면
+    # 베이스의 "127.0.0.1:3000:3000" 과 함께 바인딩돼 포트 충돌이 발생한다.
+    # 베이스(docker-compose.yml)의 매핑을 그대로 사용한다.
     volumes:
       - ./frontend:/app
       - /app/node_modules
