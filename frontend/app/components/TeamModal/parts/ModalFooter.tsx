@@ -16,7 +16,7 @@ export default function ModalFooter({
   onCancel,
 }: Props) {
   return (
-    <div className="flex justify-end gap-2 border-t border-border pt-4">
+    <div className="sticky bottom-0 z-10 -mx-6 -mb-6 flex justify-end gap-2 border-t border-border bg-surface px-6 pb-6 pt-4">
       <button
         type="button"
         onClick={onCancel}

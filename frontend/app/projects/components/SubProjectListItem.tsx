@@ -34,7 +34,13 @@ export default function SubProjectListItem({
   const inReview = sp.inreview_status
     ? VERIFY_STATE_LABEL[sp.inreview_status]
     : null;
-  const metaBits = [sp.controller_name, level, sp.vehicle_type].filter(Boolean);
+  const metaBits = [
+    sp.controller_name,
+    level,
+    sp.vehicle_type,
+    sp.function_name,
+    crNoLabel(sp.cr_no),
+  ].filter(Boolean);
   const assigneeLabel = sp.assignees?.length
     ? sp.assignees.map((assignee) => assignee.name).join(', ')
     : (sp.assignee?.name ?? '미지정');
@@ -78,11 +84,13 @@ export default function SubProjectListItem({
                 1차 검증: {first ?? '-'} · InReview: {inReview ?? '-'}
               </p>
             )}
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <RoleBadge label="검증" value={verifierLabel} />
-              <RoleBadge label="리뷰" value={reviewerLabel} />
-              <RoleBadge label="InReview" value={inreviewerLabel} />
-            </div>
+            {(verifierLabel || reviewerLabel || inreviewerLabel) && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {verifierLabel && <RoleBadge label="검증" value={verifierLabel} />}
+                {reviewerLabel && <RoleBadge label="리뷰" value={reviewerLabel} />}
+                {inreviewerLabel && <RoleBadge label="InReview" value={inreviewerLabel} />}
+              </div>
+            )}
           </button>
 
           <div className="min-w-[150px] text-right">
@@ -145,5 +153,11 @@ function roleNames(
   legacyMember: { id: number; name: string } | null | undefined,
 ) {
   if (members?.length) return members.map((member) => member.name).join(', ');
-  return legacyMember?.name ?? '미지정';
+  return legacyMember?.name ?? '';
+}
+
+function crNoLabel(crNo: string | null | undefined) {
+  const trimmed = crNo?.trim();
+  if (!trimmed) return null;
+  return `VCDS-${trimmed.replace(/^VCDS[-\s]*/i, '')}`;
 }

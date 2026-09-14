@@ -11,6 +11,7 @@ import {
 } from '../../lib/api';
 import { toISODate } from '../../lib/calendar';
 import { useMe } from '../../lib/useMe';
+import { useWorkflowSelection } from '../../lib/workflow-selection';
 
 export default function ProjectDetailPage() {
   return (
@@ -28,6 +29,7 @@ function ProjectDetailContent() {
   const subprojectId = subprojectIdParam ? Number(subprojectIdParam) : null;
   const isSubprojectMode = Number.isFinite(subprojectId);
   const { me, loading: meLoading } = useMe();
+  const { selectedMemberId, toggleSelectedMemberId } = useWorkflowSelection();
 
   const [project, setProject] = useState<Project | null>(null);
   const [subprojects, setSubprojects] = useState<SubProject[]>([]);
@@ -119,7 +121,12 @@ function ProjectDetailContent() {
       : '프로젝트 정보를 표시할 수 없습니다.';
 
   return (
-    <AppShell me={me}>
+    <AppShell
+      me={me}
+      selectedMemberId={selectedMemberId}
+      onMemberSelect={toggleSelectedMemberId}
+      onProgressLogSaved={load}
+    >
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text">{title}</h1>
         <p className="mt-1 text-xs text-text-subtle">{subtitle}</p>

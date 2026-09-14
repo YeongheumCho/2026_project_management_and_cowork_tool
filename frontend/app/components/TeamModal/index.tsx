@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   apiFetch,
   defaultFieldSchema,
@@ -160,9 +160,12 @@ export default function TeamModal({
     (field) => field.required && !fieldValues[field.key]?.trim(),
   );
   const derivedName = deriveSubprojectName(f, effectiveSchema);
+  // 사용자가 이름을 직접 입력한 뒤에는 템플릿/프로젝트 변경 시 자동 채움으로 덮어쓰지 않는다.
+  const nameTouchedRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
+    nameTouchedRef.current = false;
     if (mode === 'edit' && initial) {
       setF(fromSubProject(initial));
     } else {
@@ -214,7 +217,7 @@ export default function TeamModal({
     setF((prev) => ({
       ...applyFieldDefaults(prev, nextSchema, false),
       name:
-        selectedProject?.vehicle_sets?.length
+        nameTouchedRef.current || selectedProject?.vehicle_sets?.length
           ? prev.name
           : templateName,
       weight: templateWeight,
@@ -314,11 +317,17 @@ export default function TeamModal({
     setF((prev) => ({
       ...(schema ? applyFieldDefaults(prev, schema, true) : prev),
       name:
-        mode === 'create' && selectedProject?.vehicle_sets?.length
+        nameTouchedRef.current ||
+        (mode === 'create' && selectedProject?.vehicle_sets?.length)
           ? prev.name
           : templateName,
       weight: templateWeight,
     }));
+  };
+
+  const handleNameChange = (value: string) => {
+    nameTouchedRef.current = true;
+    set('name', value);
   };
 
   function updateDynamicField(key: string, value: string) {
@@ -423,6 +432,7 @@ export default function TeamModal({
         selectedProject={selectedProject}
         canDelete={mode === 'edit' && canDelete}
         onDelete={handleDelete}
+        onClose={onClose}
       />
 
       {!isAdmin && (
@@ -439,6 +449,7 @@ export default function TeamModal({
         <BasicSection
           f={f}
           set={set}
+          onNameChange={handleNameChange}
           users={users}
           projects={projects}
           isAdmin={isAdmin}

@@ -424,7 +424,7 @@ function HierarchyButton({
       >
         ›
       </span>
-      <span className="flex-1 truncate">{label}</span>
+      <span className="flex-1 truncate" title={label}>{label}</span>
       <span className="shrink-0 text-tiny font-medium text-text-faint">{count}</span>
     </button>
   );
@@ -624,7 +624,9 @@ function SubprojectRowContent({
   return (
     <>
       <span className={`h-[6px] w-[6px] shrink-0 rounded-full ${statusDotClass(subproject.status)}`} />
-      <span className="min-w-0 flex-1 truncate">{subproject.name}</span>
+      <span className="min-w-0 flex-1 truncate" title={subproject.name}>
+        {subproject.name}
+      </span>
       <span className="shrink-0 text-tiny text-text-faint">
         {Math.round(subproject.progress)}%
       </span>

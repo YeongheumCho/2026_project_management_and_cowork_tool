@@ -143,8 +143,11 @@ export default function ProjectManageModal({
             value={majorProjectId}
             onChange={(event) => {
               const nextId = event.target.value === '' ? '' : Number(event.target.value);
+              const nextMembers = majorProjects.find((item) => item.id === nextId)?.members ?? [];
               setMajorProjectId(nextId);
-              setParticipantIds([]);
+              setParticipantIds((prev) =>
+                prev.filter((id) => nextMembers.some((member) => member.id === id)),
+              );
             }}
             className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
           >
@@ -253,7 +256,7 @@ export default function ProjectManageModal({
           </div>
         </div>
 
-        <div className="flex flex-shrink-0 justify-end gap-2 border-t border-border-subtle pt-4">
+        <div className="sticky bottom-0 z-10 -mx-6 -mb-6 flex flex-shrink-0 justify-end gap-2 border-t border-border-subtle bg-surface px-6 pb-6 pt-4">
           <button
             type="button"
             onClick={onClose}

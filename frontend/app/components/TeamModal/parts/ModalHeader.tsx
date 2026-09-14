@@ -7,6 +7,7 @@ const TEXT = {
   create: '\ud558\uc704 \ud504\ub85c\uc81d\ud2b8 \ucd94\uac00',
   edit: '\ud558\uc704 \ud504\ub85c\uc81d\ud2b8 \uc218\uc815',
   delete: '\ud558\uc704 \ud504\ub85c\uc81d\ud2b8 \uc0ad\uc81c',
+  close: '\ub2eb\uae30',
   separator: ' \u00b7 ',
 } as const;
 
@@ -15,6 +16,7 @@ type Props = {
   selectedProject?: Project;
   canDelete: boolean;
   onDelete: () => void;
+  onClose: () => void;
 };
 
 export default function ModalHeader({
@@ -22,6 +24,7 @@ export default function ModalHeader({
   selectedProject,
   canDelete,
   onDelete,
+  onClose,
 }: Props) {
   return (
     <div className="flex items-start justify-between gap-4">
@@ -42,15 +45,26 @@ export default function ModalHeader({
         )}
       </div>
 
-      {canDelete && (
+      <div className="flex shrink-0 items-center gap-2">
+        {canDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="rounded-lg border border-verify-fail-bg px-3 py-1.5 text-micro font-bold text-verify-fail-fg hover:bg-verify-fail-bg"
+          >
+            {TEXT.delete}
+          </button>
+        )}
         <button
           type="button"
-          onClick={onDelete}
-          className="rounded-lg border border-verify-fail-bg px-3 py-1.5 text-micro font-bold text-verify-fail-fg hover:bg-verify-fail-bg"
+          onClick={onClose}
+          aria-label={TEXT.close}
+          title={TEXT.close}
+          className="rounded-lg border border-border px-2.5 py-1.5 text-micro font-bold text-text-subtle hover:bg-surface-muted"
         >
-          {TEXT.delete}
+          {'\u2715'}
         </button>
-      )}
+      </div>
     </div>
   );
 }
