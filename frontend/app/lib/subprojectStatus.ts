@@ -1,10 +1,14 @@
 import type { SubProject } from './api';
+import { toISODate } from './calendar';
 
 /**
  * SubProject 상태 매핑 — 단일 출처
  * dashboard, projects, team-calendar, personal-calendar, MonthCalendar 에서 공통 사용
  */
 type Status = SubProject['status'];
+
+/** 상태 표시에 필요한 최소 필드 — 캘린더용 임시 객체도 받을 수 있도록 좁게 잡는다. */
+export type SubprojectStatusSource = Pick<SubProject, 'status' | 'end_date'>;
 
 export const SUBPROJECT_STATUS_LABEL: Record<Status, string> = {
   planned: '예정',
@@ -42,4 +46,71 @@ export const SUBPROJECT_STATUS_BAR: Record<Status, string> = {
 
 export function getSubprojectStatusLabel(status: Status): string {
   return SUBPROJECT_STATUS_LABEL[status] ?? status;
+}
+
+/*
+ * 기한 초과 표시
+ * 백엔드 status 는 진행률만 보고 정해지므로(완료/진행중/예정) 종료일이 지난 항목도
+ * 계속 '예정'(회색)으로 남는다. 화면에서만 종료일을 함께 보고 빨강으로 구분한다.
+ * DB 상태 값은 바꾸지 않으므로 내보내기·집계는 그대로다.
+ */
+export const SUBPROJECT_OVERDUE_LABEL = '기한 초과';
+export const SUBPROJECT_OVERDUE_BADGE = 'bg-verify-fail-bg text-verify-fail-fg';
+export const SUBPROJECT_OVERDUE_BG = 'bg-verify-fail-fg text-white';
+export const SUBPROJECT_OVERDUE_DOT = 'bg-verify-fail-fg';
+export const SUBPROJECT_OVERDUE_BAR = 'bg-verify-fail-fg';
+
+/** 오늘 날짜(ISO). 목록을 그릴 때는 한 번 구해서 넘기는 편이 낫다. */
+export function todayISODate(): string {
+  return toISODate(new Date());
+}
+
+/** 완료되지 않았는데 종료일이 이미 지난 상태 */
+export function isSubprojectOverdue(
+  sp: SubprojectStatusSource,
+  todayIso: string = todayISODate(),
+): boolean {
+  if (sp.status === 'completed') return false;
+  if (!sp.end_date) return false;
+  return sp.end_date < todayIso;
+}
+
+export function subprojectStatusLabel(
+  sp: SubprojectStatusSource,
+  todayIso?: string,
+): string {
+  if (isSubprojectOverdue(sp, todayIso)) return SUBPROJECT_OVERDUE_LABEL;
+  return getSubprojectStatusLabel(sp.status);
+}
+
+export function subprojectBadgeClass(
+  sp: SubprojectStatusSource,
+  todayIso?: string,
+): string {
+  if (isSubprojectOverdue(sp, todayIso)) return SUBPROJECT_OVERDUE_BADGE;
+  return SUBPROJECT_STATUS_BADGE[sp.status];
+}
+
+export function subprojectDotClass(
+  sp: SubprojectStatusSource,
+  todayIso?: string,
+): string {
+  if (isSubprojectOverdue(sp, todayIso)) return SUBPROJECT_OVERDUE_DOT;
+  return SUBPROJECT_STATUS_DOT[sp.status];
+}
+
+export function subprojectBgClass(
+  sp: SubprojectStatusSource,
+  todayIso?: string,
+): string {
+  if (isSubprojectOverdue(sp, todayIso)) return SUBPROJECT_OVERDUE_BG;
+  return SUBPROJECT_STATUS_BG[sp.status];
+}
+
+export function subprojectBarClass(
+  sp: SubprojectStatusSource,
+  todayIso?: string,
+): string {
+  if (isSubprojectOverdue(sp, todayIso)) return SUBPROJECT_OVERDUE_BAR;
+  return SUBPROJECT_STATUS_BAR[sp.status];
 }

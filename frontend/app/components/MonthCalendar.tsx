@@ -11,6 +11,11 @@ import {
   toISODate,
 } from '../lib/calendar';
 import type { SubProject } from '../lib/api';
+import {
+  isSubprojectOverdue,
+  subprojectBadgeClass,
+  subprojectStatusLabel,
+} from '../lib/subprojectStatus';
 
 type Props = {
   year: number;
@@ -46,20 +51,17 @@ const PROJECT_TONES: BarTone[] = [
 const TONE_DONE: BarTone = { bg: '#DCFFF1', fg: '#216E4E' };
 const TONE_OVERDUE: BarTone = { bg: '#FFECEB', fg: '#AE2E24' };
 
-function isOverdue(sp: SubProject, today: string): boolean {
-  return sp.status !== 'completed' && sp.end_date < today;
-}
-
+// 기한 초과 판정은 lib/subprojectStatus 에 모아 두고 사이드바·목록과 같은 규칙을 쓴다
 function barTone(sp: SubProject, today: string): BarTone {
   if (sp.status === 'completed') return TONE_DONE;
-  if (isOverdue(sp, today)) return TONE_OVERDUE;
+  if (isSubprojectOverdue(sp, today)) return TONE_OVERDUE;
   return PROJECT_TONES[Math.abs(sp.project_id) % PROJECT_TONES.length];
 }
 
 // 막대 오른쪽 끝 표식 — 템플릿의 완료 체크/지연 아이콘 자리
 function barMark(sp: SubProject, today: string): string | null {
   if (sp.status === 'completed') return '✓';
-  if (isOverdue(sp, today)) return '!';
+  if (isSubprojectOverdue(sp, today)) return '!';
   return null;
 }
 
@@ -473,17 +475,9 @@ export default function MonthCalendar({
               </p>
               <p className="mt-1 text-tiny text-text-muted">담당: {assigneeNames(hoverTip.sp)}</p>
               <div className="mt-1.5 flex items-center gap-1.5">
-                <span className={`rounded-full px-1.5 py-0.5 text-nano font-bold ${(STATUS_MAP[hoverTip.sp.status] ?? STATUS_MAP.planned).cls}`}>
-                  {(STATUS_MAP[hoverTip.sp.status] ?? STATUS_MAP.planned).label}
+                <span className={`rounded-full px-1.5 py-0.5 text-nano font-bold ${subprojectBadgeClass(hoverTip.sp, today)}`}>
+                  {subprojectStatusLabel(hoverTip.sp, today)}
                 </span>
-                {isOverdue(hoverTip.sp, today) && (
-                  <span
-                    className="rounded-full px-1.5 py-0.5 text-nano font-bold"
-                    style={{ backgroundColor: TONE_OVERDUE.bg, color: TONE_OVERDUE.fg }}
-                  >
-                    기한 초과
-                  </span>
-                )}
                 <span className="ml-auto text-tiny font-semibold text-text">
                   진행률 {Math.round(hoverTip.sp.progress)}%
                 </span>
@@ -510,12 +504,6 @@ export default function MonthCalendar({
 }
 
 import { forwardRef } from 'react';
-
-const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  completed:   { label: '완료',   cls: 'bg-verify-pass-bg text-verify-pass-fg' },
-  in_progress: { label: '진행 중', cls: 'bg-verify-info-bg text-verify-info-fg' },
-  planned:     { label: '예정',   cls: 'bg-verify-warn-bg text-verify-warn-fg' },
-};
 
 const DayPopover = forwardRef<
   HTMLDivElement,
@@ -544,8 +532,8 @@ const DayPopover = forwardRef<
     </div>
     <div className="max-h-64 overflow-y-auto p-2">
       {items.map((item) => {
-        const barColor = barTone(item, toISODate(new Date())).fg;
-        const st = STATUS_MAP[item.status] ?? STATUS_MAP['planned'];
+        const todayIso = toISODate(new Date());
+        const barColor = barTone(item, todayIso).fg;
         return (
           <button
             key={item.id}
@@ -558,7 +546,9 @@ const DayPopover = forwardRef<
               <p className="truncate text-small font-semibold text-text">{item.name}</p>
               <p className="mt-0.5 text-micro text-text-subtle">{item.start_date} ~ {item.end_date}</p>
               <div className="mt-1 flex items-center gap-1.5">
-                <span className={`rounded-full px-1.5 py-0.5 text-tiny font-bold ${st.cls}`}>{st.label}</span>
+                <span className={`rounded-full px-1.5 py-0.5 text-tiny font-bold ${subprojectBadgeClass(item, todayIso)}`}>
+                  {subprojectStatusLabel(item, todayIso)}
+                </span>
                 <span className="text-tiny text-text-subtle">{assigneeNames(item)}</span>
                 <span className="ml-auto text-micro font-semibold text-text">{Math.round(item.progress)}%</span>
               </div>

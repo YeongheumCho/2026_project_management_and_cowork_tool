@@ -8,8 +8,8 @@ import {
 import { colorForId } from '../../components/AppShell/colors';
 import ProgressBar from '../../components/ProgressBar';
 import {
-  SUBPROJECT_STATUS_BADGE,
-  SUBPROJECT_STATUS_LABEL,
+  subprojectBadgeClass,
+  subprojectStatusLabel,
 } from '../../lib/subprojectStatus';
 
 type Props = {
@@ -62,9 +62,9 @@ export default function SubProjectListItem({
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-md font-semibold text-text">{sp.name}</p>
               <span
-                className={`rounded-full px-2.5 py-1 text-tiny font-bold uppercase tracking-[0.08em] ${SUBPROJECT_STATUS_BADGE[sp.status]}`}
+                className={`rounded-full px-2.5 py-1 text-tiny font-bold uppercase tracking-[0.08em] ${subprojectBadgeClass(sp)}`}
               >
-                {SUBPROJECT_STATUS_LABEL[sp.status]}
+                {subprojectStatusLabel(sp)}
               </span>
               {sp.upload_done && (
                 <span className="rounded-full border border-verify-pass-bg bg-verify-pass-bg px-2.5 py-1 text-tiny font-bold uppercase tracking-[0.08em] text-verify-pass-fg">

@@ -7,6 +7,11 @@ import PersonalModal from '../components/PersonalModal';
 import ProgressBar from '../components/ProgressBar';
 import TeamMemberFilter from '../components/TeamMemberFilter';
 import { apiFetch, type SubProject, type UserBrief } from '../lib/api';
+import {
+  isSubprojectOverdue,
+  subprojectBadgeClass,
+  subprojectStatusLabel,
+} from '../lib/subprojectStatus';
 import { useMe } from '../lib/useMe';
 import { useWorkflowSelection } from '../lib/workflow-selection';
 
@@ -162,9 +167,11 @@ export default function PersonalCalendarPage() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{sp.name}</span>
-                    {sp.status === 'completed' && (
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-micro font-semibold text-emerald-700">
-                        완료
+                    {(sp.status === 'completed' || isSubprojectOverdue(sp)) && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-micro font-semibold ${subprojectBadgeClass(sp)}`}
+                      >
+                        {subprojectStatusLabel(sp)}
                       </span>
                     )}
                   </div>

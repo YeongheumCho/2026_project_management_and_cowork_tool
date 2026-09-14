@@ -10,12 +10,19 @@ import CreateProjectModal from '../projects/components/CreateProjectModal';
 import { collectVehicleSuggestions } from '../projects/lib/vehicleSuggestions';
 import {
   colorForId,
-  softColorForId,
   softColorForPosition,
-  textColorForId,
   textColorForPosition,
 } from '../components/AppShell/colors';
 import { apiFetch, type Project, type SubProject, type UserBrief } from '../lib/api';
+import {
+  SUBPROJECT_OVERDUE_BADGE,
+  SUBPROJECT_OVERDUE_LABEL,
+  SUBPROJECT_STATUS_BADGE,
+  SUBPROJECT_STATUS_LABEL,
+  isSubprojectOverdue,
+  subprojectBadgeClass,
+  subprojectStatusLabel,
+} from '../lib/subprojectStatus';
 import { compactPosition } from '../lib/display';
 import { useMe } from '../lib/useMe';
 import { useWorkflowSelection } from '../lib/workflow-selection';
@@ -27,6 +34,7 @@ type MemberProjectGroup = {
   completedCount: number;
   inProgressCount: number;
   plannedCount: number;
+  overdueCount: number;
   startDate: string;
   endDate: string;
 };
@@ -154,6 +162,7 @@ export default function TeamCalendarPage() {
           completedCount: items.filter((item) => item.status === 'completed').length,
           inProgressCount: items.filter((item) => item.status === 'in_progress').length,
           plannedCount: items.filter((item) => item.status === 'planned').length,
+          overdueCount: items.filter((item) => isSubprojectOverdue(item)).length,
           startDate,
           endDate,
         } satisfies MemberProjectGroup;
@@ -398,6 +407,7 @@ function SelectedMemberProjectBoard({
                     completedCount={group.completedCount}
                     inProgressCount={group.inProgressCount}
                     plannedCount={group.plannedCount}
+                    overdueCount={group.overdueCount}
                   />
                 </div>
                 <p className="mt-1 truncate text-micro text-text-subtle">
@@ -424,10 +434,11 @@ function SelectedMemberProjectBoard({
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
+                      {/* 배지는 프로젝트 색이 아니라 상태 색 — 다른 화면과 같은 규칙 */}
                       <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-tiny font-bold ${softColorForId(group.project.id)} ${textColorForId(group.project.id)}`}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-tiny font-bold ${subprojectBadgeClass(subproject)}`}
                       >
-                        {statusLabel(subproject.status)}
+                        {subprojectStatusLabel(subproject)}
                       </span>
                       <span className="truncate text-body font-semibold text-text">
                         {subproject.name}
@@ -466,24 +477,30 @@ function MetricCard({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** 프로젝트 묶음 요약 칩 — 색과 문구는 하위 프로젝트 배지와 같은 규칙을 쓴다 */
 function StatusChip({
   completedCount,
   inProgressCount,
   plannedCount,
+  overdueCount,
 }: {
   completedCount: number;
   inProgressCount: number;
   plannedCount: number;
+  overdueCount: number;
 }) {
-  let label = '예정';
-  let classes = 'bg-verify-warn-bg text-verify-warn-fg';
+  let label = SUBPROJECT_STATUS_LABEL.planned;
+  let classes = SUBPROJECT_STATUS_BADGE.planned;
 
-  if (inProgressCount > 0) {
-    label = '진행 중';
-    classes = 'bg-verify-info-bg text-verify-info-fg';
+  if (overdueCount > 0) {
+    label = `${SUBPROJECT_OVERDUE_LABEL} ${overdueCount}건`;
+    classes = SUBPROJECT_OVERDUE_BADGE;
+  } else if (inProgressCount > 0) {
+    label = SUBPROJECT_STATUS_LABEL.in_progress;
+    classes = SUBPROJECT_STATUS_BADGE.in_progress;
   } else if (completedCount > 0 && plannedCount === 0) {
-    label = '완료';
-    classes = 'bg-verify-pass-bg text-verify-pass-fg';
+    label = SUBPROJECT_STATUS_LABEL.completed;
+    classes = SUBPROJECT_STATUS_BADGE.completed;
   }
 
   return (
@@ -493,9 +510,4 @@ function StatusChip({
   );
 }
 
-function statusLabel(status: SubProject['status']) {
-  if (status === 'completed') return '완료';
-  if (status === 'in_progress') return '진행 중';
-  return '예정';
-}
 
