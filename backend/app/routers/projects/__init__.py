@@ -23,6 +23,7 @@ from app.routers.projects import (
     projects,
     subprojects,
     subtasks,
+    time_entries,
 )
 
 
@@ -36,5 +37,6 @@ router.include_router(subprojects.router)
 router.include_router(subtasks.router)
 router.include_router(history.router)
 router.include_router(progress_logs.router)
+router.include_router(time_entries.router)
 
 __all__ = ["router"]

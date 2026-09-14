@@ -17,11 +17,14 @@ type Props = {
   onClick: (sp: SubProject) => void;
   canEdit?: boolean;
   onEdit?: (sp: SubProject) => void;
+  /** B-73: 담당자별 검증 시간 기록 창 열기 */
+  onOpenTime?: (sp: SubProject) => void;
 };
 
 export default function SubProjectListItem({
   sp,
   onClick,
+  onOpenTime,
   canEdit = false,
   onEdit,
 }: Props) {
@@ -127,6 +130,15 @@ export default function SubProjectListItem({
             >
               진행률 기록
             </button>
+            {onOpenTime && (
+              <button
+                type="button"
+                onClick={() => onOpenTime(sp)}
+                className="rounded-lg border border-border bg-white px-3 py-1.5 text-tiny font-bold text-text-muted hover:bg-surface-muted"
+              >
+                검증 시간
+              </button>
+            )}
             {canEdit && onEdit && (
               <button
                 type="button"

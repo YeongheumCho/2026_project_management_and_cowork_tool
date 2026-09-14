@@ -66,10 +66,12 @@ def create_subproject(
         payload.end_date,
     )
 
+    # B-83: 담당자 미지정 생성을 허용한다. 항목을 열어 나중에 지정할 수 있다.
     assignees = _load_valid_assignees(
         db,
         project,
         _payload_assignee_ids(payload) or [],
+        allow_empty=True,
     )
 
     sp = SubProject(

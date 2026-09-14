@@ -222,6 +222,14 @@ class ProjectTimeSummary(BaseModel):
     members: list[ProjectMemberTimeSummary]
 
 
+class HistoryStageMinutes(BaseModel):
+    """B-82: 이 이력이 어떤 검증 단계에 얼마를 썼는지."""
+
+    stage: str
+    stage_label: str
+    minutes: int
+
+
 class ProjectHistoryEntry(BaseModel):
     id: int
     user_id: int
@@ -240,6 +248,8 @@ class ProjectHistoryEntry(BaseModel):
     completion_rate: float
     recorded_at: datetime
     manual_override: bool = False
+    # 담당자별 검증 시간 기록이 있을 때만 채워진다.
+    stage_breakdown: list[HistoryStageMinutes] = []
 
 
 class ProjectHistoryCreate(BaseModel):
@@ -383,8 +393,7 @@ class SubProjectCreate(_SubProjectKeficoFields):
     def _check_dates(self):
         if self.end_date < self.start_date:
             raise ValueError("종료일은 시작일 이후여야 합니다.")
-        if not self.assignee_ids and self.assignee_id is None:
-            raise ValueError("담당자를 1명 이상 선택해주세요.")
+        # B-83: 담당자는 미지정으로 두고 나중에 항목에서 지정할 수 있다.
         return self
 
 

@@ -94,10 +94,32 @@ DEFAULT_PROJECT_TYPES = (
 DEFAULT_PROJECT_TYPES_JSON = '["official_inspection","regular_inspection","change_inspection","etc_task","general"]'
 PROJECT_TYPES = set(DEFAULT_PROJECT_TYPES)
 
+# B-26: 1차 검증 상태와 InReview 상태의 선택 목록을 분리한다.
+# 예전에는 두 칸이 같은 목록을 써서 InReview 칸에도 'FAIL 이슈' 같은 값이 떴다.
+FIRST_VERIFY_STATES = {
+    "not_started",       # 검증 전
+    "in_progress",       # 검증 중
+    "review_waiting",    # 리뷰 전
+    "review_in_progress",  # 리뷰 중
+    "review_done",       # 검증 완료
+    "all_pass",          # 전체 완료(ALL PASS)
+    "fail_issue",        # FAIL 이슈
+    "pass_issue",        # PASS 이슈
+}
+
+INREVIEW_STATES = {
+    "inreview_waiting",
+    "inreview_in_progress",
+    "inreview_done",
+    "uploaded",
+}
+
 # 검증 세부 상태 (1차 검증 / InReview 공용)
 VERIFY_STATES = {
     "not_started",
     "in_progress",
+    "review_waiting",
+    "review_in_progress",
     "all_pass",
     "fail_issue",
     "pass_issue",
@@ -305,13 +327,37 @@ class SubProject(Base):
         cascade="all, delete-orphan",
         order_by="SubTask.order_index",
     )
+    # B-73/B-74: 담당자별 검증 시간 기록. 합계 속성이 항상 참조하므로 selectin 으로
+    # 함께 읽어 목록 조회에서 쿼리가 행마다 나가지 않게 한다.
+    time_entries = relationship(
+        "SubProjectTimeEntry",
+        back_populates="subproject",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
     @property
     def created_by_name(self) -> str | None:
         return self.creator.name if self.creator else None
 
+    def _stage_entry_total(self, stage: str) -> int | None:
+        """해당 단계에 담당자별 기록이 있으면 그 합, 없으면 None.
+
+        B-74: 기록이 하나라도 있으면 상위 합계는 사람별 기록에서 만든다.
+        하나도 없으면 지금까지 쓰던 칸 값을 그대로 쓴다.
+        """
+        entries = [
+            entry for entry in (self.time_entries or []) if entry.stage == stage
+        ]
+        if not entries:
+            return None
+        return sum(entry.total_min for entry in entries)
+
     @property
     def first_total_min(self) -> int:
+        from_entries = self._stage_entry_total("first_verify")
+        if from_entries is not None:
+            return from_entries
         return sum(
             v or 0
             for v in (self.first_setup_min, self.first_aud_min, self.first_review_min)
@@ -337,6 +383,9 @@ class SubProject(Base):
 
     @property
     def inreview_total_min(self) -> int:
+        from_entries = self._stage_entry_total("inreview")
+        if from_entries is not None:
+            return from_entries
         return sum(
             v or 0
             for v in (
@@ -347,13 +396,17 @@ class SubProject(Base):
         )
 
     @property
+    def change_total_min(self) -> int:
+        from_entries = self._stage_entry_total("change")
+        if from_entries is not None:
+            return from_entries
+        return sum(
+            v or 0 for v in (self.change_feedback_min, self.change_revalidate_min)
+        )
+
+    @property
     def total_minutes(self) -> int:
-        base = self.first_total_min + self.inreview_total_min
-        if self.change_feedback_min:
-            base += self.change_feedback_min
-        if self.change_revalidate_min:
-            base += self.change_revalidate_min
-        return base
+        return self.first_total_min + self.inreview_total_min + self.change_total_min
 
 
 class SubTask(Base):

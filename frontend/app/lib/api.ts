@@ -50,6 +50,8 @@ export const PROJECT_TYPE_OPTIONS: ProjectType[] = [
 export type VerifyState =
   | 'not_started'
   | 'in_progress'
+  | 'review_waiting'
+  | 'review_in_progress'
   | 'all_pass'
   | 'fail_issue'
   | 'pass_issue'
@@ -58,6 +60,26 @@ export type VerifyState =
   | 'inreview_in_progress'
   | 'inreview_done'
   | 'uploaded';
+
+// B-26: 1차 검증 칸과 InReview 칸이 서로 다른 목록을 쓴다.
+// 예전에는 하나의 목록을 공유해서 InReview 칸에 'FAIL 이슈' 같은 값이 함께 떴다.
+export const FIRST_VERIFY_STATES: VerifyState[] = [
+  'not_started',
+  'in_progress',
+  'review_waiting',
+  'review_in_progress',
+  'review_done',
+  'all_pass',
+  'fail_issue',
+  'pass_issue',
+];
+
+export const INREVIEW_STATES: VerifyState[] = [
+  'inreview_waiting',
+  'inreview_in_progress',
+  'inreview_done',
+  'uploaded',
+];
 
 export type VerificationLevel =
   | 'basic'
@@ -252,6 +274,92 @@ export type ProjectHistoryEntry = {
   completion_rate: number;
   recorded_at: string;
   manual_override: boolean;
+  /** B-82: 이 이력이 어떤 검증 단계에 얼마를 썼는지. 기록이 없으면 빈 목록. */
+  stage_breakdown?: HistoryStageMinutes[];
+};
+
+export type HistoryStageMinutes = {
+  stage: TimeEntryStage;
+  stage_label: string;
+  minutes: number;
+};
+
+// ── 담당자별 검증 시간 (B-73 / B-74) ──────────────────────────────
+export type TimeEntryStage = 'first_verify' | 'inreview' | 'change';
+export type TimeEntryRole = 'verifier' | 'reviewer' | 'inreviewer' | 'assignee';
+
+export const TIME_ENTRY_STAGES: TimeEntryStage[] = [
+  'first_verify',
+  'inreview',
+  'change',
+];
+
+export const TIME_ENTRY_STAGE_LABEL: Record<TimeEntryStage, string> = {
+  first_verify: '1차 검증',
+  inreview: 'InReview',
+  change: '변경점 검증',
+};
+
+export const TIME_ENTRY_ROLE_LABEL: Record<TimeEntryRole, string> = {
+  verifier: '검증',
+  reviewer: '리뷰',
+  inreviewer: 'InReview',
+  assignee: '기능 담당',
+};
+
+/** 단계별 소요 시간 칸 이름 — 변경점 검증은 AUD 가 없다. */
+export const TIME_ENTRY_FIELD_LABEL: Record<
+  TimeEntryStage,
+  { setup: string; aud: string | null; work: string }
+> = {
+  first_verify: { setup: '세팅(분)', aud: 'AUD(분)', work: 'Review 작성·재검증(분)' },
+  inreview: { setup: '세팅(분)', aud: 'AUD(분)', work: '코디 피드백 반영(분)' },
+  change: { setup: '세팅(분)', aud: null, work: '검토·재검증(분)' },
+};
+
+export type SubProjectTimeEntry = {
+  id: number;
+  subproject_id: number;
+  user_id: number;
+  user_name?: string | null;
+  stage: TimeEntryStage;
+  role: TimeEntryRole;
+  setup_min?: number | null;
+  aud_min?: number | null;
+  work_min?: number | null;
+  total_min: number;
+  state?: VerifyState | null;
+  issue_note?: string | null;
+  worked_on?: string | null;
+  updated_at: string;
+};
+
+export type TimeEntryStageTotal = {
+  stage: TimeEntryStage;
+  stage_label: string;
+  total_min: number;
+  person_count: number;
+  /** 담당자별 기록이 없어 기존 칸 값을 그대로 쓰고 있는 단계 */
+  from_legacy: boolean;
+};
+
+export type SubProjectTimeSummary = {
+  subproject_id: number;
+  total_min: number;
+  stages: TimeEntryStageTotal[];
+  entries: SubProjectTimeEntry[];
+};
+
+export type SubProjectTimeEntryUpsert = {
+  stage: TimeEntryStage;
+  role: TimeEntryRole;
+  setup_min?: number | null;
+  aud_min?: number | null;
+  work_min?: number | null;
+  state?: VerifyState | null;
+  issue_note?: string | null;
+  worked_on?: string | null;
+  user_id?: number | null;
 };
 
 export type ProjectHistoryUpdate = {
@@ -447,12 +555,14 @@ export const PROJECT_TYPE_LABEL: Record<string, string> = {
 };
 
 export const VERIFY_STATE_LABEL: Record<VerifyState, string> = {
-  not_started: '대기',
+  not_started: '검증 전',
   in_progress: '검증 중',
+  review_waiting: '리뷰 전',
+  review_in_progress: '리뷰 중',
+  review_done: '검증 완료',
   all_pass: '전체 완료',
   fail_issue: 'FAIL 이슈',
   pass_issue: 'PASS 이슈',
-  review_done: '검토 완료',
   inreview_waiting: 'InReview 대기',
   inreview_in_progress: 'InReview 진행 중',
   inreview_done: 'InReview 완료',
@@ -476,9 +586,14 @@ export const ETC_CATEGORY_LABEL: Record<EtcCategory, string> = {
   other: '기타',
 };
 
-const verifyStateOptions = Object.entries(VERIFY_STATE_LABEL).map(
-  ([value, label]) => ({ value, label }),
-);
+const firstVerifyStateOptions = FIRST_VERIFY_STATES.map((value) => ({
+  value,
+  label: VERIFY_STATE_LABEL[value],
+}));
+const inreviewStateOptions = INREVIEW_STATES.map((value) => ({
+  value,
+  label: VERIFY_STATE_LABEL[value],
+}));
 const verificationLevelOptions = Object.entries(VERIFICATION_LEVEL_LABEL).map(
   ([value, label]) => ({ value, label }),
 );
@@ -514,11 +629,11 @@ const inspectionFields: FieldDefinition[] = [
   field(14, 'seat_no', '검증 자리'),
   field(15, 'controller_no', '제어기 번호'),
   field(16, 'avg_expected_minutes', '평균 예상 소요(분)', 'number'),
-  field(17, 'first_verify_status', '1차 검증 상태', 'select', verifyStateOptions),
+  field(17, 'first_verify_status', '1차 검증 상태', 'select', firstVerifyStateOptions),
   field(18, 'first_setup_min', '1차 Setup(분)', 'number'),
   field(19, 'first_aud_min', '1차 AUD(분)', 'number'),
   field(20, 'first_review_min', '1차 Review(분)', 'number'),
-  field(21, 'inreview_status', 'InReview 상태', 'select', verifyStateOptions),
+  field(21, 'inreview_status', 'InReview 상태', 'select', inreviewStateOptions),
   field(22, 'inreview_setup_min', 'InReview Setup(분)', 'number'),
   field(23, 'inreview_aud_min', 'InReview AUD(분)', 'number'),
   field(24, 'inreview_feedback_min', 'InReview 반영(분)', 'number'),
