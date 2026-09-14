@@ -1,6 +1,8 @@
 ﻿/**
  * Shared API utilities and domain types.
  */
+import { notifyDataChanged } from './dataEvents';
+
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? '/backend';
 
@@ -196,10 +198,28 @@ export type ProgressLog = {
   project_id: number;
   subproject_id: number | null;
   user_id: number;
+  user_name?: string | null;
   progress_percent: number;
   comment: string | null;
   work_date: string;
   created_at: string;
+};
+
+export type ProgressContribution = {
+  user_id: number;
+  user_name: string;
+  is_assignee: boolean;
+  latest_percent: number | null;
+  work_date: string | null;
+  contributed_percent: number;
+};
+
+export type SubProjectProgressSummary = {
+  subproject_id: number;
+  progress: number;
+  owner_count: number;
+  share_percent: number;
+  contributions: ProgressContribution[];
 };
 
 export type ProjectMemberTimeSummary = {
@@ -646,6 +666,12 @@ export async function apiFetch<T>(
       extractErrorMessage(body as ErrorBody, `요청 실패 (${res.status})`),
     );
   }
+  if (!isReadOnlyMethod(init.method)) notifyDataChanged();
   return body as T;
+}
+
+function isReadOnlyMethod(method: string | undefined) {
+  const normalized = (method ?? 'GET').toUpperCase();
+  return normalized === 'GET' || normalized === 'HEAD';
 }
 

@@ -8,6 +8,7 @@ import {
   type SubProject,
   type UserBrief,
 } from '../../lib/api';
+import { subscribeDataChanged } from '../../lib/dataEvents';
 
 type State = {
   majorProjects: MajorProject[];
@@ -54,6 +55,22 @@ export function useSidebarData(): State {
 
   useEffect(() => {
     void reload();
+  }, [reload]);
+
+  // 진행률 기록·하위 프로젝트 수정 등 어떤 페이지에서 데이터가 바뀌어도 사이드바가 따라오도록 한다.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = subscribeDataChanged(() => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        void reload();
+      }, 300);
+    });
+    return () => {
+      unsubscribe();
+      if (timer) clearTimeout(timer);
+    };
   }, [reload]);
 
   return { majorProjects, projects, subprojects, users, loading, reload };

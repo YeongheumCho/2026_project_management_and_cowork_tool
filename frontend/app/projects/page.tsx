@@ -61,6 +61,8 @@ export default function ProjectsPage() {
   const [progressTarget, setProgressTarget] = useState<SubProject | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deletingProject, setDeletingProject] = useState(false);
+  const [duplicateTarget, setDuplicateTarget] = useState<Project | null>(null);
+  const [duplicatingProject, setDuplicatingProject] = useState(false);
   const [listFilter, setListFilter] = useState<ProjectListFilter>(EMPTY_PROJECT_LIST_FILTER);
   const visibleProjects = useMemo(
     () => applyProjectListFilter(projects, listFilter),
@@ -125,6 +127,30 @@ export default function ProjectsPage() {
   const requestDeleteProject = (project: Project) => {
     if (!isAdmin) return;
     setDeleteTarget(project);
+  };
+
+  const requestDuplicateProject = (project: Project) => {
+    if (!isAdmin) return;
+    setDuplicateTarget(project);
+  };
+
+  const confirmDuplicateProject = async () => {
+    const project = duplicateTarget;
+    if (!isAdmin || !project) return;
+
+    setDuplicatingProject(true);
+    try {
+      const created = await apiFetch<Project>(`/projects/${project.id}/duplicate`, {
+        method: 'POST',
+      });
+      await reload();
+      setExpanded((prev) => new Set(prev).add(created.id));
+      setDuplicateTarget(null);
+    } catch (nextError) {
+      setError((nextError as Error).message);
+    } finally {
+      setDuplicatingProject(false);
+    }
   };
 
   const confirmDeleteProject = async () => {
@@ -246,6 +272,7 @@ export default function ProjectsPage() {
             onEditSub={openEditSub}
             onEditProject={openEditProject}
             onDeleteProject={requestDeleteProject}
+            onDuplicateProject={requestDuplicateProject}
           />
         ))}
       </div>
@@ -310,6 +337,21 @@ export default function ProjectsPage() {
         busy={deletingProject}
         onConfirm={confirmDeleteProject}
         onClose={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={duplicateTarget !== null}
+        title="프로젝트 복사"
+        description={
+          duplicateTarget
+            ? `"${duplicateTarget.name}" 프로젝트를 "${duplicateTarget.name} (복사본)" 으로 복사합니다.\n참여 인원, 차종 세트, 하위 프로젝트(템플릿 값 포함)를 그대로 가져오고 진행률·수행 이력은 초기화됩니다.`
+            : undefined
+        }
+        confirmLabel="복사"
+        variant="primary"
+        busy={duplicatingProject}
+        onConfirm={confirmDuplicateProject}
+        onClose={() => setDuplicateTarget(null)}
       />
     </AppShell>
   );

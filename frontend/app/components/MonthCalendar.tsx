@@ -31,11 +31,48 @@ type Props = {
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
-// project_id를 같은 팔레트로 매핑 — colors.ts의 COLOR_PALETTE hex 값과 동일한 순서 유지
-// 전체 캘린더(A)와 담당자 캘린더(B) 모두 project_id 기준으로 색을 결정해 일관성 보장
-const PROJECT_BAR_COLORS = ['#0048FF', '#002060', '#0F6E56', '#854F0B', '#185FA5', '#993556'];
-function projectColor(projectId: number): string {
-  return PROJECT_BAR_COLORS[Math.abs(projectId) % PROJECT_BAR_COLORS.length];
+// A-26: Atlassian 캘린더 템플릿 참고 — 연한 배경 + 같은 계열의 진한 글자색.
+// 전체 캘린더(A)와 담당자 캘린더(B) 모두 project_id 기준으로 색을 정해 같은 프로젝트가 같은 색으로 보이고,
+// 완료(초록)·기한 초과(빨강)는 프로젝트 색보다 우선한다.
+type BarTone = { bg: string; fg: string };
+const PROJECT_TONES: BarTone[] = [
+  { bg: '#E9F2FF', fg: '#0C66E4' }, // blue
+  { bg: '#F3F0FF', fg: '#5E4DB2' }, // purple
+  { bg: '#E7F9FF', fg: '#206A83' }, // teal
+  { bg: '#FFF7D6', fg: '#7F5F01' }, // yellow
+  { bg: '#FFECF8', fg: '#943D73' }, // magenta
+  { bg: '#EFFFD6', fg: '#4C6B1F' }, // lime
+];
+const TONE_DONE: BarTone = { bg: '#DCFFF1', fg: '#216E4E' };
+const TONE_OVERDUE: BarTone = { bg: '#FFECEB', fg: '#AE2E24' };
+
+function isOverdue(sp: SubProject, today: string): boolean {
+  return sp.status !== 'completed' && sp.end_date < today;
+}
+
+function barTone(sp: SubProject, today: string): BarTone {
+  if (sp.status === 'completed') return TONE_DONE;
+  if (isOverdue(sp, today)) return TONE_OVERDUE;
+  return PROJECT_TONES[Math.abs(sp.project_id) % PROJECT_TONES.length];
+}
+
+// 막대 오른쪽 끝 표식 — 템플릿의 완료 체크/지연 아이콘 자리
+function barMark(sp: SubProject, today: string): string | null {
+  if (sp.status === 'completed') return '✓';
+  if (isOverdue(sp, today)) return '!';
+  return null;
+}
+
+function BarLabel({ sp, today }: { sp: SubProject; today: string }) {
+  const mark = barMark(sp, today);
+  return (
+    <>
+      <span className="min-w-0 flex-1 truncate text-[10px] font-semibold leading-none">
+        {sp.name} {Math.round(sp.progress)}%
+      </span>
+      {mark && <span className="ml-1 shrink-0 text-[10px] font-bold leading-none">{mark}</span>}
+    </>
+  );
 }
 
 function assigneeNames(item: SubProject): string {
@@ -44,11 +81,14 @@ function assigneeNames(item: SubProject): string {
   return item.assignee?.name ?? '미지정';
 }
 
-const BAR_H = 13;
+// A-26: 막대·글씨를 한 단계 키움 (13px → 16px)
+const BAR_H = 16;
 const BAR_GAP = 2;
-const DATE_AREA_H = 18;
+const DATE_AREA_H = 20;
 const FIXED_TRACK_COUNT = 4;
-const FIXED_ROW_HEIGHT = DATE_AREA_H + FIXED_TRACK_COUNT * (BAR_H + BAR_GAP) + 4;
+// 트랙을 넘친 일정은 "+N개 더" 한 줄로 표시 (템플릿의 "+15 more")
+const MORE_AREA_H = 14;
+const FIXED_ROW_HEIGHT = DATE_AREA_H + FIXED_TRACK_COUNT * (BAR_H + BAR_GAP) + MORE_AREA_H + 2;
 const MONTH_LABELS = Array.from({ length: 12 }, (_, index) => `${index + 1}월`);
 
 export default function MonthCalendar({
@@ -75,8 +115,18 @@ export default function MonthCalendar({
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number; openUp: boolean }>({ top: 0, left: 0, openUp: false });
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(year);
+  // A-26: 일정 막대에 마우스를 올리면 아래에 상세 툴팁을 띄운다 (뷰포트 기준 fixed)
+  const [hoverTip, setHoverTip] = useState<{ sp: SubProject; top: number; left: number } | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const monthPickerRef = useRef<HTMLDivElement>(null);
+
+  function showHoverTip(sp: SubProject, target: HTMLElement) {
+    const rect = target.getBoundingClientRect();
+    const tipW = 260;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - tipW - 8));
+    setHoverTip({ sp, top: rect.bottom + 6, left });
+  }
+  const hideHoverTip = () => setHoverTip(null);
 
   useEffect(() => {
     if (!popoverIso) return;
@@ -89,7 +139,7 @@ export default function MonthCalendar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [popoverIso]);
 
-  useEffect(() => { setPopoverIso(null); }, [year, month]);
+  useEffect(() => { setPopoverIso(null); setHoverTip(null); }, [year, month]);
   useEffect(() => { setMonthPickerOpen(false); setPickerYear(year); }, [year, month]);
 
   useEffect(() => {
@@ -264,7 +314,7 @@ export default function MonthCalendar({
       <div className="p-3">
         <div className="mb-1 grid grid-cols-7 gap-1 text-center">
           {WEEKDAYS.map((w) => (
-            <div key={w} className="py-1 text-nano font-bold text-text-subtle">{w}</div>
+            <div key={w} className="py-1 text-tiny font-bold text-text-subtle">{w}</div>
           ))}
         </div>
 
@@ -273,9 +323,15 @@ export default function MonthCalendar({
             {[0, 1, 2, 3, 4, 5].map((wr) => {
               const weekDays = days.slice(wr * 7, wr * 7 + 7);
               const segsThisRow = barSegments.filter((s) => s.weekRow === wr && s.track < FIXED_TRACK_COUNT);
+              // 트랙 초과분은 요일별로 세어 "+N개 더"로 표시
+              const hiddenByCol = Array<number>(7).fill(0);
+              for (const seg of barSegments) {
+                if (seg.weekRow !== wr || seg.track < FIXED_TRACK_COUNT) continue;
+                for (let col = seg.colStart; col <= seg.colEnd; col++) hiddenByCol[col]++;
+              }
               return (
                 <div key={wr} className="relative grid grid-cols-7 gap-[2px] overflow-hidden" style={{ height: uniformRowHeight }}>
-                  {weekDays.map((day) => {
+                  {weekDays.map((day, col) => {
                     const iso = toISODate(day);
                     const inMonth = day.getMonth() === month;
                     const isToday = iso === today;
@@ -295,13 +351,18 @@ export default function MonthCalendar({
                           isToday ? 'bg-brand-soft text-text' : inMonth ? 'text-text hover:bg-surface-subtle' : 'text-text-faint hover:bg-background',
                         ].join(' ')}
                       >
-                        <span className={`text-tiny ${isToday ? 'inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-brand font-bold text-white' : ''}`}>{day.getDate()}</span>
+                        <span className={`text-micro ${isToday ? 'inline-flex h-[20px] w-[20px] items-center justify-center rounded-full bg-brand font-bold text-white' : ''}`}>{day.getDate()}</span>
+                        {hiddenByCol[col] > 0 && (
+                          <span className="absolute bottom-[2px] left-[5px] text-[10px] font-semibold leading-none text-text-subtle">
+                            +{hiddenByCol[col]}개 더
+                          </span>
+                        )}
                       </button>
                     );
                   })}
 
                   {segsThisRow.map((seg, idx) => {
-                    const color = projectColor(seg.sp.project_id);
+                    const tone = barTone(seg.sp, today);
                     const top = DATE_AREA_H + seg.track * (BAR_H + BAR_GAP);
                     const colW = `calc((100% - ${6 * 2}px) / 7)`;
                     const left = `calc(${seg.colStart} * (${colW} + 2px))`;
@@ -312,15 +373,14 @@ export default function MonthCalendar({
                         key={`${seg.sp.id}-${seg.weekRow}-${idx}`}
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onSelectSubProject?.(seg.sp); }}
-                        title={`${seg.sp.name} (${assigneeNames(seg.sp)}) ${Math.round(seg.sp.progress)}%`}
-                        className="absolute flex items-center overflow-hidden px-[5px] text-left"
-                        style={{ top, left, width, height: BAR_H, backgroundColor: color, opacity: 0.92, borderRadius: br }}
+                        onMouseEnter={(e) => showHoverTip(seg.sp, e.currentTarget)}
+                        onMouseLeave={hideHoverTip}
+                        aria-label={`${seg.sp.name} (${assigneeNames(seg.sp)}) ${Math.round(seg.sp.progress)}%`}
+                        className="absolute flex items-center overflow-hidden px-[6px] text-left transition hover:brightness-95"
+                        style={{ top, left, width, height: BAR_H, backgroundColor: tone.bg, color: tone.fg, borderRadius: br }}
                       >
-                        {seg.isStart && (
-                          <span className="truncate text-[7px] font-bold leading-none text-white">
-                            {seg.sp.name} {Math.round(seg.sp.progress)}%
-                          </span>
-                        )}
+                        {/* A-26: 주가 바뀌어도 매 주차 막대마다 이름·진행률을 다시 표기 */}
+                        <BarLabel sp={seg.sp} today={today} />
                       </button>
                     );
                   })}
@@ -355,19 +415,21 @@ export default function MonthCalendar({
                     isToday ? 'bg-brand-soft text-text' : inMonth ? 'text-text hover:bg-surface-subtle' : 'text-text-faint hover:bg-background',
                   ].join(' ')}
                 >
-                  <div className={`text-tiny ${isToday ? 'inline-flex h-[18px] w-[18px] items-center justify-center self-start rounded-full bg-brand font-bold text-white' : ''}`}>{day.getDate()}</div>
+                  <div className={`text-micro ${isToday ? 'inline-flex h-[20px] w-[20px] items-center justify-center self-start rounded-full bg-brand font-bold text-white' : ''}`}>{day.getDate()}</div>
                   <div className="mt-0.5 flex flex-col gap-[2px]">
                     {visibleItems.map((item) => {
-                      const barColor = projectColor(item.project_id);
+                      const tone = barTone(item, today);
                       return (
                         <div
                           key={item.id}
                           onClick={(e) => { e.stopPropagation(); onSelectSubProject?.(item); }}
-                          className="flex h-[13px] w-full items-center rounded-[4px] px-[4px] text-left"
-                          style={{ backgroundColor: barColor, opacity: 0.9 }}
-                          title={`${item.name} (${assigneeNames(item)}) ${Math.round(item.progress)}%`}
+                          onMouseEnter={(e) => showHoverTip(item, e.currentTarget)}
+                          onMouseLeave={hideHoverTip}
+                          className="flex h-[16px] w-full items-center rounded-[4px] px-[5px] text-left transition hover:brightness-95"
+                          style={{ backgroundColor: tone.bg, color: tone.fg }}
+                          aria-label={`${item.name} (${assigneeNames(item)}) ${Math.round(item.progress)}%`}
                         >
-                          <span className="truncate text-[7px] font-bold leading-none text-white">{item.name}</span>
+                          <BarLabel sp={item} today={today} />
                         </div>
                       );
                     })}
@@ -375,9 +437,9 @@ export default function MonthCalendar({
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); openDayPopover(iso, itemsToday, e.currentTarget); }}
-                        className={`flex h-[13px] items-center rounded-[3px] px-[4px] transition hover:bg-surface-subtle`}
+                        className={`flex h-[16px] items-center rounded-[3px] px-[4px] transition hover:bg-surface-subtle`}
                       >
-                        <span className={`text-[7px] font-bold leading-none text-brand`}>
+                        <span className={`text-[9px] font-bold leading-none text-brand`}>
                           +{hiddenCount}{'개 더'}
                         </span>
                       </button>
@@ -391,6 +453,45 @@ export default function MonthCalendar({
           </div>
         )}
       </div>
+
+      {/* A-26: 일정 막대 hover 툴팁 — 클릭 없이 상세 확인 */}
+      {hoverTip && !popoverIso && (
+        <div
+          role="tooltip"
+          className="pointer-events-none fixed z-[9998] w-[260px] rounded-xl border border-border bg-surface p-3 shadow-xl"
+          style={{ top: hoverTip.top, left: hoverTip.left }}
+        >
+          <div className="flex items-start gap-2">
+            <span
+              className="mt-[5px] h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: barTone(hoverTip.sp, today).fg }}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-small font-bold text-text">{hoverTip.sp.name}</p>
+              <p className="mt-0.5 text-tiny text-text-subtle">
+                {hoverTip.sp.start_date} ~ {hoverTip.sp.end_date}
+              </p>
+              <p className="mt-1 text-tiny text-text-muted">담당: {assigneeNames(hoverTip.sp)}</p>
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <span className={`rounded-full px-1.5 py-0.5 text-nano font-bold ${(STATUS_MAP[hoverTip.sp.status] ?? STATUS_MAP.planned).cls}`}>
+                  {(STATUS_MAP[hoverTip.sp.status] ?? STATUS_MAP.planned).label}
+                </span>
+                {isOverdue(hoverTip.sp, today) && (
+                  <span
+                    className="rounded-full px-1.5 py-0.5 text-nano font-bold"
+                    style={{ backgroundColor: TONE_OVERDUE.bg, color: TONE_OVERDUE.fg }}
+                  >
+                    기한 초과
+                  </span>
+                )}
+                <span className="ml-auto text-tiny font-semibold text-text">
+                  진행률 {Math.round(hoverTip.sp.progress)}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* fixed 팝오버 — 뷰포트 기준 배치, 어느 행에서 열어도 UI에 가리지 않음 */}
       {popoverIso && (
@@ -443,7 +544,7 @@ const DayPopover = forwardRef<
     </div>
     <div className="max-h-64 overflow-y-auto p-2">
       {items.map((item) => {
-        const barColor = projectColor(item.project_id);
+        const barColor = barTone(item, toISODate(new Date())).fg;
         const st = STATUS_MAP[item.status] ?? STATUS_MAP['planned'];
         return (
           <button
@@ -455,11 +556,11 @@ const DayPopover = forwardRef<
             <span className="mt-[3px] h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: barColor }} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-small font-semibold text-text">{item.name}</p>
-              <p className="mt-0.5 text-tiny text-text-subtle">{item.start_date} ~ {item.end_date}</p>
+              <p className="mt-0.5 text-micro text-text-subtle">{item.start_date} ~ {item.end_date}</p>
               <div className="mt-1 flex items-center gap-1.5">
-                <span className={`rounded-full px-1.5 py-0.5 text-nano font-bold ${st.cls}`}>{st.label}</span>
-                <span className="text-nano text-text-subtle">{assigneeNames(item)}</span>
-                <span className="ml-auto text-tiny font-semibold text-text">{Math.round(item.progress)}%</span>
+                <span className={`rounded-full px-1.5 py-0.5 text-tiny font-bold ${st.cls}`}>{st.label}</span>
+                <span className="text-tiny text-text-subtle">{assigneeNames(item)}</span>
+                <span className="ml-auto text-micro font-semibold text-text">{Math.round(item.progress)}%</span>
               </div>
             </div>
           </button>
