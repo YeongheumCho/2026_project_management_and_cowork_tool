@@ -4,6 +4,10 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import type { MajorProject, Project, SubProject, UserBrief } from '../../lib/api';
 import { compactPosition } from '../../lib/display';
+import {
+  subprojectDotClass,
+  subprojectStatusLabel,
+} from '../../lib/subprojectStatus';
 import { colorForPosition } from './colors';
 import {
   expandedKeysForMember,
@@ -623,7 +627,11 @@ function SubprojectRowContent({
 }) {
   return (
     <>
-      <span className={`h-[6px] w-[6px] shrink-0 rounded-full ${statusDotClass(subproject.status)}`} />
+      {/* 기한 초과는 빨강 — 규칙은 lib/subprojectStatus 에 모아 캘린더·목록과 동일하게 쓴다 */}
+      <span
+        className={`h-[6px] w-[6px] shrink-0 rounded-full ${subprojectDotClass(subproject)}`}
+        title={subprojectStatusLabel(subproject)}
+      />
       <span className="min-w-0 flex-1 truncate" title={subproject.name}>
         {subproject.name}
       </span>
@@ -666,10 +674,4 @@ function itemClass(active: boolean) {
       ? 'bg-surface-subtle font-semibold text-text'
       : 'font-medium text-text-muted hover:bg-surface-muted'
   }`;
-}
-
-function statusDotClass(status: SubProject['status']) {
-  if (status === 'completed') return 'bg-verify-pass-fg';
-  if (status === 'in_progress') return 'bg-verify-info-fg';
-  return 'bg-text-faint';
 }
