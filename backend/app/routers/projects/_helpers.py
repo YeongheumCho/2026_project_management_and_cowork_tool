@@ -138,6 +138,7 @@ def _load_subproject(db: Session, subproject_id: int) -> SubProject:
             selectinload(SubProject.verifiers),
             selectinload(SubProject.reviewers),
             selectinload(SubProject.inreviewers),
+            selectinload(SubProject.creator),
         )
         .where(SubProject.id == subproject_id)
     )

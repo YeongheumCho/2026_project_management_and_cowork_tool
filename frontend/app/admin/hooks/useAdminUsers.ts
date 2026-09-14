@@ -7,10 +7,12 @@ import {
   deleteUser,
   fetchMe,
   fetchUsers,
+  patchUserProfile,
   patchUserRole,
   resetUserPassword,
   type ErrorResponse,
   type UserCreatePayload,
+  type UserProfileUpdatePayload,
   type UserResponse,
 } from '../lib/adminApi';
 
@@ -27,6 +29,7 @@ type UseAdminUsersResult = {
   handleUserCreate: (payload: UserCreatePayload) => Promise<boolean>;
   handleUserDelete: (member: UserResponse) => Promise<void>;
   handlePasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
+  handleProfileSave: (member: UserResponse, payload: UserProfileUpdatePayload) => Promise<boolean>;
 };
 
 export function useAdminUsers(enabled = true): UseAdminUsersResult {
@@ -225,6 +228,47 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
     }
   };
 
+  const handleProfileSave = async (member: UserResponse, payload: UserProfileUpdatePayload) => {
+    const token = localStorage.getItem('access_token');
+    if (!token) { router.replace('/login'); return false; }
+
+    // 진행 상태는 행의 소속 수정 패널이 자체(profileSaving)로 표시하므로 savingId(권한 저장용)는 건드리지 않는다.
+    setMessage(null);
+
+    try {
+      const res = await patchUserProfile({ token }, member.idnum, payload);
+      const data = await res.json();
+
+      if (!res.ok) {
+        const err = data as ErrorResponse;
+        setMessage(err.detail ?? '소속 정보 수정에 실패했습니다.');
+        return false;
+      }
+
+      const updated = data as UserResponse;
+      // 소속 필드만 병합해 아직 저장하지 않은 권한 드롭다운 변경을 덮어쓰지 않는다.
+      setUsers((prev) =>
+        prev.map((current) =>
+          current.idnum === updated.idnum
+            ? {
+                ...current,
+                center: updated.center,
+                office: updated.office,
+                team: updated.team,
+                position: updated.position,
+              }
+            : current,
+        ),
+      );
+      if (user?.idnum === updated.idnum) setUser(updated);
+      setMessage(`${updated.name}님의 소속 정보를 수정했습니다.`);
+      return true;
+    } catch {
+      setMessage('소속 정보 수정 중 오류가 발생했습니다.');
+      return false;
+    }
+  };
+
   return {
     user,
     users,
@@ -238,5 +282,6 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
     handleUserCreate,
     handleUserDelete,
     handlePasswordReset,
+    handleProfileSave,
   };
 }

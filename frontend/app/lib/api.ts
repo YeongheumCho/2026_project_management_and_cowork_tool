@@ -85,6 +85,8 @@ export type SubProject = {
   status: 'planned' | 'in_progress' | 'completed';
   progress: number;
   subtasks: SubTask[];
+  created_by?: number | null;
+  created_by_name?: string | null;
   created_at: string;
   updated_at: string;
 
@@ -388,7 +390,8 @@ export type FieldType =
   | 'date'
   | 'select'
   | 'textarea'
-  | 'checkbox';
+  | 'checkbox'
+  | 'members';
 
 export type FieldOption = {
   label: string;
@@ -581,7 +584,8 @@ export function defaultFieldSchema(project_type: string): ProjectFieldSchema {
 
 export function effectiveFieldSchema(schema: ProjectFieldSchema): ProjectFieldSchema {
   if (schema.id !== 0 || schema.fields.length > 0) return schema;
-  return defaultFieldSchema(schema.project_type);
+  // 대프로젝트/프로젝트 템플릿 키는 내장 기본 스키마("추가 정보")로 대체하지 않는다.
+  return DEFAULT_PROJECT_FIELD_SCHEMAS[String(schema.project_type)] ?? schema;
 }
 
 export type Template = {

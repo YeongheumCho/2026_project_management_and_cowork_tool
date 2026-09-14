@@ -13,18 +13,27 @@ import {
   type ProjectVehicleSet,
 } from '../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
+import type { VehicleSuggestions } from '../lib/vehicleSuggestions';
 import VehicleSetEditor, { normalizeVehicleSets } from './VehicleSetEditor';
 
 type Props = {
   majorProjects: MajorProject[];
+  vehicleSuggestions?: VehicleSuggestions;
   onCreated: (project: Project) => void;
   onError: (msg: string) => void;
+  onCancel?: () => void;
 };
 
 const controlClass =
   'mt-1 h-10 w-full rounded-lg border border-border px-3 py-2 text-sm';
 
-export default function CreateProjectForm({ majorProjects, onCreated, onError }: Props) {
+export default function CreateProjectForm({
+  majorProjects,
+  vehicleSuggestions,
+  onCreated,
+  onError,
+  onCancel,
+}: Props) {
   const initialMajorProjectId = majorProjects[0]?.id ?? '';
   const [majorProjectId, setMajorProjectId] = useState<number | ''>(initialMajorProjectId);
   const [name, setName] = useState('');
@@ -171,10 +180,21 @@ export default function CreateProjectForm({ majorProjects, onCreated, onError }:
               value={vehicleSets}
               onChange={setVehicleSets}
               disabled={busy}
+              suggestions={vehicleSuggestions}
             />
           </div>
 
-          <div className="flex items-end justify-end sm:col-span-2">
+          <div className="flex items-end justify-end gap-2 sm:col-span-2">
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={busy}
+                className="h-10 rounded-lg border border-border px-4 text-sm font-medium text-text-muted transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                취소
+              </button>
+            )}
             <button
               type="submit"
               disabled={disabled}

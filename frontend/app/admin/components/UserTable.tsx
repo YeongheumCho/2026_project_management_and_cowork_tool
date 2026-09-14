@@ -1,90 +1,17 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   fetchUserProjectHistory,
   type ProjectHistoryEntry,
   type UserCreatePayload,
+  type UserProfileUpdatePayload,
   type UserResponse,
 } from '../lib/adminApi';
+import { ORG_DATA } from '../lib/orgData';
+import ComboBox from './ComboBox';
 import OrgChartView from './OrgChartView';
 import UserRoleRow from './UserRoleRow';
-
-const ORG_DATA = {
-  centers: ['E-모빌리티센터'],
-  offices: ['Automotive시스템실', 'E-모빌리티시스템실', 'SDV시스템실'],
-  officeTeams: {
-    'Automotive시스템실': ['Automotive검증1팀', 'Automotive검증2팀', 'Automotive검증3팀'],
-    'E-모빌리티시스템실': ['E-모빌리티검증1팀', 'E-모빌리티검증2팀', 'E-모빌리티검증3팀'],
-    'SDV시스템실': ['SDV솔루션1팀', 'SDV솔루션2팀', 'SDV솔루션3팀', 'SDV솔루션4팀'],
-  } as Record<string, string[]>,
-  allTeams: [
-    'Automotive검증1팀', 'Automotive검증2팀', 'Automotive검증3팀',
-    'E-모빌리티검증1팀', 'E-모빌리티검증2팀', 'E-모빌리티검증3팀',
-    'SDV솔루션1팀', 'SDV솔루션2팀', 'SDV솔루션3팀', 'SDV솔루션4팀',
-  ],
-  positions: ['인턴', '전임연구원', '선임연구원', '책임연구원', '수석연구원', '이사'],
-};
-
-function ComboBox({
-  value,
-  onChange,
-  options,
-  placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: readonly string[];
-  placeholder: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [inputVal, setInputVal] = useState(value);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputVal(e.target.value);
-    onChange(e.target.value);
-    setOpen(true);
-  };
-
-  const handleSelect = (opt: string) => {
-    setInputVal(opt);
-    onChange(opt);
-    setOpen(false);
-  };
-
-  const filtered = options.filter((opt) =>
-    opt.toLowerCase().includes(inputVal.toLowerCase()),
-  );
-
-  return (
-    <div ref={wrapperRef} className="relative">
-      <input
-        value={inputVal}
-        onChange={handleInputChange}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        placeholder={placeholder}
-        className="w-full rounded-lg border border-border bg-white px-3 py-2 text-small focus:border-brand focus:outline-none"
-      />
-      {open && filtered.length > 0 && (
-        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border bg-white shadow-lg">
-          {filtered.map((opt) => (
-            <li
-              key={opt}
-              onMouseDown={() => handleSelect(opt)}
-              className={`cursor-pointer px-3 py-2 text-small hover:bg-brand-soft hover:text-brand ${
-                opt === inputVal ? 'bg-brand-soft font-semibold text-brand' : 'text-text'
-              }`}
-            >
-              {opt}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
 
 function ErrorModal({ message, onClose }: { message: string; onClose: () => void }) {
   return (
@@ -122,6 +49,7 @@ type Props = {
   onUserCreate: (payload: UserCreatePayload) => Promise<boolean>;
   onUserDelete: (member: UserResponse) => void;
   onPasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
+  onProfileSave: (member: UserResponse, payload: UserProfileUpdatePayload) => Promise<boolean>;
 };
 
 type RoleFilter = 'all' | 'admin' | 'member';
@@ -138,6 +66,7 @@ export default function UserTable({
   onUserCreate,
   onUserDelete,
   onPasswordReset,
+  onProfileSave,
 }: Props) {
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
@@ -259,7 +188,8 @@ export default function UserTable({
 
       <div className="mt-4">
         {viewMode === 'table' ? (
-          <div className="overflow-x-auto">
+          // overflow-x-auto 는 overflow-y 도 auto 로 강제해 소속 수정 콤보박스 목록이 잘리므로 visible 로 둔다.
+          <div className="overflow-visible">
             <table className="w-full text-left text-small">
               <thead className="border-b border-border text-tiny font-bold uppercase tracking-[1px] text-text-subtle">
                 <tr>
@@ -284,6 +214,7 @@ export default function UserTable({
                     onDelete={handleDelete}
                     onOpenHistory={handleOpenHistory}
                     onPasswordReset={onPasswordReset}
+                    onProfileSave={onProfileSave}
                   />
                 ))}
               </tbody>
@@ -305,6 +236,7 @@ export default function UserTable({
             onDelete={handleDelete}
             onOpenHistory={handleOpenHistory}
             onPasswordReset={onPasswordReset}
+            onProfileSave={onProfileSave}
           />
         )}
       </div>

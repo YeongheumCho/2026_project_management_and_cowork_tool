@@ -187,7 +187,7 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="hidden w-[240px] shrink-0 border-r border-border bg-surface lg:block">
+    <aside className="min-w-0 flex-1 border-r border-border bg-surface">
       <div className="h-full overflow-y-auto px-2.5 py-3.5">
         <Section title="프로젝트">
           {projectTree.length === 0 ? (

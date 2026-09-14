@@ -24,6 +24,7 @@ import ProjectListToolbar, {
   type ProjectListFilter,
 } from './components/ProjectListToolbar';
 import { useProjects } from './hooks/useProjects';
+import { collectVehicleSuggestions } from './lib/vehicleSuggestions';
 
 export default function ProjectsPage() {
   const { me, loading: meLoading } = useMe();
@@ -34,6 +35,7 @@ export default function ProjectsPage() {
     projects,
     majorProjects,
     users,
+    fieldSchemas,
     byProject,
     timeByProject,
     historyByProject,
@@ -43,7 +45,11 @@ export default function ProjectsPage() {
     setError,
   } = useProjects(!!me);
 
+  // 백엔드는 대프로젝트 멤버에게도 프로젝트 생성을 허용하므로 관리자 외에도 멤버십이 있으면 버튼을 보여준다.
+  const canCreateProject = !!isAdmin || majorProjects.length > 0;
+
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [createOpen, setCreateOpen] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [projectInitial, setProjectInitial] = useState<Project | null>(null);
   const [csvModalOpen, setCsvModalOpen] = useState(false);
@@ -59,6 +65,10 @@ export default function ProjectsPage() {
   const visibleProjects = useMemo(
     () => applyProjectListFilter(projects, listFilter),
     [projects, listFilter],
+  );
+  const vehicleSuggestions = useMemo(
+    () => collectVehicleSuggestions(projects, Array.from(byProject.values()).flat()),
+    [projects, byProject],
   );
   const modalFunctionNameOptionsByLevel = useMemo(
     () => buildFunctionNameOptionsByLevel(byProject.get(modalProjectId ?? -1) ?? []),
@@ -155,14 +165,37 @@ export default function ProjectsPage() {
         </p>
       )}
 
-      <CreateProjectForm
-        majorProjects={majorProjects}
-        onCreated={async (created) => {
-          await reload();
-          setExpanded((prev) => new Set(prev).add(created.id));
-        }}
-        onError={setError}
-      />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-bold tracking-[-0.3px] text-text">프로젝트</h1>
+        {canCreateProject && (
+          <button
+            type="button"
+            onClick={() => setCreateOpen((prev) => !prev)}
+            aria-expanded={createOpen}
+            className={`h-10 rounded-lg px-4 text-sm font-medium transition ${
+              createOpen
+                ? 'border border-border bg-white text-text-muted hover:bg-surface-muted'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            {createOpen ? '프로젝트 추가 닫기' : '+ 프로젝트 추가'}
+          </button>
+        )}
+      </div>
+
+      {canCreateProject && createOpen && (
+        <CreateProjectForm
+          majorProjects={majorProjects}
+          vehicleSuggestions={vehicleSuggestions}
+          onCreated={async (created) => {
+            await reload();
+            setExpanded((prev) => new Set(prev).add(created.id));
+            setCreateOpen(false);
+          }}
+          onError={setError}
+          onCancel={() => setCreateOpen(false)}
+        />
+      )}
 
       {!loading && projects.length > 0 && (
         <ProjectListToolbar
@@ -184,7 +217,7 @@ export default function ProjectsPage() {
         {!loading && projects.length === 0 && (
           <p className="rounded-2xl border border-border bg-white p-8 text-center text-sm text-text-faint">
             등록된 프로젝트가 없습니다.
-            {isAdmin ? ' 상단에서 첫 프로젝트를 생성해보세요.' : ''}
+            {canCreateProject ? ' 상단의 "+ 프로젝트 추가"로 첫 프로젝트를 생성해보세요.' : ''}
           </p>
         )}
 
@@ -201,6 +234,8 @@ export default function ProjectsPage() {
             subprojects={byProject.get(project.id) ?? []}
             timeSummary={timeByProject.get(project.id) ?? emptyTimeSummary(project.id)}
             historySummary={historyByProject.get(project.id) ?? emptyHistorySummary(project.id)}
+            fieldSchemas={fieldSchemas}
+            users={users}
             isAdmin={!!isAdmin}
             canManageSubprojects={canManageProjectSubprojects(project.id)}
             isOpen={expanded.has(project.id)}
@@ -219,6 +254,7 @@ export default function ProjectsPage() {
         open={projectModalOpen}
         project={projectInitial}
         majorProjects={majorProjects}
+        vehicleSuggestions={vehicleSuggestions}
         onClose={() => {
           setProjectModalOpen(false);
           setProjectInitial(null);
@@ -249,6 +285,7 @@ export default function ProjectsPage() {
         lockedProjectId={modalMode === 'create' ? modalProjectId : undefined}
         initial={modalInitial}
         functionNameOptionsByLevel={modalFunctionNameOptionsByLevel}
+        vehicleSuggestions={vehicleSuggestions}
         onClose={() => setModalOpen(false)}
         onSaved={reload}
       />

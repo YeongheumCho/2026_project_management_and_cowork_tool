@@ -267,6 +267,9 @@ class SubProject(Base):
     # ---------- 커스텀 필드 (자유 형식 JSON) ----------
     custom_fields: Mapped[str] = mapped_column(Text, nullable=True)             # dict[str, Any] as JSON
 
+    created_by: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -295,12 +298,17 @@ class SubProject(Base):
     verifiers = relationship("User", secondary=subproject_verifiers)
     reviewers = relationship("User", secondary=subproject_reviewers)
     inreviewers = relationship("User", secondary=subproject_inreviewers)
+    creator = relationship("User", foreign_keys=[created_by])
     subtasks = relationship(
         "SubTask",
         back_populates="subproject",
         cascade="all, delete-orphan",
         order_by="SubTask.order_index",
     )
+
+    @property
+    def created_by_name(self) -> str | None:
+        return self.creator.name if self.creator else None
 
     @property
     def first_total_min(self) -> int:

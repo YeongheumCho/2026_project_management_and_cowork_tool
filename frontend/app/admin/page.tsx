@@ -40,6 +40,7 @@ export default function AdminPage() {
     handleUserCreate,
     handleUserDelete,
     handlePasswordReset,
+    handleProfileSave,
   } = useAdminUsers(isAdmin);
 
   useEffect(() => {
@@ -112,6 +113,7 @@ export default function AdminPage() {
           onUserCreate={(payload) => handleUserCreate(payload)}
           onUserDelete={(member) => void handleUserDelete(member)}
           onPasswordReset={(member, pw) => handlePasswordReset(member, pw)}
+          onProfileSave={(member, payload) => handleProfileSave(member, payload)}
         />
       )}
 

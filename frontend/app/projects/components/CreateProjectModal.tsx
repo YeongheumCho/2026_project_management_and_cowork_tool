@@ -13,11 +13,13 @@ import {
   type ProjectVehicleSet,
 } from '../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
+import type { VehicleSuggestions } from '../lib/vehicleSuggestions';
 import VehicleSetEditor, { normalizeVehicleSets } from './VehicleSetEditor';
 
 type Props = {
   open: boolean;
   defaultDate?: string;
+  vehicleSuggestions?: VehicleSuggestions;
   onClose: () => void;
   onCreated: (project: Project) => Promise<void> | void;
   onError: (message: string) => void;
@@ -26,6 +28,7 @@ type Props = {
 export default function CreateProjectModal({
   open,
   defaultDate,
+  vehicleSuggestions,
   onClose,
   onCreated,
   onError,
@@ -250,6 +253,7 @@ export default function CreateProjectModal({
             value={vehicleSets}
             onChange={setVehicleSets}
             disabled={busy}
+            suggestions={vehicleSuggestions}
           />
         </div>
 

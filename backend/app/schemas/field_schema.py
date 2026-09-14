@@ -5,7 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
-FieldType = Literal["text", "number", "date", "select", "textarea", "checkbox"]
+FieldType = Literal["text", "number", "date", "select", "textarea", "checkbox", "members"]
 
 
 class FieldOption(BaseModel):

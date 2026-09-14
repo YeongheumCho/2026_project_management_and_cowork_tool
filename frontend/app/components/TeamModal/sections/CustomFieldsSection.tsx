@@ -36,6 +36,21 @@ export default function CustomFieldsSection({
       </h4>
       <div className="grid gap-3 sm:grid-cols-3">
         {sorted.map((field) => {
+          if (field.field_type === 'members' && !isMultiRoleField(field.key)) {
+            return (
+              <Field key={field.key} label={field.label} full required={field.required}>
+                <div className="max-h-[240px] overflow-y-auto rounded-xl border border-border bg-surface-muted p-3">
+                  <OrganizationMemberPicker
+                    users={roleUsers}
+                    selectedIds={parseMemberIds(values[field.key])}
+                    onChange={(userIds) => onChange(field.key, userIds.join(','))}
+                    emptyLabel="프로젝트 참여 인원이 없습니다."
+                    disabled={disabled}
+                  />
+                </div>
+              </Field>
+            );
+          }
           if (isMultiRoleField(field.key) && onRoleSelectionChange) {
             return (
               <Field key={field.key} label={field.label} full required={field.required}>
@@ -68,6 +83,15 @@ export default function CustomFieldsSection({
 
 function isMultiRoleField(key: string) {
   return key === 'verifier_id' || key === 'reviewer_id' || key === 'inreviewer_id';
+}
+
+/** '프로젝트원 선택' 필드 값은 사용자 id를 쉼표로 이어 붙인 문자열로 저장한다. */
+export function parseMemberIds(value: string | undefined) {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map((part) => Number(part.trim()))
+    .filter((id) => Number.isInteger(id) && id > 0);
 }
 
 type FieldInputProps = {

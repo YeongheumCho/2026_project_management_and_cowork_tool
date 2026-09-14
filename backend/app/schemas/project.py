@@ -426,6 +426,8 @@ class SubProjectResponse(BaseModel):
     status: str
     progress: float
     subtasks: list[SubTaskResponse] = []
+    created_by: Optional[int] = None
+    created_by_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

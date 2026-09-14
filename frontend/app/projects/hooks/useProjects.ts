@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   apiFetch,
   type MajorProject,
+  type ProjectFieldSchema,
   type ProjectHistorySummary,
   type Project,
   type ProjectTimeSummary,
@@ -16,6 +17,7 @@ type UseProjectsResult = {
   majorProjects: MajorProject[];
   subprojects: SubProject[];
   users: UserBrief[];
+  fieldSchemas: ProjectFieldSchema[];
   timeByProject: Map<number, ProjectTimeSummary>;
   historyByProject: Map<number, ProjectHistorySummary>;
   byProject: Map<number, SubProject[]>;
@@ -30,6 +32,7 @@ export function useProjects(enabled: boolean): UseProjectsResult {
   const [majorProjects, setMajorProjects] = useState<MajorProject[]>([]);
   const [subprojects, setSubProjects] = useState<SubProject[]>([]);
   const [users, setUsers] = useState<UserBrief[]>([]);
+  const [fieldSchemas, setFieldSchemas] = useState<ProjectFieldSchema[]>([]);
   const [timeSummary, setTimeSummary] = useState<ProjectTimeSummary[]>([]);
   const [historySummary, setHistorySummary] = useState<ProjectHistorySummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,19 +41,29 @@ export function useProjects(enabled: boolean): UseProjectsResult {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [majorProjectList, projectList, subprojectList, userList, timeSummaryList, historySummaryList] =
-        await Promise.all([
-          apiFetch<MajorProject[]>('/major-projects'),
-          apiFetch<Project[]>('/projects'),
-          apiFetch<SubProject[]>('/subprojects'),
-          apiFetch<UserBrief[]>('/users'),
-          apiFetch<ProjectTimeSummary[]>('/projects/time-summary'),
-          apiFetch<ProjectHistorySummary[]>('/projects/history-summary'),
-        ]);
+      const [
+        majorProjectList,
+        projectList,
+        subprojectList,
+        userList,
+        timeSummaryList,
+        historySummaryList,
+        fieldSchemaList,
+      ] = await Promise.all([
+        apiFetch<MajorProject[]>('/major-projects'),
+        apiFetch<Project[]>('/projects'),
+        apiFetch<SubProject[]>('/subprojects'),
+        apiFetch<UserBrief[]>('/users'),
+        apiFetch<ProjectTimeSummary[]>('/projects/time-summary'),
+        apiFetch<ProjectHistorySummary[]>('/projects/history-summary'),
+        // 템플릿은 내보내기 이름 변환용 부가 정보라 실패해도 목록은 보여준다.
+        apiFetch<ProjectFieldSchema[]>('/field-schemas').catch(() => [] as ProjectFieldSchema[]),
+      ]);
       setMajorProjects(majorProjectList);
       setProjects(projectList);
       setSubProjects(subprojectList);
       setUsers(userList);
+      setFieldSchemas(fieldSchemaList);
       setTimeSummary(timeSummaryList);
       setHistorySummary(historySummaryList);
       setError('');
@@ -99,6 +112,7 @@ export function useProjects(enabled: boolean): UseProjectsResult {
     majorProjects,
     subprojects,
     users,
+    fieldSchemas,
     timeByProject,
     historyByProject,
     byProject,
