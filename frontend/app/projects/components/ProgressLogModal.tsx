@@ -2,7 +2,12 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Modal from '../../components/Modal';
-import { apiFetch, type ProgressLog, type SubProject } from '../../lib/api';
+import {
+  apiFetch,
+  type ProgressLog,
+  type SubProject,
+  type SubProjectProgressSummary,
+} from '../../lib/api';
 import { toISODate } from '../../lib/calendar';
 
 type Props = {
@@ -24,6 +29,7 @@ export default function ProgressLogModal({
   initialProgressPercent,
 }: Props) {
   const [logs, setLogs] = useState<ProgressLog[]>([]);
+  const [summary, setSummary] = useState<SubProjectProgressSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -37,8 +43,13 @@ export default function ProgressLogModal({
     setLoading(true);
     setMessage('');
     try {
-      const fetched = await apiFetch<ProgressLog[]>(`/subprojects/${subproject.id}/progress`);
+      const [fetched, fetchedSummary] = await Promise.all([
+        apiFetch<ProgressLog[]>(`/subprojects/${subproject.id}/progress`),
+        apiFetch<SubProjectProgressSummary>(`/subprojects/${subproject.id}/progress/summary`)
+          .catch(() => null),
+      ]);
       setLogs(fetched);
+      setSummary(fetchedSummary);
     } catch (error) {
       setMessage((error as Error).message);
     } finally {
@@ -176,6 +187,43 @@ export default function ProgressLogModal({
         </form>
 
         <section className="rounded-2xl border border-border bg-surface-muted p-4">
+          {summary && summary.owner_count > 0 && (
+            <div className="mb-4 rounded-xl border border-border bg-white p-3">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-text">담당자별 기여</h3>
+                <p className="text-xs font-semibold text-text">
+                  {summary.owner_count}명 평균 → {Math.round(summary.progress)}%
+                </p>
+              </div>
+              <p className="mt-1 text-xs text-text-subtle">
+                하위 프로젝트 진행률은 담당자별 최신 기록의 평균입니다. 한 사람이 0%를
+                기록해도 다른 담당자의 기록이 남아 있으면 0%가 되지 않습니다.
+              </p>
+              <ul className="mt-3 space-y-1.5">
+                {summary.contributions.map((item) => (
+                  <li
+                    key={item.user_id}
+                    className="flex items-center justify-between gap-3 text-xs"
+                  >
+                    <span className="min-w-0 truncate text-text">
+                      {item.user_name}
+                      {!item.is_assignee && (
+                        <span className="ml-1 text-text-subtle">(담당자 아님 · 기록만)</span>
+                      )}
+                    </span>
+                    <span className="shrink-0 text-text-muted">
+                      {item.latest_percent == null
+                        ? '기록 없음 (0%)'
+                        : `${item.latest_percent}%${item.work_date ? ` · ${item.work_date}` : ''}`}
+                      <span className="ml-2 font-semibold text-text">
+                        +{item.contributed_percent}%
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <h3 className="text-base font-semibold text-text">진행률 이력</h3>
           <div className="mt-4 max-h-[360px] space-y-2 overflow-y-auto pr-1">
             {loading && (
@@ -190,7 +238,12 @@ export default function ProgressLogModal({
               logs.map((log) => (
                 <div key={log.id} className="rounded-xl border border-border bg-white p-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-text">{log.progress_percent}%</p>
+                    <p className="text-sm font-semibold text-text">
+                      {log.progress_percent}%
+                      {log.user_name && (
+                        <span className="ml-2 text-xs font-medium text-text-subtle">{log.user_name}</span>
+                      )}
+                    </p>
                     <p className="shrink-0 text-xs text-text-subtle">{log.work_date}</p>
                   </div>
                   <p className="mt-1 text-xs text-text-muted">

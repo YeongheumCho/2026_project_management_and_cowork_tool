@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.dependencies import get_current_user, get_db, require_admin
-from app.models.project import Project, SubProject
+from app.models.project import STATUS_PLANNED, Project, SubProject, SubTask
 from app.models.user import User
 from app.models.workflow import WORKLOG_RUNNING, WorkLog
 from app.schemas.project import (
@@ -18,6 +18,7 @@ from app.schemas.project import (
     ProjectUpdate,
 )
 from app.routers.projects._helpers import (
+    _KEFICO_COPY_FIELDS,
     _ensure_project_type_allowed,
     _get_visible_project_ids_for_user,
     _load_major_project_for_user,
@@ -28,6 +29,22 @@ from app.routers.projects._helpers import (
 
 
 router = APIRouter(tags=["projects"])
+
+# 복사본에서는 "설정"만 가져오고 "진행 기록"은 새로 시작하도록 비우는 필드
+_PROGRESS_RESET_FIELDS = {
+    "first_verify_status",
+    "first_setup_min",
+    "first_aud_min",
+    "first_review_min",
+    "inreview_status",
+    "inreview_setup_min",
+    "inreview_aud_min",
+    "inreview_feedback_min",
+    "change_feedback_min",
+    "change_revalidate_min",
+    "issue_note",
+    "completed_on",
+}
 
 
 # ========== Projects ==========
@@ -71,6 +88,101 @@ def create_project(
         .where(Project.id == project.id)
     )
     return _serialize_project_response(project)
+
+
+@router.post(
+    "/projects/{project_id}/duplicate",
+    response_model=ProjectResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def duplicate_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    source = db.scalar(
+        select(Project)
+        .options(
+            selectinload(Project.participants),
+            selectinload(Project.subprojects).options(
+                selectinload(SubProject.assignees),
+                selectinload(SubProject.verifiers),
+                selectinload(SubProject.reviewers),
+                selectinload(SubProject.inreviewers),
+                selectinload(SubProject.subtasks),
+            ),
+        )
+        .where(Project.id == project_id)
+    )
+    if not source:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="프로젝트를 찾을 수 없습니다.",
+        )
+
+    # 생성과 동일한 권한 규칙: 관리자이거나 해당 대프로젝트의 멤버
+    if source.major_project_id is not None:
+        _load_major_project_for_user(db, source.major_project_id, current_user)
+    elif current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="이 프로젝트를 복사할 권한이 없습니다.",
+        )
+
+    copy = Project(
+        major_project_id=source.major_project_id,
+        name=f"{source.name} (복사본)",
+        project_type=source.project_type,
+        start_date=source.start_date,
+        end_date=source.end_date,
+        vehicle_sets=source.vehicle_sets,
+        created_by=current_user.id,
+    )
+    copy.participants = list(source.participants)
+
+    for sp in source.subprojects:
+        new_sp = SubProject(
+            name=sp.name,
+            assignee_id=sp.assignee_id,
+            start_date=sp.start_date,
+            end_date=sp.end_date,
+            status=STATUS_PLANNED,
+            progress=0,
+            custom_fields=sp.custom_fields,
+            created_by=current_user.id,
+        )
+        for fname in _KEFICO_COPY_FIELDS:
+            if fname in _PROGRESS_RESET_FIELDS:
+                continue
+            setattr(new_sp, fname, getattr(sp, fname))
+        new_sp.upload_done = False
+        new_sp.assignees = list(sp.assignees)
+        new_sp.verifiers = list(sp.verifiers)
+        new_sp.reviewers = list(sp.reviewers)
+        new_sp.inreviewers = list(sp.inreviewers)
+        for task in sp.subtasks:
+            new_sp.subtasks.append(
+                SubTask(
+                    name=task.name,
+                    order_index=task.order_index,
+                    weight=task.weight,
+                    is_done=False,
+                )
+            )
+        copy.subprojects.append(new_sp)
+
+    db.add(copy)
+    db.commit()
+    copy = db.scalar(
+        select(Project)
+        .options(
+            selectinload(Project.major_project),
+            selectinload(Project.participants),
+            selectinload(Project.subprojects).selectinload(SubProject.assignees),
+        )
+        .where(Project.id == copy.id)
+    )
+    return _serialize_project_response(copy)
 
 
 @router.get("/projects", response_model=list[ProjectResponse])

@@ -317,7 +317,7 @@ function MemberChips({
             onClick={() => onSelect(user.id)}
             className={`inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full border px-[9px] py-1 text-micro ${
               active
-                ? `${softColorForPosition(user.position)} ${textColorForPosition(user.position)} border-transparent`
+                ? `${softColorForPosition(user.position)} ${textColorForPosition(user.position)} border-transparent font-bold`
                 : 'border-border text-text-subtle hover:bg-surface-muted'
             }`}
           >

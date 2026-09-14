@@ -39,6 +39,7 @@ type Props = {
   onEditSub: (sp: SubProject) => void;
   onEditProject: (project: Project) => void;
   onDeleteProject: (project: Project) => void;
+  onDuplicateProject: (project: Project) => void;
 };
 
 export default function ProjectCard({
@@ -58,6 +59,7 @@ export default function ProjectCard({
   onEditSub,
   onEditProject,
   onDeleteProject,
+  onDuplicateProject,
 }: Props) {
   const exportOptions = useMemo(() => {
     const memberFieldKeys = new Set<string>();
@@ -211,6 +213,9 @@ export default function ProjectCard({
                 <>
                   <ActionButton onClick={() => onEditProject(project)}>
                     프로젝트 수정
+                  </ActionButton>
+                  <ActionButton onClick={() => onDuplicateProject(project)}>
+                    프로젝트 복사
                   </ActionButton>
                   <ActionButton tone="danger" onClick={() => onDeleteProject(project)}>
                     프로젝트 삭제

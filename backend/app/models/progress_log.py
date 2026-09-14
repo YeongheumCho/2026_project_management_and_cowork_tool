@@ -37,3 +37,8 @@ class ProgressLog(Base):
 
     project = relationship("Project", back_populates="progress_logs")
     subproject = relationship("SubProject")
+    user = relationship("User")
+
+    @property
+    def user_name(self) -> str | None:
+        return self.user.name if self.user else None
