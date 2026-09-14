@@ -342,7 +342,7 @@ export default function TeamModal({
     !derivedName ||
     (mode === 'create' && fieldSchemaOptions.length === 0) ||
     !f.projectId ||
-    f.assigneeIds.length === 0 ||
+    // B-83: 담당자는 미지정으로 두고 나중에 항목에서 지정할 수 있다.
     !f.startDate ||
     !f.endDate ||
     f.endDate < f.startDate ||

@@ -763,7 +763,17 @@ export default function WorkHistoryManager({
                 </td>
                 <td className="px-4 py-3">{formatDate(row.started_on)}</td>
                 <td className="px-4 py-3">{formatDate(row.ended_on)}</td>
-                <td className="px-4 py-3">{formatMinutes(row.worked_minutes)}</td>
+                <td className="px-4 py-3">
+                  {formatMinutes(row.worked_minutes)}
+                  {/* B-82: 어떤 검증에 얼마나 걸렸는지 단계별로 보여준다 */}
+                  {!!row.stage_breakdown?.length && (
+                    <span className="mt-0.5 block text-tiny text-text-subtle">
+                      {row.stage_breakdown
+                        .map((item) => `${item.stage_label} ${formatMinutes(item.minutes)}`)
+                        .join(' · ')}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-2">
                     <button

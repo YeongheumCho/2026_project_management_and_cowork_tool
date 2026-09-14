@@ -18,6 +18,7 @@ import ProjectCard from './components/ProjectCard';
 import ProjectManageModal from './components/ProjectManageModal';
 import CsvImportModal from './components/CsvImportModal';
 import ProgressLogModal from './components/ProgressLogModal';
+import VerifyTimeModal from './components/VerifyTimeModal';
 import ProjectListToolbar, {
   EMPTY_PROJECT_LIST_FILTER,
   applyProjectListFilter,
@@ -59,6 +60,8 @@ export default function ProjectsPage() {
   const [modalProjectId, setModalProjectId] = useState<number | undefined>();
   const [modalInitial, setModalInitial] = useState<SubProject | null>(null);
   const [progressTarget, setProgressTarget] = useState<SubProject | null>(null);
+  // B-73: 담당자별 검증 시간 기록 창
+  const [timeTarget, setTimeTarget] = useState<SubProject | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deletingProject, setDeletingProject] = useState(false);
   const [duplicateTarget, setDuplicateTarget] = useState<Project | null>(null);
@@ -269,6 +272,7 @@ export default function ProjectsPage() {
             onAddSub={openCreateSub}
             onCsvImport={openCsvImport}
             onOpenSubProgress={openSubProject}
+            onOpenSubTime={setTimeTarget}
             onEditSub={openEditSub}
             onEditProject={openEditProject}
             onDeleteProject={requestDeleteProject}
@@ -321,6 +325,15 @@ export default function ProjectsPage() {
         open={progressTarget !== null}
         subproject={progressTarget}
         onClose={() => setProgressTarget(null)}
+        onSaved={reload}
+      />
+
+      <VerifyTimeModal
+        open={timeTarget !== null}
+        subproject={timeTarget}
+        meId={me?.id ?? null}
+        isAdmin={!!isAdmin}
+        onClose={() => setTimeTarget(null)}
         onSaved={reload}
       />
 

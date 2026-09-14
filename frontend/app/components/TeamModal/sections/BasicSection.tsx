@@ -134,11 +134,10 @@ export default function BasicSection({
         <Field
           label="담당자"
           span={2}
-          required
           helper={
             selectedProject?.participants.length
-              ? '이 프로젝트에 참여 중인 인원만 선택할 수 있습니다.'
-              : '프로젝트 참여 인원이 아직 없으면 전체 조직에서 선택합니다.'
+              ? '이 프로젝트에 참여 중인 인원만 선택할 수 있습니다. 비워 두고 나중에 지정할 수 있습니다.'
+              : '프로젝트 참여 인원이 아직 없으면 전체 조직에서 선택합니다. 비워 두고 나중에 지정할 수 있습니다.'
           }
         >
           <div className="max-h-[280px] overflow-y-auto rounded-xl border border-border bg-surface-muted p-3 pr-2">

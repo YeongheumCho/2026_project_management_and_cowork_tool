@@ -36,6 +36,8 @@ type Props = {
   onAddSub: (projectId: number) => void;
   onCsvImport: (projectId: number) => void;
   onOpenSubProgress: (sp: SubProject) => void;
+  /** B-73: 담당자별 검증 시간 기록 */
+  onOpenSubTime?: (sp: SubProject) => void;
   onEditSub: (sp: SubProject) => void;
   onEditProject: (project: Project) => void;
   onDeleteProject: (project: Project) => void;
@@ -56,6 +58,7 @@ export default function ProjectCard({
   onAddSub,
   onCsvImport,
   onOpenSubProgress,
+  onOpenSubTime,
   onEditSub,
   onEditProject,
   onDeleteProject,
@@ -261,6 +264,7 @@ export default function ProjectCard({
                   key={sp.id}
                   sp={sp}
                   onClick={onOpenSubProgress}
+                  onOpenTime={onOpenSubTime}
                   canEdit={canManageSubprojects}
                   onEdit={onEditSub}
                 />

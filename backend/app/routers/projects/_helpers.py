@@ -21,9 +21,15 @@ from app.models.project import (
     subproject_assignees,
 )
 from app.models.progress_log import ProgressLog
+from app.models.time_entry import STAGE_LABELS, SubProjectTimeEntry
 from app.models.user import User
 from app.models.workflow import ProjectExecutionHistory, WORKLOG_RUNNING, WorkLog
-from app.schemas.project import MajorProjectResponse, ProjectHistoryEntry, ProjectResponse
+from app.schemas.project import (
+    HistoryStageMinutes,
+    MajorProjectResponse,
+    ProjectHistoryEntry,
+    ProjectResponse,
+)
 
 
 # ?꾨줈?앺듃 ?좏삎 ???몃? ?쒖뒪???쒗뵆由?留ㅽ븨
@@ -169,8 +175,12 @@ def _load_valid_assignees(
     db: Session,
     project: Project | None,
     assignee_ids: list[int],
+    allow_empty: bool = False,
 ) -> list[User]:
+    # B-83: 담당자를 비운 채로 하위 프로젝트를 만들고 나중에 지정할 수 있다.
     if not assignee_ids:
+        if allow_empty:
+            return []
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="?대떦?먮? 1紐??댁긽 ?좏깮?댁＜?몄슂.",
@@ -568,11 +578,45 @@ def _sync_subproject_execution_history(
         history.keyword_text = _build_history_keywords(project, subproject)
 
 
+def _load_stage_minutes_map(
+    db: Session,
+    subproject_ids: list[int],
+) -> dict[tuple[int, int], list[HistoryStageMinutes]]:
+    """B-82: (user_id, subproject_id) -> 단계별 소요 시간.
+
+    수행 이력 목록에서 한 번에 읽어 행마다 쿼리가 나가지 않게 한다.
+    """
+    if not subproject_ids:
+        return {}
+
+    entries = db.scalars(
+        select(SubProjectTimeEntry)
+        .where(SubProjectTimeEntry.subproject_id.in_(subproject_ids))
+        .order_by(SubProjectTimeEntry.stage.asc())
+    ).all()
+
+    grouped: dict[tuple[int, int], list[HistoryStageMinutes]] = {}
+    for entry in entries:
+        minutes = entry.total_min
+        if minutes <= 0:
+            continue
+        key = (entry.user_id, entry.subproject_id)
+        grouped.setdefault(key, []).append(
+            HistoryStageMinutes(
+                stage=entry.stage,
+                stage_label=STAGE_LABELS.get(entry.stage, entry.stage),
+                minutes=minutes,
+            )
+        )
+    return grouped
+
+
 def _serialize_history_entry(
     history: ProjectExecutionHistory,
     user: User | None,
     project: Project | None = None,
     major_project: MajorProject | None = None,
+    stage_minutes: list[HistoryStageMinutes] | None = None,
 ) -> ProjectHistoryEntry:
     history_project = project or history.project
     history_major_project = major_project or (
@@ -596,6 +640,7 @@ def _serialize_history_entry(
         completion_rate=float(history.completion_rate),
         recorded_at=history.recorded_at,
         manual_override=bool(history.manual_override),
+        stage_breakdown=stage_minutes or [],
     )
 
 

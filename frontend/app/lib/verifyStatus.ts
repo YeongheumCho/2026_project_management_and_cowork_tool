@@ -6,10 +6,15 @@
  *
  * backend/app/schemas/project.py 의 VerifyState Literal 과 동기화 필요
  */
-import { VERIFY_STATE_LABEL, type VerifyState } from './api';
+import {
+  FIRST_VERIFY_STATES,
+  INREVIEW_STATES,
+  VERIFY_STATE_LABEL,
+  type VerifyState,
+} from './api';
 
 export type { VerifyState };
-export { VERIFY_STATE_LABEL };
+export { VERIFY_STATE_LABEL, FIRST_VERIFY_STATES, INREVIEW_STATES };
 
 /** 의미 분류 — 시맨틱 색상 매핑용 */
 type Tone = 'idle' | 'info' | 'warn' | 'fail' | 'pass';
@@ -17,6 +22,8 @@ type Tone = 'idle' | 'info' | 'warn' | 'fail' | 'pass';
 const TONE_BY_STATE: Record<VerifyState, Tone> = {
   not_started: 'idle',
   in_progress: 'info',
+  review_waiting: 'idle',
+  review_in_progress: 'info',
   all_pass: 'pass',
   fail_issue: 'fail',
   pass_issue: 'warn',
@@ -67,3 +74,17 @@ export const VERIFY_STATE_OPTIONS: Array<{ value: VerifyState; label: string }> 
     value,
     label: VERIFY_STATE_LABEL[value],
   }));
+
+/**
+ * B-26: 칸별 선택 목록.
+ * 1차 검증 칸과 InReview 칸이 서로 다른 목록을 쓴다.
+ */
+export const FIRST_VERIFY_STATE_OPTIONS = FIRST_VERIFY_STATES.map((value) => ({
+  value,
+  label: VERIFY_STATE_LABEL[value],
+}));
+
+export const INREVIEW_STATE_OPTIONS = INREVIEW_STATES.map((value) => ({
+  value,
+  label: VERIFY_STATE_LABEL[value],
+}));

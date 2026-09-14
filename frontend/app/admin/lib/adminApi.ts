@@ -56,6 +56,8 @@ export type ProjectHistoryEntry = {
   worked_minutes: number;
   completion_rate: number;
   recorded_at: string;
+  /** B-82: 어떤 검증 단계에 얼마가 들었는지. 담당자별 기록이 있을 때만 채워진다. */
+  stage_breakdown?: Array<{ stage: string; stage_label: string; minutes: number }>;
 };
 
 type FetchOptions = {

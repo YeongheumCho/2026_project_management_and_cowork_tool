@@ -20,6 +20,7 @@ from app.schemas.project import (
 from app.routers.projects._helpers import (
     _build_history_keywords,
     _get_visible_project_ids_for_user,
+    _load_stage_minutes_map,
     _load_subproject,
     _serialize_history_entry,
     _sync_subproject_execution_history,
@@ -69,8 +70,19 @@ def list_project_execution_history(
         stmt = stmt.where(ProjectExecutionHistory.ended_on <= end_date)
 
     rows = db.execute(stmt).all()
+    # B-82: 이력마다 어떤 검증 단계에 얼마가 들었는지 함께 내려준다.
+    stage_map = _load_stage_minutes_map(
+        db,
+        [history.subproject_id for history, *_ in rows if history.subproject_id],
+    )
     return [
-        _serialize_history_entry(history, user, project, major_project)
+        _serialize_history_entry(
+            history,
+            user,
+            project,
+            major_project,
+            stage_map.get((history.user_id, history.subproject_id)),
+        )
         for history, user, project, major_project in rows
     ]
 
