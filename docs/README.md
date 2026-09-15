@@ -5,6 +5,7 @@
 | 문서 | 내용 |
 |---|---|
 | [Windows 배포 가이드](../DEPLOY_GUIDE_WINDOWS.md) | Rancher Desktop 설치부터 실행까지. 개발 워크플로우와 문제 해결도 여기에 있다 |
+| [폐쇄망 배포](./airgap-deploy.md) | 인터넷이 없는 망으로 옮기고 최신화하는 방법. git 번들과 도커 이미지 |
 | [사내 도메인 배포](./internal-domain-deployment.md) | 컴퓨터 이름으로 접속하게 만드는 리버스 프록시 구성 |
 
 ## 운영

@@ -88,10 +88,16 @@ idnum,name,center,office,team,position,email,phone
 
 ## 되돌리기
 
-반영 전 상태는 `backups/` 아래에 남겨 둡니다. 되돌리려면 해당 SQL을 넣으면 됩니다.
+반영 전 상태는 `backups/` 아래에 남겨 둡니다. 파일 이름은 실행 시각으로 정해집니다.
+
+> [!NOTE]
+> `backups/` 는 비밀번호 해시와 연락처가 들어 있어 저장소에 올리지 않습니다.
+> 각 PC 에만 남습니다.
+
+되돌리려면 해당 SQL 을 넣습니다.
 
 ```bash
-docker compose exec -T db psql -U $POSTGRES_USER -d $POSTGRES_DB < backups/users_before_sync_260915.sql
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < backups/users_before_sync_260915.sql
 ```
 
 큰 변경 전에는 백업을 먼저 뜨는 편이 안전합니다.
@@ -135,4 +141,9 @@ docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -
 ## 기록
 
 - 최초 반영: 2026-09-15. E-모빌리티센터 98명 기준으로 신규 13명, 변경 2명, 비활성 20명 처리.
-- 견본 파일: `database/seeds/org_emobility_260915.csv`
+  관리자였던 퇴사자 1명도 함께 비활성 처리.
+- 반영 후 인원: 전체 118명 (활성 98 / 비활성 20)
+
+> [!NOTE]
+> 내려받은 CSV 는 사내 인원의 이름·이메일·전화번호가 들어 있어 저장소에 올리지 않습니다.
+> `.gitignore` 가 `database/seeds/org_*.csv` 를 걸러냅니다. 각 PC 에만 두세요.

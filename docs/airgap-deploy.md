@@ -45,7 +45,7 @@ cd "C:\Users\USER\Desktop\KPI\2026_project_management_and_cowork_tool"
 폐쇄망에 반영된 커밋을 알면 함께 넘겨서, 의존성이 바뀌었는지 확인받을 수 있습니다.
 
 ```powershell
-.\scripts\airgap\export-bundle.ps1 -SinceRef 1cf0718
+.\scripts\airgap\export-bundle.ps1 -SinceRef e4da4a6
 ```
 
 처음 설치용 전체 묶음은 이렇게 만듭니다.
@@ -83,15 +83,26 @@ tar -czf surelog-bundle-260915.tar.gz surelog-bundle-260915
 
 ```powershell
 # 폐쇄망에 반영된 커밋부터 현재까지
-git bundle create main_branch_260915.bundle 1cf0718..main_branch
-git bundle verify main_branch_260915.bundle
+# 폐쇄망의 현재 커밋(git log --oneline -1)부터 지금까지를 담는다
+git bundle create main_branch_261001.bundle e4da4a6..main_branch
+git bundle verify main_branch_261001.bundle
 ```
+
+> [!TIP]
+> 기준 커밋이 폐쇄망에 없으면 `git pull` 이 실패합니다.
+> 확실하지 않으면 범위 없이 전체를 담으세요. 수 MB 로 커집니다.
+>
+> ```powershell
+> git bundle create main_branch_full.bundle main_branch
+> ```
 
 **폐쇄망 PC**
 
 ```powershell
 cd C:\surelog
-git pull D:\main_branch_260915.bundle main_branch
+git log --oneline -1                                # 현재 커밋 확인
+git pull D:\main_branch_261001.bundle main_branch
+git log --oneline -1                                # 반영 확인
 ```
 
 > [!WARNING]
@@ -229,7 +240,7 @@ docker system df
 
 기존 데이터는 지우지 않습니다. 컬럼을 더하기만 합니다.
 
-PR #62 이후 늘어난 것은 이렇습니다.
+2026-09-15 반영(PR #62 → #69)에서 늘어난 것은 이렇습니다.
 
 | 대상 | 내용 |
 |---|---|
@@ -308,3 +319,13 @@ docker compose up -d
 ```
 
 DB 까지 되돌려야 하면 백업 SQL 을 넣습니다. 위 "DB 백업" 항목을 보세요.
+
+---
+
+## 반영 이력
+
+| 날짜 | 범위 | 담아 간 것 |
+|---|---|---|
+| 2026-09-15 | PR #62 → #69 (`1cf0718` → `e4da4a6`) | git 번들 125KB + `images.tar` 556MB |
+
+다음 번들은 위 표의 마지막 커밋을 기준으로 만들면 됩니다.
