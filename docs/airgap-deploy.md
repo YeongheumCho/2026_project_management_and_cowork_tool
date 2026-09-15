@@ -75,7 +75,44 @@ tar -czf surelog-bundle-260915.tar.gz surelog-bundle-260915
 
 ---
 
-## 2. 폐쇄망 PC 에서 반영하기
+## 2. 소스 이력만 옮길 때 (git bundle)
+
+파이썬 코드나 문서만 바뀌었다면 이미지 없이 git 번들만 옮겨도 됩니다. 수백 KB 로 끝납니다.
+
+**인터넷 PC**
+
+```powershell
+# 폐쇄망에 반영된 커밋부터 현재까지
+git bundle create main_branch_260915.bundle 1cf0718..main_branch
+git bundle verify main_branch_260915.bundle
+```
+
+**폐쇄망 PC**
+
+```powershell
+cd C:\surelog
+git pull D:\main_branch_260915.bundle main_branch
+```
+
+> [!WARNING]
+> `git fetch ... main_branch:main_branch` 는 쓰지 마세요.
+> 그 브랜치가 체크아웃돼 있으면 `refusing to fetch into branch` 로 거부됩니다.
+> 체크아웃된 브랜치에 바로 받으려면 `git pull` 을 씁니다.
+
+받은 뒤 컨테이너를 다시 올립니다.
+
+```powershell
+docker compose up -d
+```
+
+> [!IMPORTANT]
+> **프론트엔드 화면은 git 번들만으로 바뀌지 않습니다.**
+> 빌드 결과가 이미지 안에 들어 있기 때문입니다. 화면이 바뀌었다면 `images.tar` 도 함께 옮기세요.
+> 백엔드·실시간·챗봇은 소스를 마운트하므로 git 번들만으로 반영됩니다.
+
+---
+
+## 3. 이미지까지 옮길 때
 
 USB 를 꽂고 묶음 폴더를 로컬로 복사한 뒤 실행합니다.
 
@@ -96,7 +133,7 @@ cd D:\surelog-bundle-260915
 
 ---
 
-## 3. 손으로 할 때 쓰는 명령어
+## 4. 손으로 할 때 쓰는 명령어
 
 스크립트를 쓰지 않고 직접 할 때의 순서입니다.
 
