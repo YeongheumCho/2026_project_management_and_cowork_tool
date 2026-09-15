@@ -37,6 +37,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: surelog-backend:latest
     container_name: cowork_backend
     restart: unless-stopped
     env_file:
@@ -57,6 +58,7 @@ services:
     build:
       context: ./realtime
       dockerfile: Dockerfile
+    image: surelog-realtime:latest
     container_name: cowork_realtime
     restart: unless-stopped
     env_file:
@@ -76,6 +78,7 @@ services:
     build:
       context: ./ai-chatbot
       dockerfile: Dockerfile
+    image: surelog-ai-chatbot:latest
     container_name: cowork_ai_chatbot
     restart: unless-stopped
     env_file:
@@ -93,6 +96,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    image: surelog-frontend:latest
     container_name: cowork_frontend
     restart: unless-stopped
     env_file:

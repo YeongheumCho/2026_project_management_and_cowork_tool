@@ -2,7 +2,8 @@
 
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import AppShell from '../../components/AppShell';
+import AppShell from '../../components/AppShell';
+import InlineMessage, { type MessageTone } from '../../components/InlineMessage';
 import {
   apiFetch,
   type ProgressLog,
@@ -36,6 +37,7 @@ function ProjectDetailContent() {
   const [logs, setLogs] = useState<ProgressLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [tone, setTone] = useState<MessageTone>('info');
 
   const [progressPercent, setProgressPercent] = useState('');
   const [comment, setComment] = useState('');
@@ -62,9 +64,14 @@ function ProjectDetailContent() {
       setProject(found);
       setSubprojects(fetchedSubprojects);
       setLogs(fetchedLogs);
-      if (!found) setMessage('프로젝트를 찾을 수 없습니다.');
+      if (!found) {
+        setTone('error');
+        setMessage('프로젝트를 찾을 수 없습니다.');
+      }
       else setMessage('');
     } catch (err) {
+      setTone('error');
+      setTone('error');
       setMessage((err as Error).message);
     } finally {
       setLoading(false);
@@ -80,6 +87,7 @@ function ProjectDetailContent() {
     if (!Number.isFinite(projectId)) return;
     const n = Number(progressPercent);
     if (!Number.isFinite(n) || n < 0 || n > 100) {
+      setTone('error');
       setMessage('진행률은 0~100 사이 숫자여야 합니다.');
       return;
     }
@@ -98,6 +106,7 @@ function ProjectDetailContent() {
       });
       setProgressPercent('');
       setComment('');
+      setTone('success');
       setMessage(
         isSubprojectMode
           ? '진행률 기록이 저장되고 하위 프로젝트 진행률에 반영되었습니다.'
@@ -132,11 +141,7 @@ function ProjectDetailContent() {
         <p className="mt-1 text-xs text-text-subtle">{subtitle}</p>
       </div>
 
-      {message && (
-        <p className="mb-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
-          {message}
-        </p>
-      )}
+      <InlineMessage tone={tone} className="mb-4">{message}</InlineMessage>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="flex flex-col rounded-2xl border border-border bg-white p-5 shadow-sm">
@@ -184,7 +189,7 @@ function ProjectDetailContent() {
 
             <button
               type="submit"
-              className="self-start rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-strong"
+              className="self-start rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
             >
               기록 저장
             </button>

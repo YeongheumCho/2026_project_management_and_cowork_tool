@@ -32,11 +32,11 @@ export default function Field({
     <div className={colSpan}>
       <label className="field-label">
         {label}
-        {required && <span className="ml-0.5 text-red-500">*</span>}
+        {required && <span className="ml-0.5 text-verify-fail-fg">*</span>}
       </label>
       {children}
       {error ? (
-        <span className="field-helper text-red-600">{error}</span>
+        <span className="field-helper text-verify-fail-fg">{error}</span>
       ) : helper ? (
         <span className="field-helper">{helper}</span>
       ) : null}

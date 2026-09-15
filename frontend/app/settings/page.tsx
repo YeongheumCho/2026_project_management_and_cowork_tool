@@ -73,12 +73,12 @@ export default function SettingsPage() {
   return (
     <AppShell me={me}>
       {error && (
-        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="mb-4 rounded-lg bg-verify-fail-bg px-3 py-2 text-sm text-verify-fail-fg">
           {error}
         </p>
       )}
       {message && (
-        <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        <p className="mb-4 rounded-lg bg-verify-pass-bg px-3 py-2 text-sm text-verify-pass-fg">
           {message}
         </p>
       )}
@@ -140,7 +140,7 @@ export default function SettingsPage() {
                   onClick={() => setDefaultCalendarView(value)}
                   className={`rounded-xl px-4 py-2 text-sm font-medium ${
                     defaultCalendarView === value
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-brand text-white'
                       : 'bg-white text-text'
                   }`}
                 >

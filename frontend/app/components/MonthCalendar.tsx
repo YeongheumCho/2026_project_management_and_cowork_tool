@@ -112,6 +112,35 @@ export default function MonthCalendar({
   const days = useMemo(() => getMonthMatrix(year, month), [year, month]);
   const today = toISODate(new Date());
 
+  // 이 달에 걸치는 일정이 하나도 없는지. 빈 격자만 보이면 고장난 것처럼 읽힌다.
+  const monthHasItems = useMemo(() => {
+    const first = new Date(year, month, 1);
+    const last = new Date(year, month + 1, 0);
+    return subprojects.some((sp) => {
+      const start = parseISODate(sp.start_date);
+      const end = parseISODate(sp.end_date);
+      return !(end < first || start > last);
+    });
+  }, [subprojects, year, month]);
+
+  // 가장 가까운 일정이 있는 달 — 빈 달에서 바로 이동할 수 있게 한다.
+  const nearestMonth = useMemo(() => {
+    if (monthHasItems || subprojects.length === 0) return null;
+    const cursorIndex = year * 12 + month;
+    let best: { distance: number; year: number; month: number } | null = null;
+    for (const sp of subprojects) {
+      for (const iso of [sp.start_date, sp.end_date]) {
+        const date = parseISODate(iso);
+        const index = date.getFullYear() * 12 + date.getMonth();
+        const distance = Math.abs(index - cursorIndex);
+        if (!best || distance < best.distance) {
+          best = { distance, year: date.getFullYear(), month: date.getMonth() };
+        }
+      }
+    }
+    return best;
+  }, [subprojects, year, month, monthHasItems]);
+
   const [popoverIso, setPopoverIso] = useState<string | null>(null);
   const [popoverItems, setPopoverItems] = useState<SubProject[]>([]);
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number; openUp: boolean }>({ top: 0, left: 0, openUp: false });
@@ -452,6 +481,26 @@ export default function MonthCalendar({
             })}
 
             {/* 팝오버는 아래 fixed 레이어에서 단일 렌더링 */}
+          </div>
+        )}
+
+        {/* 빈 달 안내 — 일정이 없어서 빈 격자만 보이는 상황을 설명한다 */}
+        {!monthHasItems && (
+          <div className="mt-3 rounded-xl border border-dashed border-border-strong bg-surface-muted px-4 py-3 text-center">
+            <p className="text-small text-text-muted">
+              {subprojects.length === 0
+                ? '표시할 일정이 없습니다.'
+                : `${formatMonth(year, month)}에는 일정이 없습니다.`}
+            </p>
+            {nearestMonth && onSelectMonth && (
+              <button
+                type="button"
+                onClick={() => onSelectMonth(nearestMonth.year, nearestMonth.month)}
+                className="mt-2 rounded-lg border border-brand-soft bg-white px-3 py-1.5 text-micro font-bold text-brand transition hover:bg-brand-soft"
+              >
+                가장 가까운 일정 보기 ({formatMonth(nearestMonth.year, nearestMonth.month)})
+              </button>
+            )}
           </div>
         )}
       </div>

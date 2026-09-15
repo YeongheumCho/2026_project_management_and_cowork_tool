@@ -19,7 +19,7 @@ const emptyVehicleSet: ProjectVehicleSet = {
 };
 
 const inputClass =
-  'mt-1 h-10 w-full rounded-lg border border-border px-3 py-2 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100';
+  'mt-1 h-10 w-full rounded-lg border border-border px-3 py-2 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100';
 
 const FIELDS: Array<{ key: VehicleSuggestionKey; label: string; placeholder: string }> = [
   { key: 'controller_name', label: '제어기명', placeholder: '예: VPC1.1' },

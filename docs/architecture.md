@@ -2,37 +2,33 @@
 
 ## 서비스 구성도
 
-```
-                          ┌─────────────────┐
-                          │    Frontend      │
-                          │ React + TS       │
-                          │  :3000           │
-                          └────────┬────────┘
-                                   │
-              ┌────────────────────┼────────────────────┐
-              │                    │                    │
-              ▼                    ▼                    ▼
-    ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-    │    Backend        │  │    Realtime       │  │   AI Chatbot     │
-    │  FastAPI REST     │  │  FastAPI WS       │  │   FastAPI        │
-    │    :8000          │  │    :8001          │  │    :8002         │
-    └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘
-             │                     │                      │
-             ▼                     ▼                      │
-    ┌──────────────────┐  ┌──────────────────┐           │
-    │   PostgreSQL      │  │     Redis         │           │
-    │    :5432          │  │    :6379          │           │
-    └──────────────────┘  └──────────────────┘           │
-             ▲                                             │
-             └─────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    U([브라우저]) --> CD["Caddy :80"]
+    CD --> FE["Frontend<br/>Next.js 15 + React 19<br/>:3000"]
+    FE -->|REST| BE["Backend<br/>FastAPI<br/>:8000"]
+    FE -->|WebSocket| RT["Realtime<br/>FastAPI WS<br/>:8001"]
+    FE -->|REST| AI["AI Chatbot<br/>FastAPI<br/>:8002"]
+    BE --> PG[("PostgreSQL :5432")]
+    RT --> PG
+    AI --> PG
+    BE <--> RD[("Redis :6379")]
+    RT <--> RD
 ```
 
 ## 데이터 흐름
 
 ### 인증 흐름
-1. 사용자 로그인 요청 → Backend `/api/v1/auth/login`
-2. JWT 토큰 발급 → Frontend localStorage 저장
-3. 이후 모든 API 요청에 `Authorization: Bearer <token>` 헤더 첨부
+
+```mermaid
+sequenceDiagram
+    participant F as Frontend
+    participant B as Backend
+    F->>B: POST /auth/login (사번 + 비밀번호)
+    B-->>F: JWT access_token
+    Note over F: localStorage 에 저장
+    F->>B: 이후 모든 요청<br/>Authorization: Bearer token
+```
 
 ### 실시간 채팅 흐름
 1. Frontend → WebSocket 연결: `ws://realtime:8001/ws/chat/{channel_id}?token=<jwt>`
@@ -44,11 +40,15 @@
 2. AI Chatbot 서버가 LLM API 호출
 3. 응답 반환
 
-## 담당자별 개발 영역
+## 브라우저에서 들어오는 길
 
-| 담당자 | 서비스 | 주요 파일 |
-|--------|--------|-----------|
-| 개발자 1 | backend/ | `app/api/`, `app/crud/`, `app/models/` |
-| 개발자 2 | realtime/ | `app/websocket/` |
-| 개발자 3 | frontend/, database/ | `src/`, `migrations/` |
-| 개발자 4 | ai-chatbot/ | `app/services/`, `app/api/` |
+실제 접속은 Caddy(80)를 거친다. Caddy가 프론트엔드(3000)로 넘기고, 프론트엔드의 `/backend/*`
+재작성 규칙이 백엔드(8000)로 보낸다. 그래서 사용자는 `http://localhost` 하나만 쓰면 된다.
+
+```
+브라우저 → Caddy :80 → Frontend :3000 ──(/backend/* 재작성)──> Backend :8000
+```
+
+## 폴더별 역할
+
+서비스별 폴더 구조는 [README](../README.md#폴더-구조)에 정리돼 있다.

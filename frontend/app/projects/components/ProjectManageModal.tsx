@@ -133,7 +133,7 @@ export default function ProjectManageModal({
             id="project-edit-name"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100"
           />
         </div>
 
@@ -152,7 +152,7 @@ export default function ProjectManageModal({
                 prev.filter((id) => nextMembers.some((member) => member.id === id)),
               );
             }}
-            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100"
           >
             <option value="">대프로젝트를 선택하세요</option>
             {majorProjects.map((majorProject) => (
@@ -177,7 +177,7 @@ export default function ProjectManageModal({
             id="project-edit-type"
             value={type}
             onChange={(event) => setType(event.target.value as ProjectType)}
-            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100"
           >
             {availableProjectTypes.map((option) => (
               <option key={option} value={option}>
@@ -207,7 +207,7 @@ export default function ProjectManageModal({
                 event.currentTarget.value = clampDateYear(event.currentTarget.value);
               }}
               onChange={(event) => setStartDate(clampDateYear(event.target.value))}
-              className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100"
             />
           </div>
           <div>
@@ -226,7 +226,7 @@ export default function ProjectManageModal({
                 event.currentTarget.value = clampDateYear(event.currentTarget.value);
               }}
               onChange={(event) => setEndDate(clampDateYear(event.target.value))}
-              className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100"
             />
           </div>
         </div>
@@ -271,7 +271,7 @@ export default function ProjectManageModal({
           <button
             type="submit"
             disabled={disabled}
-            className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy ? '저장 중...' : '프로젝트 저장'}
           </button>

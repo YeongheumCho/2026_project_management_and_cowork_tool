@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Modal from '../../components/Modal';
+import InlineMessage, { type MessageTone } from '../../components/InlineMessage';
 import {
   apiFetch,
   FIRST_VERIFY_STATES,
@@ -54,6 +55,7 @@ export default function VerifyTimeModal({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [tone, setTone] = useState<MessageTone>('info');
 
   const [stage, setStage] = useState<TimeEntryStage>('first_verify');
   const [role, setRole] = useState<TimeEntryRole>('verifier');
@@ -76,6 +78,7 @@ export default function VerifyTimeModal({
       );
       setSummary(fetched);
     } catch (error) {
+      setTone('error');
       setMessage((error as Error).message);
     } finally {
       setLoading(false);
@@ -124,10 +127,12 @@ export default function VerifyTimeModal({
     const aud = fieldLabels.aud ? toMinutes(audMin) : null;
     const work = toMinutes(workMin);
     if ([setupMin, audMin, workMin].some((raw) => raw.trim() !== '' && toMinutes(raw) === null)) {
+      setTone('error');
       setMessage('소요 시간은 0 이상 숫자(분)로 입력해 주세요.');
       return;
     }
     if (setup === null && aud === null && work === null) {
+      setTone('error');
       setMessage('소요 시간을 한 칸 이상 입력해 주세요.');
       return;
     }
@@ -152,9 +157,11 @@ export default function VerifyTimeModal({
         },
       );
       setSummary(fetched);
+      setTone('success');
       setMessage('저장했습니다.');
       await onSaved?.();
     } catch (error) {
+      setTone('error');
       setMessage((error as Error).message);
     } finally {
       setSaving(false);
@@ -173,6 +180,7 @@ export default function VerifyTimeModal({
       setSummary(fetched);
       await onSaved?.();
     } catch (error) {
+      setTone('error');
       setMessage((error as Error).message);
     } finally {
       setSaving(false);
@@ -202,9 +210,7 @@ export default function VerifyTimeModal({
         </button>
       </div>
 
-      {message && (
-        <p className="mt-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">{message}</p>
-      )}
+      <InlineMessage tone={tone} className="mt-4">{message}</InlineMessage>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <form onSubmit={submit} className="rounded-2xl border border-border bg-white p-4">
@@ -319,7 +325,7 @@ export default function VerifyTimeModal({
           <button
             type="submit"
             disabled={saving || !subproject}
-            className="mt-4 w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-4 w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? '저장 중...' : myEntry ? '기록 수정' : '기록 저장'}
           </button>

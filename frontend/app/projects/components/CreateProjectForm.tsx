@@ -198,7 +198,7 @@ export default function CreateProjectForm({
             <button
               type="submit"
               disabled={disabled}
-              className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-10 rounded-lg bg-brand px-4 text-sm font-medium text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? '생성 중...' : '+ 프로젝트 생성'}
             </button>

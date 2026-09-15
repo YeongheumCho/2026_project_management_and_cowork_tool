@@ -64,3 +64,11 @@ media/
 
 # OS
 .DS_Store
+
+# DB 백업 — 비밀번호 해시와 연락처가 들어 있어 저장소에 올리지 않는다
+backups/
+*.sql.bak
+
+# 조직도 원본 — 사내 인원 개인정보
+database/seeds/org_*.csv
+backend/scripts/data/*.csv

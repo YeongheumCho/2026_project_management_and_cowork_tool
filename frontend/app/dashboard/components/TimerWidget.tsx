@@ -164,14 +164,14 @@ export default function TimerWidget({
             </p>
           </div>
           {runningLogs.length > 0 && (
-            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+            <span className="rounded-full bg-verify-pass-bg px-2.5 py-0.5 text-xs font-semibold text-verify-pass-fg">
               {runningLogs.length}건 진행 중
             </span>
           )}
         </div>
 
         {error && (
-          <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p className="mb-4 rounded-lg bg-verify-fail-bg px-3 py-2 text-sm text-verify-fail-fg">
             {error}
           </p>
         )}
@@ -196,9 +196,9 @@ export default function TimerWidget({
                   key={candidate.id}
                   className={`rounded-xl border p-4 transition ${
                     isRunning
-                      ? 'border-emerald-200 bg-emerald-50'
+                      ? 'border-verify-pass-fg/30 bg-verify-pass-bg'
                       : isPaused
-                        ? 'border-amber-200 bg-amber-50'
+                        ? 'border-verify-warn-fg/30 bg-verify-warn-bg'
                         : 'border-border bg-white'
                   }`}
                 >
@@ -359,7 +359,7 @@ export default function TimerWidget({
               onClick={() =>
                 pendingStart && void startTask(pendingStart.candidate, [])
               }
-              className="rounded-xl border border-amber-200 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+              className="rounded-xl border border-verify-warn-fg/30 px-4 py-2 text-sm font-medium text-verify-warn-fg hover:bg-verify-warn-bg disabled:opacity-50"
             >
               기존 작업 일시정지
             </button>
@@ -373,7 +373,7 @@ export default function TimerWidget({
                   runningLogs.map((log) => log.id),
                 )
               }
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+              className="rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-50"
             >
               동시 진행
             </button>
@@ -491,8 +491,8 @@ function MiniButton({
 }
 
 const BUTTON_TONE = {
-  emerald: 'bg-emerald-600 text-white hover:bg-emerald-700',
-  amber: 'bg-amber-100 text-amber-800 hover:bg-amber-200',
+  emerald: 'bg-verify-pass-fg text-white hover:bg-verify-pass-fg',
+  amber: 'bg-verify-warn-bg text-verify-warn-fg hover:bg-verify-warn-bg',
   rose: 'bg-rose-100 text-rose-700 hover:bg-rose-200',
   slate: 'bg-surface-subtle text-text hover:bg-border-strong',
 };
@@ -504,8 +504,8 @@ const STATUS_LABEL = {
 };
 
 const STATUS_BADGE = {
-  running: 'bg-emerald-100 text-emerald-700',
-  paused: 'bg-amber-100 text-amber-700',
+  running: 'bg-verify-pass-bg text-verify-pass-fg',
+  paused: 'bg-verify-warn-bg text-verify-warn-fg',
   completed: 'bg-border-strong text-text',
 };
 

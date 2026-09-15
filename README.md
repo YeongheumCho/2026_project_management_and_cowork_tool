@@ -1,407 +1,222 @@
-# 2026 프로젝트 관리 & 협업 툴
+# SureLog AI
 
-Flow(flow.team)와 유사한 사내 업무 협업 도구. **KEFICO 5층 공식/정기/변경점 검증 및 기타 업무** 흐름에 맞춰 소프로젝트 단위로 일감을 추적한다.
+사내 업무 협업 도구. **HCU HILS 검증 업무** 흐름에 맞춰 대·중·하위 3단계로 일감을 추적합니다.
 
-## 구현된 기능 (현 시점)
+FastAPI · Next.js 15 · PostgreSQL 16 · Docker Compose
 
-**인증 · 팀원**
-- 회원가입 / 로그인 (JWT)
-- **관리자 / 일반 직원** 역할 구분 — 프로젝트·소프로젝트 생성/수정/삭제는 관리자만, 세부 태스크 체크는 담당자 본인도 가능
+> [!TIP]
+> 처음이라면 [Windows 배포 가이드](./DEPLOY_GUIDE_WINDOWS.md)부터 보세요. 전체 문서는 [docs/](./docs/README.md)에 있습니다.
 
-**프로젝트 & 소프로젝트**
-- 프로젝트 유형 4종 + 일반: `공식 검증 / 정기 검증 / 변경점 검증 / 기타 업무 / 일반`
-- 유형별 세부 태스크 템플릿 자동 생성
-  - 검증 3종: `사전 준비 → 1차 검증 → Review 작성 → InReview 반영 → 업로드/완료`
-  - 기타 업무: `계획 → 진행 → 정리`
-  - 일반: `기획 → 분석 → 설계 → 구현 → 검증`
-- 세부 태스크 체크 시 `progress` 자동 계산, 100%면 `completed`로 전이
-- 완료된 소프로젝트는 삭제 불가, 종료일 < 시작일은 422로 거부
+---
 
-**KEFICO 필드 (소프로젝트)**
-- 검증 공통 메타: 우선순위, 제어기명/버전/나라, TO번호/담당자, 검증 LEVEL (기초/LV1/LV2/BSW/LV3/LV4), 차종(HEV/PHEV/CN8 LV2 등), 기능명·담당, 검증자(verifier)·리뷰어(reviewer), 검증자리, 제어기번호, 평균 예상 소요(분), 특이사항, 이슈/진행상황, 업로드 완료 여부, 완료일
-- 1차 검증 vs InReview 분리: 각 단계별 `검증 상태 (10단계 enum)` + 세팅(분) / AUD(분) / Review·Feedback(분) 입력, 합계 자동 표시
-- 변경점 전용: CR.No, IP, 검토/피드백(분), 재검증(분), LIN/STD/HOLD→FAIL 메모
-- 기타 업무 전용: 카테고리 (교육/휴가/출장/FAIL분류/기타), 월(YYYY-MM), 소요일, 비고
+## 목차
 
-**대시보드 & 캘린더**
-- 대시보드: 진행 중 소프로젝트 수, 오늘 마감 업무, 활성 팀원 수 KPI + 본인 담당 오늘 할 일 + 최근 5건
-- 팀 캘린더: 전체 소프로젝트의 기간 바 (상태별 색상)
-- 개인 캘린더: 담당자별 필터, 체크리스트 모달
+| 바로가기 | |
+|---|---|
+| [프로젝트 구조](#프로젝트-구조) | 대·중·하위 3단계가 무엇인지 |
+| [주요 기능](#주요-기능) | 진행률, 검증 시간, 화면 구성 |
+| [서비스 구성](#서비스-구성) | 6개 서비스와 통신 방식 |
+| [폴더 구조](#폴더-구조) | 어느 파일이 무엇을 하는지 |
+| [Quick Start](#quick-start) | 5분 안에 띄우기 |
+| [개발 규칙](#개발-규칙) | 기여 전에 읽을 것 |
+
+---
+
+## 프로젝트 구조
+
+일감을 세 단계로 나눕니다.
+
+```mermaid
+flowchart TD
+    A["대프로젝트 A<br/>HCU 제어로직 SW검증(26년)"]
+    A --> B1["프로젝트 B<br/>1차 정기"]
+    A --> B2["프로젝트 B<br/>공식"]
+    B1 --> C1["하위 C<br/>02_Diagnosis"]
+    B1 --> C2["하위 C<br/>27_Signal_Interface"]
+    B1 --> C3["하위 C<br/>08_Regenerative_Brake"]
+```
+
+| 단계 | 무엇인가 | 예시 |
+|---|---|---|
+| **대프로젝트 (A)** | 연 단위 묶음. 템플릿이 여기에 붙습니다 | `HCU 제어로직 SW검증(26년)` |
+| **프로젝트 (B)** | 차수 | `1차 정기`, `공식` |
+| **하위 프로젝트 (C)** | 기능 하나. 실제 검증 단위 | `02_Diagnosis` |
+
+---
+
+## 주요 기능
+
+<details open>
+<summary><strong>프로젝트 관리</strong></summary>
+
+- 유형 5종: 공식 검증 / 정기 검증 / 변경점 검증 / 기타 업무 / 일반
+- 템플릿은 대프로젝트 단위로 만들어 재사용합니다. 필드를 직접 추가·삭제하고 가중치를 줄 수 있습니다
+- 프로젝트 복사로 같은 구성을 통째로 다시 씁니다
+- CSV로 하위 프로젝트를 한 번에 가져오고, 결과를 xlsx·csv로 내보냅니다
+
+</details>
+
+<details open>
+<summary><strong>진행률과 시간</strong></summary>
+
+> [!IMPORTANT]
+> 하위 프로젝트 진행률은 **담당자별 최신 기록의 평균**입니다.
+> 담당자가 2명일 때 한 명이 0%를 올려도, 다른 담당자의 72%가 남아 있으면 36%가 됩니다.
+> 진행률 기록 창의 "담당자별 기여" 패널에서 누가 얼마를 올렸는지 확인할 수 있습니다.
+
+- 검증·리뷰·InReview 시간은 담당자별·단계별로 남깁니다. 상위 합계는 그 기록에서 계산됩니다
+- 스톱워치로 실제 소요 시간을 재고, 종료할 때 진행률을 함께 입력합니다
+- 수행 이력에 어떤 검증 단계에 얼마가 들었는지 나뉘어 표시됩니다
+
+</details>
+
+<details>
+<summary><strong>상태 표시 — 네 가지 색으로 통일</strong></summary>
+
+| 색 | 상태 | 조건 |
+|---|---|---|
+| 회색 | 예정 | 기록 없음, 기한 남음 |
+| 파랑 | 진행중 | 진행률 1~99% |
+| 초록 | 완료 | 진행률 100% |
+| 빨강 | 기한 초과 | 완료가 아닌데 종료일이 지남 |
+
+사이드바 점, 목록 배지, 캘린더 막대, 팝오버가 모두 같은 규칙을 씁니다.
+규칙은 `frontend/app/lib/subprojectStatus.ts` 한 곳에 있습니다.
+
+</details>
+
+<details>
+<summary><strong>화면 구성</strong></summary>
+
+| 화면 | 내용 |
+|---|---|
+| 대시보드 | 진행 중 업무, 오늘 마감, 활성 팀원 수, 본인 할 일 |
+| 팀 캘린더 | 전체 프로젝트와 담당자별 일정. 주마다 이름과 진행률 표기 |
+| 개인 캘린더 | 담당자별 필터와 체크리스트 |
+| AI 업무 배정 | 과거 수행 이력 기반 담당자 추천 |
+| 관리 | 사용자 권한, 인원 동기화, 대프로젝트, 템플릿, 업무 이력 |
+
+</details>
+
+<details>
+<summary><strong>인증과 권한</strong></summary>
+
+사번으로 로그인합니다(JWT). 관리자와 일반 직원으로 나뉩니다.
+
+| 작업 | 관리자 | 참여 인원 |
+|---|:---:|:---:|
+| 프로젝트 생성·수정·삭제 | O | X |
+| 하위 프로젝트 수정 | O | O |
+| 진행률·검증 시간 기록 | O | O |
+| 사용자 관리 | O | X |
+
+</details>
+
+---
 
 ## 서비스 구성
 
-| 서비스 | 경로 | 포트 | 담당 |
-|--------|------|------|------|
-| Backend REST API | `./backend` | 8000 | 개발자 1 |
-| Realtime Server (WebSocket) | `./realtime` | 8001 | 개발자 2 |
-| Frontend (Next.js 15 + React 19) | `./frontend` | 3000 | 개발자 3 |
-| AI Chatbot | `./ai-chatbot` | 8002 | 개발자 4 |
-| PostgreSQL | - | 5432 | 개발자 3 (DB 관리) |
-| Redis | - | 6379 | - |
-
-## 기술 스택
-
-- **Backend**: FastAPI (Python 3.11+), SQLAlchemy 2.0 (Mapped 스타일), Pydantic v2
-- **Realtime**: FastAPI + WebSocket + Redis Pub/Sub
-- **Frontend**: Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS v4
-- **AI Chatbot**: FastAPI + LLM API
-- **DB**: PostgreSQL 16 · **Cache/Pub-Sub**: Redis 7
-- **Containerization**: Docker + Docker Compose (Rancher Desktop 기반)
-
-## 서비스 간 통신
-
+```mermaid
+flowchart LR
+    U([브라우저]) --> CD["Caddy<br/>:80"]
+    CD --> FE["Frontend<br/>Next.js :3000"]
+    FE -->|"REST /backend/*"| BE["Backend<br/>FastAPI :8000"]
+    FE -->|WebSocket| RT["Realtime<br/>:8001"]
+    FE -->|REST| AI["AI Chatbot<br/>:8002"]
+    BE --> PG[("PostgreSQL<br/>:5432")]
+    RT --> PG
+    AI --> PG
+    BE <--> RD[("Redis<br/>:6379")]
+    RT <--> RD
 ```
-Frontend (3000)
-  ├── REST API  →  Backend (8000)
-  ├── WebSocket →  Realtime (8001)
-  └── REST API  →  AI Chatbot (8002)
 
-Backend (8000)
-  ├── DB        →  PostgreSQL (5432)
-  └── Pub/Sub   →  Redis (6379)
+> [!NOTE]
+> 평소 접속은 **http://localhost** 하나면 됩니다. 나머지 포트는 개발·디버깅용입니다.
 
-Realtime (8001)
-  ├── DB        →  PostgreSQL (5432)
-  └── Pub/Sub   →  Redis (6379)
+| 서비스 | 경로 | 포트 |
+|--------|------|------|
+| Backend REST API | `./backend` | 8000 |
+| Realtime (WebSocket) | `./realtime` | 8001 |
+| AI Chatbot | `./ai-chatbot` | 8002 |
+| Frontend (Next.js) | `./frontend` | 3000 |
+| Caddy (리버스 프록시) | - | 80 |
+| PostgreSQL 16 | - | 5432 |
+| Redis 7 | - | 6379 |
 
-AI Chatbot (8002)
-  └── DB        →  PostgreSQL (5432)
-```
+**기술 스택** · FastAPI (Python 3.11), SQLAlchemy 2.0 Mapped 스타일, Pydantic v2 · Next.js 15 App Router, React 19, TypeScript, Tailwind CSS v4 · PostgreSQL 16, Redis 7 · Docker Compose (Rancher Desktop), Caddy
+
+---
 
 ## 폴더 구조
 
+<details>
+<summary><strong>펼쳐 보기</strong></summary>
+
 ```
 .
-├── backend/          # FastAPI REST API
-│   ├── app/
-│   │   ├── models/project.py    # Project / SubProject / SubTask (+KEFICO 필드)
-│   │   ├── models/user.py       # User (+조직도 확장: team/position/email/phone)
-│   │   ├── schemas/project.py   # Pydantic 스키마 (enum: 검증상태/LEVEL/기타카테고리)
-│   │   └── routers/projects.py  # CRUD + 유형별 템플릿 자동 생성
-│   └── scripts/
-│       ├── import_org_chart.py  # E-모빌리티센터 조직도 104명 일괄 등록 (멱등성 보장)
-│       └── data/사번포함조직도.csv  # 조직도 원본 (수정 후 재실행으로 갱신)
-├── realtime/         # WebSocket 실시간 서버
-├── frontend/         # Next.js 프론트엔드
+├── backend/              # FastAPI REST API
 │   └── app/
-│       ├── lib/api.ts              # 도메인 타입 + 한국어 라벨 상수
-│       ├── components/TeamModal.tsx # 유형별 조건부 폼 (검증 공통/1차·InReview/변경점/기타)
-│       ├── projects/page.tsx       # 프로젝트 목록 + 소프로젝트 추가
-│       ├── dashboard/page.tsx      # KPI + 오늘 할 일 + 최근 5건
-│       ├── team-calendar/          # 팀 캘린더
-│       └── personal-calendar/      # 개인 캘린더
-├── ai-chatbot/       # AI 챗봇 서비스
-├── database/         # DB 초기화 SQL
-├── docs/
-├── docker-compose.yml
-├── docker-compose.dev.yml
+│       ├── models/       # User / MajorProject / Project / SubProject / SubTask
+│       │                 # ProgressLog / SubProjectTimeEntry
+│       ├── schemas/      # Pydantic 스키마
+│       └── routers/
+│           ├── auth.py           # 로그인, 사용자 관리, 인원 동기화
+│           ├── projects/         # 프로젝트 도메인 (도메인별 파일 분리)
+│           └── workflow.py       # 스톱워치, 템플릿, 수행 이력
+├── realtime/             # WebSocket 실시간 서버
+├── ai-chatbot/           # AI 챗봇 서비스
+├── frontend/
+│   └── app/
+│       ├── lib/          # api.ts(도메인 타입·라벨), subprojectStatus.ts(상태 색)
+│       ├── components/   # 공통 UI, AppShell, 캘린더, 모달
+│       ├── projects/     # 프로젝트 목록·상세
+│       ├── dashboard/    # 개요
+│       ├── team-calendar/ · personal-calendar/
+│       └── admin/        # 관리 탭
+├── database/             # 초기화 SQL, 시드 데이터
+├── backups/              # DB 백업 (인원 동기화 전 자동 생성분 등)
+├── docs/                 # 문서 → docs/README.md 참고
+├── docker-compose.yml        # 프로덕션 구성 (source of truth)
+├── docker-compose.dev.yml    # 개발 오버라이드 (코드 수정 즉시 반영)
 └── .env.example
 ```
 
-## 브랜치 전략
-
-- `main`: 프로덕션 배포 브랜치
-- `develop`: 통합 개발 브랜치
-- `feature/<이름>/<기능>`: 기능 개발 브랜치 (예: `feature/backend/auth`, `feature/frontend/dashboard`)
-
-
-### 7. 초기 데이터 — E-모빌리티센터 조직도 임포트
-
-최초 기동 후, **실제 조직도 104명**을 일괄 등록해서 바로 로그인 테스트를 할 수 있습니다. 전체 절차와 주의사항은 별도 가이드에 정리되어 있습니다 → [`docs/setup/database-setup.md`](./docs/setup/database-setup.md)
-
-요약:
-
-```powershell
-# 1. DB 볼륨 초기화 (User 모델에 team/position/email/phone 컬럼이 추가되었으므로 필수)
-docker compose down -v
-
-# 2. 백엔드 + DB 기동 (create_all 로 테이블 생성)
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db redis backend
-
-# 3. CSV 기반 104명 일괄 임포트
-docker compose exec backend python scripts/import_org_chart.py
-```
-
-임포트 완료 후 로그인 샘플:
-
-- 모든 사용자: **로그인 ID = 사번, 초기 비밀번호 = `00000000`**
-- 관리자(`admin`) 18명: 각 팀의 팀장/실장/센터장(MASTER) + 서비스 개발자 4명 (조영흠·박상은·신현지·김한결)
-- 나머지 86명은 일반 직원(`member`)
-
-결과 확인:
-
-```powershell
-docker compose exec db psql -U cowork_user -d cowork_db -c "SELECT role, COUNT(*) FROM users GROUP BY role ORDER BY role;"
-docker compose exec db psql -U cowork_user -d cowork_db -c "SELECT team, COUNT(*) FROM users GROUP BY team ORDER BY team;"
-```
-
-조직 개편으로 CSV 를 갱신한 뒤에는 같은 명령 (`import_org_chart.py`) 을 다시 실행하면 됩니다. 스크립트는 멱등성을 가져 같은 사번은 메타데이터만 덮어쓰고 비밀번호는 유지합니다.
+</details>
 
 ---
 
-## Windows 배포 가이드 (초보자용)
+## Quick Start
 
-이 프로젝트는 **Docker Compose**로 모든 서비스를 한 번에 띄우므로, 컨테이너 런타임만 설치하면 됩니다. Python, Node.js 등을 별도로 설치할 필요가 없습니다.
-
-### 1단계: 사전 준비 (Rancher Desktop 설치)
-
-> **왜 Docker Desktop이 아닌가요?**
-> Docker Desktop은 직원 250명 이상 또는 연 매출 $10M 이상인 회사에서 유료 구독이 필요합니다.
-> **Rancher Desktop**은 SUSE에서 제공하는 완전 무료/오픈소스 대안으로, 상업적 사용에 제한이 없습니다.
-
-#### 1-1. WSL 2 설치 (필수 선행)
-
-PowerShell을 **관리자 권한**으로 열고 실행합니다:
+> [!WARNING]
+> Rancher Desktop과 WSL 2가 먼저 설치돼 있어야 합니다.
+> 설치부터 필요하면 [Windows 배포 가이드](./DEPLOY_GUIDE_WINDOWS.md)를 보세요.
 
 ```powershell
-wsl --install
-```
+# 1. 환경 변수 준비
+Copy-Item .env.example .env    # 열어서 비밀번호·시크릿 키 수정
 
-이미 설치되어 있다면 "이미 설치됨" 메시지가 나옵니다. 새로 설치했다면 **재부팅**이 필요합니다.
-
-#### 1-2. Rancher Desktop 설치 & 초기 설정
-
-1. https://rancherdesktop.io/ → "Download for Windows" → MSI 실행
-2. 설치 후 실행 → **Container Engine: dockerd (moby)** 선택 (필수!)
-   - containerd를 고르면 `docker compose`가 동작하지 않습니다
-3. Kubernetes는 이 프로젝트에서 사용하지 않으므로 비활성화 가능
-4. 설정 완료 후 1~3분 대기 (VM 생성)
-
-#### 1-3. Docker 동작 확인
-
-PowerShell을 **새로** 열고:
-
-```powershell
-docker --version
-docker compose version
-```
-
-### 2단계: 환경 변수 설정
-
-```powershell
-Copy-Item .env.example .env
-notepad .env
-```
-
-**반드시 변경할 항목:**
-
-```env
-POSTGRES_PASSWORD=MySecurePassword123!
-DATABASE_URL=postgresql+psycopg2://cowork_user:MySecurePassword123!@db:5432/cowork_db
-SECRET_KEY=my-super-secret-key-change-this-to-random-string
-
-# AI 챗봇용 (선택)
-OPENAI_API_KEY=sk-...
-# 또는
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-랜덤 SECRET_KEY 생성:
-```powershell
--join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object {[char]$_})
-```
-
-### 3단계: 실행
-
-#### (A) 프로덕션 모드 — 빌드된 이미지로 실행, 코드 수정 반영 없음
-
-```powershell
-docker compose up --build
-```
-
-처음 실행 시 5~15분 소요. 아래 로그가 나오면 정상:
-
-```
-cowork_db        | database system is ready to accept connections
-cowork_redis     | Ready to accept connections
-cowork_backend   | Uvicorn running on http://0.0.0.0:8000
-cowork_realtime  | Uvicorn running on http://0.0.0.0:8001
-cowork_ai_chatbot| Uvicorn running on http://0.0.0.0:8002
-cowork_frontend  | Ready on http://0.0.0.0:3000
-```
-
-#### (B) 개발 모드 — **코드 수정 즉시 반영** ⭐ 추천
-
-```powershell
+# 2. 개발 모드로 기동 (코드 수정 즉시 반영)
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+# 3. 브라우저에서 http://localhost 접속
 ```
 
-개발 모드에서 자동으로 적용되는 설정:
-- Backend / Realtime / AI Chatbot: `uvicorn --reload` — Python 파일 저장 시 자동 재시작
-- Frontend: `npm run dev` (Next.js dev 모드) — `.tsx` 저장 시 브라우저가 HMR로 즉시 갱신
-- 호스트의 소스 폴더(`./backend`, `./frontend` 등)가 컨테이너로 bind-mount — IDE에서 편집한 파일이 컨테이너 안에서 그대로 보임
-
-#### (C) 백그라운드 실행 (터미널 종료해도 유지)
-
-```powershell
-docker compose up --build -d
-docker compose logs -f          # 로그 보기 (Ctrl+C로 로그만 빠져나옴)
-```
-
-### 4단계: 접속 & 확인
-
-| 용도 | URL |
-|------|-----|
-| 웹 화면 (Frontend) | http://localhost:3000 |
-| Backend Swagger UI | http://localhost:8000/docs |
-| Realtime API 문서 | http://localhost:8001/docs |
-| AI Chatbot API 문서 | http://localhost:8002/docs |
+첫 사용자는 회원가입 후 관리자로 지정해야 프로젝트를 만들 수 있습니다.
+실제 조직도를 한 번에 넣으려면 [인원 동기화 가이드](./docs/org-sync-guide.md)를 보세요.
 
 ---
 
-## 개발 워크플로우 — `docker compose up --build` 상태로 개발하기
+## 개발 규칙
 
-목표: **컨테이너를 띄워둔 채 코드를 수정하면 즉시 반영**되는 흐름.
+**브랜치** · `main_branch`가 배포 브랜치입니다. 작업 브랜치는 날짜 기준(`260915`, `260914_yhcho`)으로 만들고 PR로 머지합니다.
 
-### 1. 최초 1회: 개발 모드로 기동
+**기여 전에** · 서비스 경계, 검증 범위, 편집 지침은 [CLAUDE.md](./CLAUDE.md)에 있습니다.
 
-```powershell
-# 프로젝트 폴더에서
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
-```
+**검증 범위** · 고친 서비스만 확인하면 됩니다.
 
-> 두 compose 파일을 매번 타이핑하기 귀찮다면 PowerShell 프로필이나 별칭으로 등록해두세요:
-> ```powershell
-> function dcdev { docker compose -f docker-compose.yml -f docker-compose.dev.yml @args }
-> # 이후 dcdev up --build / dcdev logs -f frontend 로 사용
-> ```
-
-### 2. 코드 수정하면 어떻게 반영되는가
-
-| 변경 대상 | 즉시 반영 여부 | 추가 조치 |
-|-----------|---------------|-----------|
-| `frontend/app/**/*.tsx` | ✅ 브라우저가 HMR로 자동 갱신 | 없음 |
-| `frontend/app/globals.css`, Tailwind 클래스 | ✅ 자동 갱신 | 없음 |
-| `frontend/package.json` (의존성 추가) | ❌ | `docker compose -f … -f docker-compose.dev.yml build frontend` 후 재기동 |
-| `backend/app/**/*.py` | ✅ uvicorn `--reload`가 감지해 재시작 (1~3초) | Swagger UI 새로고침 |
-| `backend/requirements.txt` | ❌ | `docker compose build backend` → `up` |
-| `backend/app/models/**.py` (DB 스키마 변경) | ⚠️ 재시작은 되지만 **기존 테이블은 변경되지 않음** | 아래 "DB 스키마 변경 시" 참조 |
-| `docker-compose*.yml`, `Dockerfile` | ❌ | `up --build`로 전체 재기동 |
-| `.env` | ❌ | `docker compose restart` |
-
-### 3. 변경 내용 확인 체크리스트
-
-프론트엔드를 고쳤을 때:
-1. 브라우저에서 http://localhost:3000 을 새로고침 (대부분 불필요 — HMR)
-2. 브라우저 콘솔에 빨간색 에러 있는지 확인
-3. 타입 오류 의심 시 호스트에서:
-   ```powershell
-   cd frontend
-   npx tsc --noEmit
-   ```
-
-백엔드를 고쳤을 때:
-1. `docker compose logs -f backend` 로 `Uvicorn … Application startup complete.` 재등장 확인
-2. http://localhost:8000/docs 에서 엔드포인트가 제대로 반영됐는지 확인
-3. 실제 호출해보기 — Swagger UI의 "Try it out" 또는 프론트에서 기능 테스트
-
-### 4. DB 스키마 변경 시 (모델 파일 수정)
-
-현재 구현은 `Base.metadata.create_all()`로 **최초 1회만** 테이블을 만듭니다. 컬럼을 추가/삭제하면 기존 테이블이 그대로 남아 `column X does not exist` 에러가 납니다.
-
-**개발 중 권장 절차:**
-
-```powershell
-# 1. 스택 정지 + DB 볼륨까지 삭제 (데이터 초기화)
-docker compose down -v
-
-# 2. 재기동 (테이블이 최신 모델 기준으로 새로 생성됨)
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
-
-# 3. 브라우저에서 다시 회원가입 → 로그인 → 관리자로 테스트
-```
-
-> **주의**: `-v` 플래그는 PostgreSQL 데이터 볼륨을 완전히 지웁니다. 유지하고 싶은 데이터가 있으면 먼저 백업하세요.
->
-> 프로덕션에서는 Alembic으로 마이그레이션 파일을 생성·적용하는 흐름으로 바꿔야 합니다. (이 레포는 설정만 되어있고 실제 마이그레이션은 아직 미사용 상태입니다.)
-
-### 5. 자주 쓰는 명령어
-
-```powershell
-docker compose ps                               # 서비스 상태
-docker compose logs -f backend                  # 백엔드 실시간 로그
-docker compose logs -f frontend                 # 프론트 실시간 로그
-docker compose logs -f --tail=100               # 전체 서비스, 최근 100줄부터
-docker compose restart backend                  # 특정 서비스만 재시작
-docker compose exec backend bash                # 컨테이너 안으로 진입
-docker compose exec db psql -U cowork_user -d cowork_db    # DB 접속
-docker compose down                             # 전체 정지 (데이터 유지)
-docker compose down -v                          # 전체 정지 + DB 초기화
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build frontend  # 특정 서비스만 dev 빌드
-```
-
-### 6. 컨테이너 안에서 직접 디버깅
-
-```powershell
-# 백엔드 셸에서 python 대화형으로 DB 조회
-docker compose exec backend python
->>> from app.db import SessionLocal
->>> from app.models.project import SubProject
->>> db = SessionLocal()
->>> db.query(SubProject).all()
-
-# DB 직접 조회
-docker compose exec db psql -U cowork_user -d cowork_db
-cowork_db=# \dt
-cowork_db=# SELECT id, name, status FROM subprojects LIMIT 10;
-```
-
----
-
-## 자주 발생하는 문제
-
-### "docker: command not found" / "Cannot connect to the Docker daemon"
-Rancher Desktop이 실행 중인지 시스템 트레이에서 확인. PowerShell을 새로 여세요.
-
-### "port is already allocated"
-```powershell
-netstat -ano | findstr :8000
-tasklist | findstr <PID>
-```
-프로세스를 종료하거나 `.env`에서 포트를 바꾸세요.
-
-### 빌드 중 `invalid file request node_modules/.bin/acorn` (Windows npm 심볼릭 링크 이슈)
-각 서비스 폴더의 `.dockerignore`에 `node_modules`를 제외하는 규칙이 있습니다. 그래도 재현된다면 호스트에서 `frontend/node_modules`를 지우고 다시 빌드하세요:
-```powershell
-Remove-Item -Recurse -Force frontend/node_modules
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
-```
-
-### `column users.role does not exist` 또는 `column subprojects.controller_name does not exist`
-DB에 이미 과거 스키마로 만든 테이블이 남아있기 때문입니다. 개발 중이면:
-```powershell
-docker compose down -v
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
-```
-
-### HMR이 동작하지 않음 / 저장해도 반영 안 됨
-- Windows 파일 시스템 → WSL2 이벤트 전달 문제일 가능성. `frontend/next.config.ts`에 `webpack → watchOptions: { poll: 1000 }` 추가를 시도해보세요.
-- 혹은 `docker compose restart frontend` 로 강제 재시작.
-
-### DB 연결 에러 (backend가 계속 재시작)
-healthcheck가 DB 준비를 기다리므로 보통 1~2분 내 자동 연결됩니다. 그래도 안 되면 `docker compose down -v` 후 재기동.
-
----
-
-## Quick Start (요약)
-
-```powershell
-# 1. WSL 2 설치 (관리자 PowerShell)
-wsl --install   # 재부팅
-
-# 2. Rancher Desktop 설치 (https://rancherdesktop.io/)
-#    Container Engine: dockerd (moby) 선택
-
-# 3. 프로젝트 폴더
-cd "C:\경로\2026_project_management_and_cowork_tool"
-
-# 4. 환경변수
-Copy-Item .env.example .env
-notepad .env      # POSTGRES_PASSWORD, SECRET_KEY 수정
-
-# 5. 개발 모드로 실행 (코드 수정 즉시 반영)
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
-
-# 6. 브라우저에서 http://localhost:3000 접속
-#    회원가입 시 "관리자"로 가입하면 프로젝트 생성까지 바로 테스트 가능
-```
+| 고친 곳 | 실행할 것 |
+|---|---|
+| `frontend/` | `npm run lint`, `npx tsc --noEmit` |
+| `backend/` | `pytest` |
+| `realtime/` · `ai-chatbot/` | 각 폴더에서 `pytest` |
+| 서비스 경계를 넘는 변경 | 양쪽 스키마 확인 후 해당 서비스 전부 |

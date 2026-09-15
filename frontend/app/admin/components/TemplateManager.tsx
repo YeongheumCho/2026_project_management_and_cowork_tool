@@ -640,7 +640,7 @@ export default function TemplateManager() {
                     <div className="flex flex-1 flex-wrap gap-3">
                       <label className="block min-w-[240px] max-w-sm flex-1">
                         <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-text-subtle">
-                          템플릿 이름 <span className="text-red-500">*</span>
+                          템플릿 이름 <span className="text-verify-fail-fg">*</span>
                         </span>
                         <input
                           value={templateName}
@@ -651,7 +651,7 @@ export default function TemplateManager() {
                       </label>
                       <label className="block w-[130px]">
                         <span className="mb-2 block text-xs font-bold uppercase tracking-[0.8px] text-text-subtle">
-                          가중치 <span className="text-red-500">*</span>
+                          가중치 <span className="text-verify-fail-fg">*</span>
                         </span>
                         <select
                           value={templateWeight}
@@ -1003,7 +1003,7 @@ function PreviewField({ field }: { field: FieldDefinition }) {
     <label className="block">
       <span className="mb-1.5 block text-xs font-bold text-text-muted">
         {field.label || '필드 이름'}
-        {field.required && <span className="ml-0.5 text-red-500">*</span>}
+        {field.required && <span className="ml-0.5 text-verify-fail-fg">*</span>}
         {hasDefaultValue(field) && (
           <span className="ml-1 rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] text-brand">
             기본값
