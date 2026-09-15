@@ -1,4 +1,19 @@
-# 디자인 시스템 감사 리포트
+# 디자인 시스템 감사 리포트 (2026-04-22)
+
+> **이 문서는 지난 기록이다. 아래 지적사항은 모두 해결됐다.**
+> 현재 상태를 알고 싶으면 `frontend/app/globals.css` 의 토큰 정의와
+> `frontend/app/lib/subprojectStatus.ts` 의 상태 색 규칙을 직접 보면 된다.
+>
+> | 지적 | 당시 | 2026-09-15 확인 |
+> |---|---|---|
+> | C-1 `.input` 유틸리티 미정의 | 32회 사용, 정의 0 | 정의됨 |
+> | C-2 검증 상태 색상·라벨 매핑 부재 | 없음 | `lib/verifyStatus.ts` 에 정리. 1차 검증과 InReview 목록도 분리 |
+> | H-1 `STATUS_LABEL` 4개 파일 중복 | 4곳 | `lib/subprojectStatus.ts` 한 곳 |
+> | H-2 `API_BASE_URL` 하드코딩 | 4곳 | 0곳 |
+> | H-3 디자인 토큰 거의 없음 | `@theme` 4줄 | 42줄. 색·글씨 크기·반경 전부 토큰화 |
+> | H-4 `border-slate-200` 등 raw 클래스 반복 | 41회 | 0회. 팔레트 직접 사용 없음 |
+>
+> 기록으로 남겨 두는 이유는, 같은 문제가 다시 생겼을 때 무엇을 봐야 하는지 알기 위해서다.
 
 > 생성일: 2026-04-22 · 대상: `frontend/app/` (Next.js 15 + React 19 + Tailwind CSS v4) · 도구: `/design-system audit`
 
@@ -16,6 +31,10 @@
 ---
 
 ## 🔴 Critical Findings
+
+<details>
+<summary><strong>펼쳐 보기 — Critical 2건</strong></summary>
+
 
 ### C-1. `className="input"` 유틸리티가 정의되지 않음 — TeamModal 전체 폼이 스타일 미적용 위험
 
@@ -39,7 +58,15 @@
 
 ---
 
+</details>
+
+---
+
 ## 🟠 High Findings
+
+<details>
+<summary><strong>펼쳐 보기 — High 5건</strong></summary>
+
 
 ### H-1. `STATUS_LABEL` / `STATUS_BADGE` 가 4개 파일에 중복 정의
 
@@ -110,7 +137,15 @@
 
 ---
 
+</details>
+
+---
+
 ## 🟡 Medium Findings
+
+<details>
+<summary><strong>펼쳐 보기 — Medium 6건</strong></summary>
+
 
 ### M-1. 둥글기(radius) 4종 혼용 — `rounded-lg` 32회, `rounded-2xl` 27회, `rounded-xl` 24회, `rounded-full` 20회
 
@@ -156,6 +191,10 @@ dashboard/page.tsx:157  text-[11px]   // STATUS_BADGE 안
 
 `ChatBot.tsx:208~210` 의 3개 점은 Tailwind 애니메이션 딜레이로 토큰화 가능.
 - **권장**: `globals.css` 에 `--animate-bounce-stagger-{1,2,3}` 추가 또는 별도 `<TypingIndicator />` 컴포넌트로 추출
+
+---
+
+</details>
 
 ---
 

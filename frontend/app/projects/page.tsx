@@ -189,7 +189,7 @@ export default function ProjectsPage() {
       onSubprojectSelect={setProgressTarget}
     >
       {error && (
-        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="mb-4 rounded-lg bg-verify-fail-bg px-3 py-2 text-sm text-verify-fail-fg">
           {error}
         </p>
       )}
@@ -204,7 +204,7 @@ export default function ProjectsPage() {
             className={`h-10 rounded-lg px-4 text-sm font-medium transition ${
               createOpen
                 ? 'border border-border bg-white text-text-muted hover:bg-surface-muted'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-brand text-white hover:bg-brand-hover'
             }`}
           >
             {createOpen ? '프로젝트 추가 닫기' : '+ 프로젝트 추가'}
@@ -251,9 +251,18 @@ export default function ProjectsPage() {
         )}
 
         {!loading && projects.length > 0 && visibleProjects.length === 0 && (
-          <p className="rounded-2xl border border-border bg-white p-8 text-center text-sm text-text-faint">
-            조건에 맞는 프로젝트가 없습니다.
-          </p>
+          <div className="rounded-2xl border border-border bg-white p-8 text-center">
+            <p className="text-sm text-text-muted">
+              조건에 맞는 프로젝트가 없습니다. 전체 {projects.length}개 중 걸러진 결과입니다.
+            </p>
+            <button
+              type="button"
+              onClick={() => setListFilter(EMPTY_PROJECT_LIST_FILTER)}
+              className="mt-3 rounded-lg border border-brand-soft bg-white px-3 py-1.5 text-micro font-bold text-brand transition hover:bg-brand-soft"
+            >
+              필터 초기화
+            </button>
+          </div>
         )}
 
         {visibleProjects.map((project) => (

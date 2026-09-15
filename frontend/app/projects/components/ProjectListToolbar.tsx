@@ -37,7 +37,7 @@ const SORT_LABEL: Record<ProjectSortKey, string> = {
 };
 
 const controlClass =
-  'h-9 rounded-lg border border-border bg-white px-3 text-sm text-text outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100';
+  'h-9 rounded-lg border border-border bg-white px-3 text-sm text-text outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100';
 
 type Props = {
   value: ProjectListFilter;

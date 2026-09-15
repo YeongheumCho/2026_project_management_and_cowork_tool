@@ -181,21 +181,21 @@ export default function BasicSection({
             />
           </div>
           {f.startDate && f.endDate && f.endDate < f.startDate && (
-            <p className="mt-1 text-xs text-red-500">
+            <p className="mt-1 text-xs text-verify-fail-fg">
               종료일은 시작일 이후여야 합니다.
             </p>
           )}
           {selectedProject?.start_date &&
             f.startDate &&
             f.startDate < selectedProject.start_date && (
-              <p className="mt-1 text-xs text-red-500">
+              <p className="mt-1 text-xs text-verify-fail-fg">
                 하위 프로젝트 시작일은 상위 프로젝트 시작일 이후여야 합니다.
               </p>
             )}
           {selectedProject?.end_date &&
             f.endDate &&
             f.endDate > selectedProject.end_date && (
-              <p className="mt-1 text-xs text-red-500">
+              <p className="mt-1 text-xs text-verify-fail-fg">
                 하위 프로젝트 종료일은 상위 프로젝트 종료일 이내여야 합니다.
               </p>
             )}

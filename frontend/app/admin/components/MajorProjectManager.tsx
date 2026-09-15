@@ -185,7 +185,7 @@ export default function MajorProjectManager({ users }: Props) {
           className={`mb-3 rounded-lg px-3 py-2 text-sm ${
             messageTone === 'success'
               ? 'bg-verify-pass-bg text-verify-pass-fg'
-              : 'bg-red-50 text-red-600'
+              : 'bg-verify-fail-bg text-verify-fail-fg'
           }`}
         >
           {message}

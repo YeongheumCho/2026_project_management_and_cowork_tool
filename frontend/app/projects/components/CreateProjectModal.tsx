@@ -150,7 +150,7 @@ export default function CreateProjectModal({
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="예: 2026년 3차 정기 검증"
-            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100"
           />
         </div>
 
@@ -169,7 +169,7 @@ export default function CreateProjectModal({
                 prev.filter((id) => nextMembers.some((member) => member.id === id)),
               );
             }}
-            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100"
           >
             <option value="">대프로젝트를 선택하세요</option>
             {majorProjects.map((majorProject) => (
@@ -194,7 +194,7 @@ export default function CreateProjectModal({
             id="project-type"
             value={type}
             onChange={(event) => setType(event.target.value as ProjectType)}
-            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100"
           >
             {availableProjectTypes.map((option) => (
               <option key={option} value={option}>
@@ -224,7 +224,7 @@ export default function CreateProjectModal({
                 event.currentTarget.value = clampDateYear(event.currentTarget.value);
               }}
               onChange={(event) => setStartDate(clampDateYear(event.target.value))}
-              className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100"
             />
           </div>
           <div>
@@ -243,7 +243,7 @@ export default function CreateProjectModal({
                 event.currentTarget.value = clampDateYear(event.currentTarget.value);
               }}
               onChange={(event) => setEndDate(clampDateYear(event.target.value))}
-              className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-indigo-100"
             />
           </div>
         </div>
@@ -291,7 +291,7 @@ export default function CreateProjectModal({
           <button
             type="submit"
             disabled={disabled}
-            className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy ? '생성 중...' : '프로젝트 생성'}
           </button>

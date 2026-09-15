@@ -132,7 +132,7 @@ export default function TasksPage() {
   if (me.role !== 'admin') {
     return (
       <AppShell me={me} sidebarProjects={projects} sidebarUsers={users}>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
+        <div className="rounded-2xl border border-verify-warn-fg/30 bg-verify-warn-bg p-6 text-verify-warn-fg">
           <h1 className="text-xl font-semibold">AI 업무 배정은 관리자 전용입니다</h1>
           <p className="mt-2 text-sm">
             개인 캘린더와 팀 캘린더에서 배정된 업무를 확인해주세요.
@@ -145,7 +145,7 @@ export default function TasksPage() {
   return (
     <AppShell me={me} sidebarProjects={projects} sidebarUsers={users}>
       {(error || screenError) && (
-        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="mb-4 rounded-lg bg-verify-fail-bg px-3 py-2 text-sm text-verify-fail-fg">
           {error || screenError}
         </p>
       )}

@@ -7,15 +7,17 @@ import { useMe } from '../lib/useMe';
 import MajorProjectManager from './components/MajorProjectManager';
 import ProjectDeletionManager from './components/ProjectDeletionManager';
 import TemplateManager from './components/TemplateManager';
+import UserSyncManager from './components/UserSyncManager';
 import UserTable from './components/UserTable';
 import WorkStatusManager from './components/WorkStatusManager';
 import { useAdminUsers } from './hooks/useAdminUsers';
 
-type AdminTab = 'users' | 'major-projects' | 'templates' | 'work-history';
+type AdminTab = 'users' | 'user-sync' | 'major-projects' | 'templates' | 'work-history';
 type DateRange = { from: string; to: string };
 
 const TABS: { id: AdminTab; label: string }[] = [
   { id: 'users', label: '사용자 권한 관리' },
+  { id: 'user-sync', label: '인원 동기화' },
   { id: 'major-projects', label: '프로젝트 관리' },
   { id: 'templates', label: '템플릿 관리' },
   { id: 'work-history', label: '업무 이력 관리' },
@@ -117,6 +119,8 @@ export default function AdminPage() {
         />
       )}
 
+
+      {activeTab === 'user-sync' && <UserSyncManager enabled={!!isAdmin} />}
 
       {activeTab === 'major-projects' && (
         <div className="space-y-4">

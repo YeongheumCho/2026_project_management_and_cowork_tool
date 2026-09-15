@@ -14,6 +14,9 @@ from app.schemas.user import (
     UserResponse,
     UserRoleUpdate,
     UserSignupCreate,
+    UserSyncChange,
+    UserSyncRequest,
+    UserSyncResult,
 )
 
 
@@ -204,3 +207,130 @@ def delete_user(
     db.delete(target_user)
     db.commit()
     return None
+
+
+# 신규 계정 초기 비밀번호 — 기존 사용자 추가 화면과 같은 규칙
+_SYNC_DEFAULT_PASSWORD = "12345678"
+
+# 이 값들만 그룹웨어 기준으로 덮어쓴다. 권한과 비밀번호는 절대 건드리지 않는다.
+_SYNC_FIELDS = ("name", "center", "office", "team", "position", "email", "phone")
+
+
+def _normalize_idnum(value: str) -> str:
+    """사번을 9자리로 맞춘다. DB에 앞자리 0이 빠져 저장된 값이 있어 보정이 필요하다."""
+    return (value or "").strip().zfill(9)
+
+
+@router.post("/users/sync", response_model=UserSyncResult)
+def sync_users(
+    payload: UserSyncRequest,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require_admin),
+):
+    """그룹웨어 조직도 목록으로 사용자 정보를 맞춘다.
+
+    - 사번이 키. 없으면 새로 만들고, 있으면 소속·직급·연락처를 갱신한다.
+    - 목록에 없는 사람은 지우지 않고 비활성으로 돌린다. 지우면 그 사람 이름으로
+      남은 프로젝트와 수행 이력의 담당자가 비기 때문이다. 관리자 계정도 같다.
+    - 권한(admin/member)과 비밀번호는 어떤 경우에도 바꾸지 않는다.
+    - 단 하나의 예외로, 동기화를 실행한 본인 계정은 끄지 않는다.
+      작업 도중 스스로 로그아웃되어 되돌릴 수 없게 되는 것을 막기 위해서다.
+    """
+    result = UserSyncResult(dry_run=payload.dry_run, total_rows=len(payload.rows))
+
+    seen: set[str] = set()
+    for row in payload.rows:
+        idnum = _normalize_idnum(row.idnum)
+        if idnum in seen:
+            result.errors.append(f"사번 {idnum} 이 목록에 두 번 있습니다. 뒤의 줄은 건너뜁니다.")
+            continue
+        seen.add(idnum)
+
+    existing = {
+        _normalize_idnum(user.idnum): user
+        for user in db.scalars(select(User)).all()
+    }
+
+    for row in payload.rows:
+        idnum = _normalize_idnum(row.idnum)
+        user = existing.get(idnum)
+
+        if user is None:
+            if not payload.dry_run:
+                user = User(
+                    idnum=idnum,
+                    name=row.name,
+                    password_hash=hash_password(_SYNC_DEFAULT_PASSWORD),
+                    role="member",
+                    is_active=True,
+                )
+                for field in _SYNC_FIELDS:
+                    setattr(user, field, getattr(row, field))
+                db.add(user)
+            result.created.append(
+                UserSyncChange(
+                    idnum=idnum,
+                    name=row.name,
+                    detail=f"{row.team or row.office or row.center or '소속 미지정'} · {row.position or '직급 미지정'}",
+                )
+            )
+            continue
+
+        # DB 사번에 앞자리 0 이 빠져 있으면 이번 기회에 맞춘다.
+        if user.idnum != idnum:
+            result.idnum_fixed.append(
+                UserSyncChange(idnum=idnum, name=user.name, detail=f"{user.idnum} → {idnum}")
+            )
+            if not payload.dry_run:
+                user.idnum = idnum
+
+        diffs = []
+        for field in _SYNC_FIELDS:
+            new_value = getattr(row, field)
+            if (getattr(user, field) or "") != (new_value or ""):
+                diffs.append(f"{field} {getattr(user, field) or '없음'} → {new_value or '없음'}")
+                if not payload.dry_run:
+                    setattr(user, field, new_value)
+
+        if not user.is_active:
+            result.reactivated.append(UserSyncChange(idnum=idnum, name=row.name))
+            if not payload.dry_run:
+                user.is_active = True
+        elif diffs:
+            result.updated.append(
+                UserSyncChange(idnum=idnum, name=row.name, detail=", ".join(diffs))
+            )
+        else:
+            result.unchanged += 1
+
+    if payload.deactivate_missing:
+        for idnum, user in existing.items():
+            if idnum in seen or not user.is_active:
+                continue
+            if user.id == current_admin.id:
+                # 실행한 본인만 예외. 스스로 로그아웃되면 되돌릴 수 없다.
+                result.admin_skipped.append(
+                    UserSyncChange(
+                        idnum=idnum,
+                        name=user.name,
+                        detail="동기화를 실행한 본인 계정이라 건너뛰었습니다. 필요하면 다른 관리자가 처리하세요.",
+                    )
+                )
+                continue
+            if payload.limit_center and (user.center or "") != payload.limit_center:
+                continue
+            result.deactivated.append(
+                UserSyncChange(
+                    idnum=idnum,
+                    name=user.name,
+                    detail=f"{user.team or user.office or user.center or '소속 미지정'} · {user.position or ''}",
+                )
+            )
+            if not payload.dry_run:
+                user.is_active = False
+
+    if payload.dry_run:
+        db.rollback()
+    else:
+        db.commit()
+    return result

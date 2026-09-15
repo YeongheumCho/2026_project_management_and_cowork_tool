@@ -9,7 +9,7 @@ export default function Label({ required, className = '', children, ...rest }: P
   return (
     <label className={`field-label ${className}`} {...rest}>
       {children}
-      {required && <span className="ml-0.5 text-red-500">*</span>}
+      {required && <span className="ml-0.5 text-verify-fail-fg">*</span>}
     </label>
   );
 }

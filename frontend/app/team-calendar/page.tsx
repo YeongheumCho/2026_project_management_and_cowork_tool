@@ -223,7 +223,7 @@ export default function TeamCalendarPage() {
       sidebarProjects={projects}
     >
       {error && (
-        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="mb-4 rounded-lg bg-verify-fail-bg px-3 py-2 text-sm text-verify-fail-fg">
           {error}
         </p>
       )}

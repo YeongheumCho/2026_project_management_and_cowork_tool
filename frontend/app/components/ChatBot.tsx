@@ -191,7 +191,7 @@ export default function ChatBot() {
       {/* 플로팅 버튼 */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl active:scale-95"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-lg transition-all hover:bg-brand-hover hover:shadow-xl active:scale-95"
         aria-label="AI 챗봇 열기"
       >
         {isOpen ? (
@@ -230,7 +230,7 @@ export default function ChatBot() {
             </svg>
           </button>
           {/* 헤더 */}
-          <div className="flex items-center gap-3 bg-blue-600 px-5 py-4">
+          <div className="flex items-center gap-3 bg-brand px-5 py-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
               <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-1.43-5.727a2.25 2.25 0 00-.659-1.591" />
@@ -238,14 +238,14 @@ export default function ChatBot() {
             </div>
             <div className="flex-1">
               <h3 className="text-sm font-semibold text-white">AI 어시스턴트</h3>
-              <p className="text-xs text-blue-100">데이터 기반 업무 분석</p>
+              <p className="text-xs text-brand-soft">데이터 기반 업무 분석</p>
             </div>
             <button
               onClick={() => {
                 setMessages([]);
                 setHasGreeted(false);
               }}
-              className="rounded-lg p-1.5 text-blue-100 transition-colors hover:bg-white/20 hover:text-white"
+              className="rounded-lg p-1.5 text-brand-soft transition-colors hover:bg-white/20 hover:text-white"
               title="대화 초기화"
             >
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -264,7 +264,7 @@ export default function ChatBot() {
                 <div
                   className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                     msg.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-md'
+                      ? 'bg-brand text-white rounded-br-md'
                       : 'bg-surface-subtle text-text rounded-bl-md'
                   }`}
                 >
@@ -294,7 +294,7 @@ export default function ChatBot() {
                 onKeyDown={handleKeyDown}
                 placeholder="메시지를 입력하세요..."
                 rows={1}
-                className="flex-1 resize-none rounded-xl border border-border px-3 py-2.5 text-sm text-text placeholder-text-faint outline-none transition-colors focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                className="flex-1 resize-none rounded-xl border border-border px-3 py-2.5 text-sm text-text placeholder-text-faint outline-none transition-colors focus:border-brand focus:ring-1 focus:ring-blue-400"
                 style={{ maxHeight: '80px' }}
               />
               <button
@@ -302,7 +302,7 @@ export default function ChatBot() {
                 onClick={sendMessage}
                 disabled={!input.trim() || isLoading}
                 aria-label="메시지 전송"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition-all hover:bg-blue-700 disabled:bg-border-strong disabled:cursor-not-allowed"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand text-white transition-all hover:bg-brand-hover disabled:bg-border-strong disabled:cursor-not-allowed"
               >
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
