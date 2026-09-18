@@ -28,6 +28,7 @@ from app.routers.projects._helpers import (
     _payload_assignee_ids,
     _recalc_status_and_progress_from_logs,
     _set_subproject_assignees,
+    _subproject_assignee_ids,
     _sync_subproject_execution_history,
     _validate_subproject_dates_within_project,
 )
@@ -204,9 +205,16 @@ def update_subproject(
         sp.name = payload.name
     next_assignee_ids = _payload_assignee_ids(payload)
     if next_assignee_ids is not None:
+        # 이미 배정돼 있던 담당자는 퇴사(비활성)했어도 유지한다
         _set_subproject_assignees(
             sp,
-            _load_valid_assignees(db, project, next_assignee_ids),
+            _load_valid_assignees(
+                db,
+                project,
+                next_assignee_ids,
+                allow_empty=True,
+                keep_ids=_subproject_assignee_ids(sp),
+            ),
         )
     if payload.start_date is not None:
         sp.start_date = payload.start_date

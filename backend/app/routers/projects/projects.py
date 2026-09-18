@@ -231,7 +231,12 @@ def update_project(
 
     major_project = _load_major_project_for_user(db, payload.major_project_id, _)
     _ensure_project_type_allowed(major_project, payload.project_type)
-    participants = _load_project_participants_for_major(db, major_project, payload.participant_ids)
+    # 이미 참여자로 등록된 사람은 퇴사(비활성)했어도 그대로 유지한다.
+    # 그러지 않으면 퇴사자가 남은 프로젝트는 날짜 하나 바꾸는 것도 막힌다.
+    existing_participant_ids = {user.id for user in project.participants}
+    participants = _load_project_participants_for_major(
+        db, major_project, payload.participant_ids, keep_ids=existing_participant_ids
+    )
 
     participant_id_set = {user.id for user in participants}
     invalid_assignees = [

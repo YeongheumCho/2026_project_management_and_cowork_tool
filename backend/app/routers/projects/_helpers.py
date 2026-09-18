@@ -2,7 +2,7 @@ import json
 from datetime import date, datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.project import (
@@ -176,7 +176,10 @@ def _load_valid_assignees(
     project: Project | None,
     assignee_ids: list[int],
     allow_empty: bool = False,
+    keep_ids: set[int] | None = None,
 ) -> list[User]:
+    """keep_ids 는 이미 이 하위 프로젝트에 배정돼 있던 담당자 id 다.
+    퇴사해서 비활성이 되었어도 기존 배정은 유지한다."""
     # B-83: 담당자를 비운 채로 하위 프로젝트를 만들고 나중에 지정할 수 있다.
     if not assignee_ids:
         if allow_empty:
@@ -186,9 +189,13 @@ def _load_valid_assignees(
             detail="?대떦?먮? 1紐??댁긽 ?좏깮?댁＜?몄슂.",
         )
 
+    keep_ids = keep_ids or set()
+    active_or_kept = User.is_active.is_(True)
+    if keep_ids:
+        active_or_kept = or_(active_or_kept, User.id.in_(keep_ids))
     assignees = db.scalars(
         select(User)
-        .where(User.id.in_(assignee_ids), User.is_active.is_(True))
+        .where(User.id.in_(assignee_ids), active_or_kept)
         .order_by(User.name.asc())
     ).all()
     if len(assignees) != len(assignee_ids):
@@ -199,7 +206,11 @@ def _load_valid_assignees(
 
     if project and project.participants:
         participant_ids = {member.id for member in project.participants}
-        invalid = [user.name for user in assignees if user.id not in participant_ids]
+        invalid = [
+            user.name
+            for user in assignees
+            if user.id not in participant_ids and user.id not in keep_ids
+        ]
         if invalid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -339,7 +350,16 @@ def _load_project_participants_for_major(
     db: Session,
     major_project: MajorProject,
     participant_ids: list[int],
+    keep_ids: set[int] | None = None,
 ) -> list[User]:
+    """프로젝트 참여 인원을 검증해서 불러온다.
+
+    keep_ids 는 이미 이 프로젝트에 참여자로 등록돼 있던 사람의 id 다.
+    퇴사해서 비활성이 되었더라도 이미 등록된 사람은 그대로 통과시킨다.
+    그러지 않으면 퇴사자가 남은 프로젝트는 날짜 하나 바꾸는 것도 막힌다.
+    새로 추가하는 사람에게는 기존 규칙을 그대로 적용한다.
+    """
+    keep_ids = keep_ids or set()
     unique_ids = list(dict.fromkeys(participant_ids))
     if not unique_ids:
         raise HTTPException(
@@ -347,15 +367,23 @@ def _load_project_participants_for_major(
             detail="?꾨줈?앺듃 李몄뿬 ?몄썝??1紐??댁긽 ?좏깮?댁＜?몄슂.",
         )
     major_member_ids = {user.id for user in major_project.members}
-    invalid_ids = [user_id for user_id in unique_ids if user_id not in major_member_ids]
+    invalid_ids = [
+        user_id
+        for user_id in unique_ids
+        if user_id not in major_member_ids and user_id not in keep_ids
+    ]
     if invalid_ids:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="以묓봽濡쒖젥??李몄뿬?먮뒗 ?좏깮????꾨줈?앺듃 李몄뿬???덉뿉?쒕쭔 ?좏깮?????덉뒿?덈떎.",
         )
+    # 이미 등록돼 있던 사람은 비활성이어도 함께 불러온다
+    active_or_kept = User.is_active.is_(True)
+    if keep_ids:
+        active_or_kept = or_(active_or_kept, User.id.in_(keep_ids))
     participants = db.scalars(
         select(User)
-        .where(User.id.in_(unique_ids), User.is_active.is_(True))
+        .where(User.id.in_(unique_ids), active_or_kept)
         .order_by(User.name.asc())
     ).all()
     if len(participants) != len(unique_ids):
