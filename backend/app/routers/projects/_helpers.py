@@ -672,6 +672,10 @@ def _serialize_history_entry(
     )
 
 
+# custom_fields 를 "지정 안 함"과 "None 으로 지우기"를 구분하기 위한 표식
+_UNSET = object()
+
+
 def _apply_kefico_fields(sp: SubProject, payload) -> None:
     """payload?먯꽌 KEFICO ?꾨뱶??以?媛믪씠 ?ㅼ뼱??寃껊쭔 sp??諛섏쁺."""
     data = payload.model_dump(exclude_unset=True)
@@ -679,10 +683,25 @@ def _apply_kefico_fields(sp: SubProject, payload) -> None:
         if fname in data:
             setattr(sp, fname, data[fname])
     # 而ㅼ뒪? ?꾨뱶 諛섏쁺
-    if "custom_fields" in data and data["custom_fields"] is not None:
-        sp.custom_fields = json.dumps(data["custom_fields"], ensure_ascii=False)
-    elif "custom_fields" in data and data["custom_fields"] is None:
-        sp.custom_fields = None
+    # overflow 는 날짜·숫자 칸에 들어온 해석 불가 텍스트다(E-2).
+    # 저장된 값을 지우지 않도록 기존 내용 위에 얹는다.
+    overflow = data.get("free_text_overflow")
+    if "custom_fields" in data:
+        base = dict(data["custom_fields"]) if data["custom_fields"] is not None else None
+    elif overflow:
+        try:
+            base = dict(json.loads(sp.custom_fields)) if sp.custom_fields else {}
+        except (TypeError, ValueError):
+            base = {}
+    else:
+        base = _UNSET
+
+    if base is not _UNSET:
+        if overflow:
+            base = {**(base or {}), **overflow}
+        sp.custom_fields = (
+            json.dumps(base, ensure_ascii=False) if base is not None else None
+        )
 
 
 def _subproject_effective_weight(subproject: SubProject) -> float:

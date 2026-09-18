@@ -440,14 +440,18 @@ class _SubProjectKeficoFields(BaseModel):
                 moved["etc_month"] = etc_month.strip()
                 data["etc_month"] = None
 
-        if moved:
-            custom = dict(data.get("custom_fields") or {})
-            custom.update(moved)
-            data["custom_fields"] = custom
+        # custom_fields 를 여기서 직접 만들지 않는다.
+        # 부분 수정(PUT 한 칸만) 때 기존 custom_fields 를 통째로 지워버리기 때문이다.
+        # 라우터가 저장된 값 위에 얹도록 별도 칸으로 넘긴다.
+        data["free_text_overflow"] = moved or None
         return data
 
     # 커스텀 필드 (자유 형식)
     custom_fields: Optional[dict[str, Any]] = None
+
+    # 해석하지 못해 텍스트로 보존할 값. _keep_free_text 가 채우고 라우터가 합친다.
+    # 클라이언트가 보낸 값은 위 검증기가 항상 덮어쓰므로 무시된다.
+    free_text_overflow: Optional[dict[str, str]] = None
 
 
 class SubProjectCreate(_SubProjectKeficoFields):
