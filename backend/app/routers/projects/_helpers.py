@@ -32,7 +32,7 @@ from app.schemas.project import (
 )
 
 
-# ?꾨줈?앺듃 ?좏삎 ???몃? ?쒖뒪???쒗뵆由?留ㅽ븨
+# 프로젝트 유형 → 세부 태스크 템플릿 매핑
 _TEMPLATE_BY_TYPE = {
     "official_inspection": INSPECTION_SUBTASK_TEMPLATE,
     "regular_inspection": INSPECTION_SUBTASK_TEMPLATE,
@@ -42,7 +42,7 @@ _TEMPLATE_BY_TYPE = {
 }
 
 
-# ?낅뜲?댄듃 ??怨듯넻?쇰줈 蹂듭궗??KEFICO ?꾨뱶 紐⑸줉
+# 업데이트 시 공통으로 복사할 KEFICO 필드 목록
 _KEFICO_COPY_FIELDS = (
     "priority", "controller_name", "controller_version", "controller_country",
     "to_number", "to_assignee", "verification_level", "vehicle_type",
@@ -151,7 +151,7 @@ def _load_subproject(db: Session, subproject_id: int) -> SubProject:
     if not sp:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="?뚰봽濡쒖젥?몃? 李얠쓣 ???놁뒿?덈떎.",
+            detail="소프로젝트를 찾을 수 없습니다.",
         )
     return sp
 
@@ -186,7 +186,7 @@ def _load_valid_assignees(
             return []
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?대떦?먮? 1紐??댁긽 ?좏깮?댁＜?몄슂.",
+            detail="담당자를 1명 이상 선택해주세요.",
         )
 
     keep_ids = keep_ids or set()
@@ -201,7 +201,7 @@ def _load_valid_assignees(
     if len(assignees) != len(assignee_ids):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?좏슚?섏? ?딆? ?대떦?먭? ?ы븿?섏뼱 ?덉뒿?덈떎.",
+            detail="유효하지 않은 담당자가 포함되어 있습니다.",
         )
 
     if project and project.participants:
@@ -214,7 +214,7 @@ def _load_valid_assignees(
         if invalid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="?대떦?먮뒗 ?대떦 ?꾨줈?앺듃 李몄뿬 ?몄썝 以묒뿉?쒕쭔 ?좏깮?????덉뒿?덈떎.",
+                detail="담당자는 해당 프로젝트 참여 인원 중에서만 선택할 수 있습니다.",
             )
 
     order = {user_id: index for index, user_id in enumerate(assignee_ids)}
@@ -315,12 +315,12 @@ def _load_major_project_for_user(
     if not major_project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="??꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
+            detail="대프로젝트를 찾을 수 없습니다.",
         )
     if current_user.role != "admin" and current_user.id not in {user.id for user in major_project.members}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="蹂몄씤??諛곗젙????꾨줈?앺듃留??ъ슜?????덉뒿?덈떎.",
+            detail="본인이 배정된 대프로젝트만 사용할 수 있습니다.",
         )
     return major_project
 
@@ -340,7 +340,7 @@ def _load_major_project_members(
     if len(members) != len(unique_ids):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?좏슚?섏? ?딆? ??꾨줈?앺듃 李몄뿬?먭? ?ы븿?섏뼱 ?덉뒿?덈떎.",
+            detail="유효하지 않은 대프로젝트 참여자가 포함되어 있습니다.",
         )
     order = {user_id: index for index, user_id in enumerate(unique_ids)}
     return sorted(members, key=lambda user: order[user.id])
@@ -364,7 +364,7 @@ def _load_project_participants_for_major(
     if not unique_ids:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?꾨줈?앺듃 李몄뿬 ?몄썝??1紐??댁긽 ?좏깮?댁＜?몄슂.",
+            detail="프로젝트 참여 인원을 1명 이상 선택해주세요.",
         )
     major_member_ids = {user.id for user in major_project.members}
     invalid_ids = [
@@ -375,7 +375,7 @@ def _load_project_participants_for_major(
     if invalid_ids:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="以묓봽濡쒖젥??李몄뿬?먮뒗 ?좏깮????꾨줈?앺듃 李몄뿬???덉뿉?쒕쭔 ?좏깮?????덉뒿?덈떎.",
+            detail="중프로젝트 참여자는 선택한 대프로젝트 참여자 안에서만 선택할 수 있습니다.",
         )
     # 이미 등록돼 있던 사람은 비활성이어도 함께 불러온다
     active_or_kept = User.is_active.is_(True)
@@ -389,7 +389,7 @@ def _load_project_participants_for_major(
     if len(participants) != len(unique_ids):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?좏슚?섏? ?딆? ?꾨줈?앺듃 李몄뿬 ?몄썝???ы븿?섏뼱 ?덉뒿?덈떎.",
+            detail="유효하지 않은 프로젝트 참여 인원이 포함되어 있습니다.",
         )
     order = {user_id: index for index, user_id in enumerate(unique_ids)}
     return sorted(participants, key=lambda user: order[user.id])
@@ -454,7 +454,7 @@ def _ensure_subproject_access(db: Session, sp: SubProject, current_user: User) -
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="?대떦 ?뚰봽濡쒖젥?몄뿉 ?묎렐?????놁뒿?덈떎.",
+        detail="해당 소프로젝트에 접근할 수 없습니다.",
     )
 
 
@@ -498,19 +498,19 @@ def _validate_subproject_dates_within_project(
     if end_date < start_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="醫낅즺?쇱? ?쒖옉???댄썑?ъ빞 ?⑸땲??",
+            detail="종료일은 시작일 이후여야 합니다.",
         )
     if project is None:
         return
     if project.start_date is not None and start_date < project.start_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?섏쐞 ?꾨줈?앺듃 ?쒖옉?쇱? ?곸쐞 ?꾨줈?앺듃 ?쒖옉???댄썑?ъ빞 ?⑸땲??",
+            detail="하위 프로젝트 시작일은 상위 프로젝트 시작일 이후여야 합니다.",
         )
     if project.end_date is not None and end_date > project.end_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?섏쐞 ?꾨줈?앺듃 醫낅즺?쇱? ?곸쐞 ?꾨줈?앺듃 醫낅즺???대궡?ъ빞 ?⑸땲??",
+            detail="하위 프로젝트 종료일은 상위 프로젝트 종료일 이내여야 합니다.",
         )
 
 
@@ -562,7 +562,7 @@ def _sync_subproject_execution_history(
         )
     ).all()
 
-    # 愿由ъ옄媛 ?섎룞 ?몄쭛???됱? ?먮룞 ?숆린????곸뿉???쒖쇅 ??蹂댁〈留??쒕떎.
+    # 관리자가 수동 편집한 행은 자동 동기화 대상에서 제외 — 보존만 한다.
     auto_rows = [row for row in existing_rows if not row.manual_override]
 
     assignee_ids = sorted(_subproject_assignee_ids(subproject))
@@ -677,12 +677,12 @@ _UNSET = object()
 
 
 def _apply_kefico_fields(sp: SubProject, payload) -> None:
-    """payload?먯꽌 KEFICO ?꾨뱶??以?媛믪씠 ?ㅼ뼱??寃껊쭔 sp??諛섏쁺."""
+    """payload에서 KEFICO 필드들 중 값이 들어온 것만 sp에 반영."""
     data = payload.model_dump(exclude_unset=True)
     for fname in _KEFICO_COPY_FIELDS:
         if fname in data:
             setattr(sp, fname, data[fname])
-    # 而ㅼ뒪? ?꾨뱶 諛섏쁺
+    # 커스텀 필드 반영
     # overflow 는 날짜·숫자 칸에 들어온 해석 불가 텍스트다(E-2).
     # 저장된 값을 지우지 않도록 기존 내용 위에 얹는다.
     overflow = data.get("free_text_overflow")

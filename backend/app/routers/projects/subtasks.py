@@ -33,14 +33,14 @@ def update_subtask(
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="?몃? ?쒖뒪?щ? 李얠쓣 ???놁뒿?덈떎.",
+            detail="세부 태스크를 찾을 수 없습니다.",
         )
 
     sp = _load_subproject(db, task.subproject_id)
     if current_user.role != "admin" and current_user.id not in _subproject_assignee_ids(sp):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="蹂몄씤???대떦???쒖뒪?щ쭔 蹂寃쏀븷 ???덉뒿?덈떎.",
+            detail="본인이 담당한 태스크만 변경할 수 있습니다.",
         )
 
     if payload.is_done is not None:

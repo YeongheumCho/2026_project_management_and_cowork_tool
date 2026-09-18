@@ -237,9 +237,9 @@ export default function TeamCalendarPage() {
         </p>
       </div>
 
-      {/* ?댁뒋5: ?꾩껜 罹섎┛?붾? ?곷떒 ?꾩껜?? ?섎떒 2??援ъ꽦?쇰줈 蹂寃???鍮??щ갚 ?댁냼 */}
+      {/* 이슈5: 전체 캘린더를 상단 전체폭, 하단 2단 구성으로 변경 — 빈 여백 해소 */}
       <div className="space-y-4">
-        {/* 罹섎┛??A ???꾩껜 ?꾨줈?앺듃 (?곗냽 諛? ?댁뒋7) */}
+        {/* 캘린더 A — 전체 프로젝트 (연속 바, 이슈7) */}
         <MonthCalendar
           year={cursor.getFullYear()}
           month={cursor.getMonth()}
@@ -252,10 +252,10 @@ export default function TeamCalendarPage() {
           continuousBars
         />
 
-        {/* ?섎떒 2?? 罹섎┛??B + ?대떦??蹂대뱶 */}
+        {/* 하단 2단: 캘린더 B + 담당자 보드 */}
         <div className="grid gap-4 xl:grid-cols-2">
           <div className="space-y-4">
-            {/* 罹섎┛??B ???대떦?먮퀎 */}
+            {/* 캘린더 B — 담당자별 */}
             <MonthCalendar
               year={cursor.getFullYear()}
               month={cursor.getMonth()}
@@ -268,7 +268,7 @@ export default function TeamCalendarPage() {
               continuousBars
               filterSlot={
                 <div className="flex flex-col items-start gap-1.5">
-                  {/* ?댁뒋6: ?대떦???덉씠釉?蹂쇰뱶 */}
+                  {/* 이슈6: 담당자 레이블 볼드 */}
                   <span className="text-tiny font-bold text-text">담당자</span>
                   <TeamMemberFilter
                     users={users}
@@ -370,7 +370,7 @@ function SelectedMemberProjectBoard({
           </h2>
         </div>
 
-        {/* ?댁뒋1: 移대뱶 ?믪씠 ?듭씪 ??items-stretch濡?以?留욎땄 */}
+        {/* 이슈1: 카드 높이 통일 — items-stretch로 줄 맞춤 */}
         <div className="grid grid-cols-2 items-stretch gap-2 sm:grid-cols-4 lg:min-w-[430px]">
           <MetricCard label="프로젝트" value={String(summary.projectCount)} />
           <MetricCard label="일정 수" value={String(summary.subprojectCount)} />
@@ -467,7 +467,7 @@ function SelectedMemberProjectBoard({
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    /* ?댁뒋1: flex-col justify-between?쇰줈 ?덉씠釉?媛믪씠 ??긽 媛숈? ?꾩튂??怨좎젙 */
+    /* 이슈1: flex-col justify-between으로 레이블 값이 항상 같은 위치에 고정 */
     <div className="flex min-w-0 flex-col justify-between rounded-xl border border-border bg-surface-muted px-3 py-2">
       <div className="whitespace-nowrap text-tiny font-semibold uppercase tracking-[0.04em] text-text-subtle">
         {label}

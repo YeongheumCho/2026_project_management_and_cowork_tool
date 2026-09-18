@@ -57,7 +57,7 @@ def create_subproject(
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="?꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
+            detail="프로젝트를 찾을 수 없습니다.",
         )
 
     _ensure_project_participant_write_access(project, current_user)
@@ -86,11 +86,11 @@ def create_subproject(
     )
     _set_subproject_assignees(sp, assignees)
 
-    # KEFICO ?꾨뱶 蹂듭궗
+    # KEFICO 필드 복사
     _apply_kefico_fields(sp, payload)
     _apply_role_assignments(db, project, sp, payload)
 
-    # ?몃? ?쒖뒪?? ?꾨줈?앺듃 ?좏삎蹂?肄붾뱶 ?댁옣 ?쒗뵆由??곸슜
+    # 세부 태스크: 프로젝트 유형별 코드 내장 템플릿 적용
     task_source = [(name, float(w)) for name, w in _TEMPLATE_BY_TYPE.get(project.project_type, DEFAULT_SUBTASK_TEMPLATE)]
 
     for idx, (task_name, weight) in enumerate(task_source, start=1):
@@ -196,7 +196,7 @@ def update_subproject(
     if new_end < new_start:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="醫낅즺?쇱? ?쒖옉???댄썑?ъ빞 ?⑸땲??",
+            detail="종료일은 시작일 이후여야 합니다.",
         )
 
     _validate_subproject_dates_within_project(project, new_start, new_end)
@@ -221,11 +221,11 @@ def update_subproject(
     if payload.end_date is not None:
         sp.end_date = payload.end_date
 
-    # KEFICO ?꾨뱶 諛섏쁺
+    # KEFICO 필드 반영
     _apply_kefico_fields(sp, payload)
     _apply_role_assignments(db, project, sp, payload)
 
-    # verifier/reviewer FK 寃利?
+    # verifier/reviewer FK 검증
     for fk_name in ("function_owner", "verifier_id", "reviewer_id", "inreviewer_id"):
         val = getattr(sp, fk_name)
         if val is not None:
@@ -233,7 +233,7 @@ def update_subproject(
             if not ref:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"{fk_name} ?ъ슜?먮? 李얠쓣 ???놁뒿?덈떎.",
+                    detail=f"{fk_name} 사용자를 찾을 수 없습니다.",
                 )
 
     db.flush()
