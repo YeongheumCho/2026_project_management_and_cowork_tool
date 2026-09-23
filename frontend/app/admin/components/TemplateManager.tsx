@@ -87,6 +87,9 @@ export default function TemplateManager() {
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [reuseSourceKey, setReuseSourceKey] = useState('');
   const [moveTargetMajorProjectId, setMoveTargetMajorProjectId] = useState<number | ''>('');
+  // B-97: 끌고 있는 필드와, 지금 올라가 있는 자리
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const activeMajorProject = useMemo(
     () =>
@@ -188,6 +191,23 @@ export default function TemplateManager() {
           : field,
       ),
     );
+  }
+
+  /**
+   * B-97: 필드를 끌어서 원하는 자리에 놓는다.
+   * order 는 배열 순서로 다시 매기므로 저장 형식은 그대로다.
+   */
+  function reorderField(from: number, to: number) {
+    if (from === to) return;
+    setFields((current) => {
+      if (from < 0 || from >= current.length || to < 0 || to >= current.length) {
+        return current;
+      }
+      const next = [...current];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next.map((field, order) => ({ ...field, order }));
+    });
   }
 
   function moveField(index: number, direction: -1 | 1) {
@@ -689,6 +709,19 @@ export default function TemplateManager() {
                         total={fields.length}
                         onChange={(key, value) => updateField(index, key, value)}
                         onMove={(direction) => moveField(index, direction)}
+                        isDragging={dragIndex === index}
+                        isDragOver={dragOverIndex === index && dragIndex !== index}
+                        onDragStartField={() => setDragIndex(index)}
+                        onDragOverField={() => setDragOverIndex(index)}
+                        onDropField={() => {
+                          if (dragIndex !== null) reorderField(dragIndex, index);
+                          setDragIndex(null);
+                          setDragOverIndex(null);
+                        }}
+                        onDragEndField={() => {
+                          setDragIndex(null);
+                          setDragOverIndex(null);
+                        }}
                         onRemove={() =>
                           setFields((current) =>
                             current.filter((_, fieldIndex) => fieldIndex !== index),
@@ -736,6 +769,13 @@ type FieldEditorProps = {
     value: FieldDefinition[K],
   ) => void;
   onMove: (direction: -1 | 1) => void;
+  /** B-97: 끌어서 순서 바꾸기 */
+  isDragging: boolean;
+  isDragOver: boolean;
+  onDragStartField: () => void;
+  onDragOverField: () => void;
+  onDropField: () => void;
+  onDragEndField: () => void;
   onRemove: () => void;
   onAddOption: () => void;
   onUpdateOption: (index: number, key: keyof FieldOption, value: string) => void;
@@ -748,15 +788,69 @@ function FieldEditor({
   total,
   onChange,
   onMove,
+  isDragging,
+  isDragOver,
+  onDragStartField,
+  onDragOverField,
+  onDropField,
+  onDragEndField,
   onRemove,
   onAddOption,
   onUpdateOption,
   onRemoveOption,
 }: FieldEditorProps) {
+  // 손잡이를 누르고 있을 때만 끌 수 있게 한다.
+  // 카드 전체를 항상 draggable 로 두면 입력칸에서 글자를 못 고른다.
+  const [handleHeld, setHandleHeld] = useState(false);
+
+  const cardClass = [
+    'rounded-2xl border bg-white p-4 transition',
+    isDragging ? 'border-brand opacity-60' : 'border-border',
+    isDragOver ? 'border-brand ring-2 ring-brand-soft' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className="rounded-2xl border border-border bg-white p-4">
+    <div
+      className={cardClass}
+      draggable={handleHeld}
+      onDragStart={(event) => {
+        // 드래그 이미지가 뜨려면 데이터가 있어야 한다(파이어폭스).
+        event.dataTransfer.setData('text/plain', String(index));
+        event.dataTransfer.effectAllowed = 'move';
+        onDragStartField();
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        onDragOverField();
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setHandleHeld(false);
+        onDropField();
+      }}
+      onDragEnd={() => {
+        setHandleHeld(false);
+        onDragEndField();
+      }}
+    >
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="text-xs font-bold text-text-faint">필드 #{index + 1}</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={`필드 ${index + 1} 순서 바꾸기 — 끌어서 옮기세요`}
+            title="끌어서 순서를 바꿉니다"
+            onMouseDown={() => setHandleHeld(true)}
+            onMouseUp={() => setHandleHeld(false)}
+            onBlur={() => setHandleHeld(false)}
+            className="cursor-grab rounded px-1.5 py-1 text-text-faint hover:bg-surface-muted active:cursor-grabbing"
+          >
+            <span aria-hidden>⠿</span>
+          </button>
+          <span className="text-xs font-bold text-text-faint">필드 #{index + 1}</span>
+        </div>
         <div className="flex gap-1">
           <button
             type="button"

@@ -110,7 +110,12 @@ export default function SubProjectListItem({
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-micro text-text-muted">
-          <div className="min-w-[160px] flex-1">
+          {/*
+            A-29: 최소 폭이 160px 이라 좁은 화면에서 줄바꿈 대신 진행률 바만 계속
+            찌그러졌다(1280px 599px -> 640px 214px). 버튼 줄과 나란히 둘 수 없을
+            만큼 좁아지면 아예 아래로 내려가도록 최소 폭을 키웠다.
+          */}
+          <div className="min-w-[280px] flex-1">
             <div className="mb-1 flex items-center justify-between">
               <span>진행률</span>
               <span className="font-semibold text-text">

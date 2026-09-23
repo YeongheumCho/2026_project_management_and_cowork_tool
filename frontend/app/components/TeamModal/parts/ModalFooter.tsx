@@ -16,7 +16,9 @@ export default function ModalFooter({
   onCancel,
 }: Props) {
   return (
-    <div className="sticky bottom-0 z-10 -mx-6 -mb-6 flex justify-end gap-2 border-t border-border bg-surface px-6 pb-6 pt-4">
+    /* A-30: 모달 패널에 아래쪽 padding 24px 이 있어 sticky bottom-0 이면
+       버튼 줄이 패널 바닥에서 24px 떠 보였다. 그만큼 내려 붙인다. */
+    <div className="sticky -bottom-6 z-10 -mx-6 -mb-6 flex justify-end gap-2 border-t border-border bg-surface px-6 pb-6 pt-4">
       <button
         type="button"
         onClick={onCancel}
