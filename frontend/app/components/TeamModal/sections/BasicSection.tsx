@@ -11,7 +11,7 @@ import {
 import { clampDateYear, MAX_DATE_VALUE } from '../../../lib/dateInput';
 import OrganizationMemberPicker from '../../OrganizationMemberPicker';
 import Field from '../../form/Field';
-import type { FormSetter, FormState } from '../types';
+import { composeSubprojectName, type FormSetter, type FormState } from '../types';
 
 type Props = {
   f: FormState;
@@ -71,7 +71,7 @@ export default function BasicSection({
     set('endDate', selectedProject.end_date ?? '');
     const firstVehicleSet = selectedProject.vehicle_sets?.[0];
     if (firstVehicleSet) {
-      applyVehicleSet(firstVehicleSet, selectedProject.name, set);
+      applyVehicleSet(firstVehicleSet, fieldSchema.section_label, set);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, projectId]);
@@ -105,7 +105,7 @@ export default function BasicSection({
               onChange={(event) => {
                 const vehicleSet = selectedProject.vehicle_sets[Number(event.target.value)];
                 if (vehicleSet) {
-                  applyVehicleSet(vehicleSet, selectedProject.name, set);
+                  applyVehicleSet(vehicleSet, fieldSchema.section_label, set);
                 }
               }}
               disabled={!isAdmin}
@@ -158,7 +158,7 @@ export default function BasicSection({
             <input
               type="date"
               value={f.startDate}
-              min={selectedProject?.start_date ?? undefined}
+              // B-93: 상위 프로젝트 시작일보다 앞선 날짜도 고를 수 있다.
               max={selectedProject?.end_date ?? MAX_DATE_VALUE}
               onInput={(e) => {
                 e.currentTarget.value = clampDateYear(e.currentTarget.value);
@@ -170,7 +170,7 @@ export default function BasicSection({
             <input
               type="date"
               value={f.endDate}
-              min={selectedProject?.start_date ?? undefined}
+              min={f.startDate || undefined}
               max={selectedProject?.end_date ?? MAX_DATE_VALUE}
               onInput={(e) => {
                 e.currentTarget.value = clampDateYear(e.currentTarget.value);
@@ -185,13 +185,6 @@ export default function BasicSection({
               종료일은 시작일 이후여야 합니다.
             </p>
           )}
-          {selectedProject?.start_date &&
-            f.startDate &&
-            f.startDate < selectedProject.start_date && (
-              <p className="mt-1 text-xs text-verify-fail-fg">
-                하위 프로젝트 시작일은 상위 프로젝트 시작일 이후여야 합니다.
-              </p>
-            )}
           {selectedProject?.end_date &&
             f.endDate &&
             f.endDate > selectedProject.end_date && (
@@ -273,12 +266,13 @@ function vehicleSetMatchesForm(vehicleSet: ProjectVehicleSet, f: FormState) {
 
 function applyVehicleSet(
   vehicleSet: ProjectVehicleSet,
-  projectName: string,
+  templateName: string,
   set: FormSetter,
 ) {
   set('controllerName', vehicleSet.controller_name);
   set('vehicleType', vehicleSet.vehicle_type);
   set('controllerCountry', vehicleSet.controller_country);
   set('controllerVersion', vehicleSet.controller_version);
-  set('name', `${projectName} - ${vehicleSet.vehicle_type || '차종 미입력'}`);
+  // B-95: 중간 프로젝트 이름이 아니라 선택한 템플릿 이름을 앞에 쓴다.
+  set('name', composeSubprojectName(templateName, vehicleSet.vehicle_type));
 }

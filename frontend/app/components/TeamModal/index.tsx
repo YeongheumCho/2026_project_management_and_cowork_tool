@@ -12,6 +12,7 @@ import {
   type SubProject,
   type UserBrief,
 } from '../../lib/api';
+import ConfirmDialog from '../ConfirmDialog';
 import Modal from '../Modal';
 import ProgressBar from '../ProgressBar';
 import ModalFooter from './parts/ModalFooter';
@@ -19,7 +20,12 @@ import ModalHeader from './parts/ModalHeader';
 import BasicSection from './sections/BasicSection';
 import CustomFieldsSection, { parseMemberIds } from './sections/CustomFieldsSection';
 import { buildSubProjectPayload } from './payload';
-import { EMPTY_FORM, fromSubProject, type FormState } from './types';
+import {
+  composeSubprojectName,
+  EMPTY_FORM,
+  fromSubProject,
+  type FormState,
+} from './types';
 import {
   isTemplateForMajorProject,
   projectTemplatePrefix,
@@ -31,7 +37,8 @@ import {
 } from '../../projects/lib/vehicleSuggestions';
 
 const TEXT = {
-  deleteConfirm: '이 하위 프로젝트를 삭제하시겠습니까?',
+  deleteTitle: '하위 프로젝트를 삭제할까요?',
+  deleteDescription: '기록된 진행률과 검증 시간도 함께 삭제됩니다.\n되돌릴 수 없습니다.',
   createAria: '하위 프로젝트 추가',
   editAria: '하위 프로젝트 수정',
   adminOnly:
@@ -116,6 +123,8 @@ export default function TeamModal({
   const [f, setF] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // A-28: 하위 프로젝트 삭제 확인창
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [fieldSchemas, setFieldSchemas] = useState<Record<string, ProjectFieldSchema>>({});
   // 빈 값으로 시작해 프로젝트에 할당된 템플릿(fieldSchemaOptions)으로 채운다.
   // 'general' 같은 내장 키로 시작하면 내장 "추가 정보" 스키마가 잘못 적용된다.
@@ -231,11 +240,15 @@ export default function TeamModal({
     setSelectedFieldSchemaType(String(nextSchema.project_type));
     const templateName = nextSchema.section_label;
     const templateWeight = nextSchema.weight ?? 5;
+    const usesVehicleSet = !!selectedProject?.vehicle_sets?.length;
     setF((prev) => ({
       ...applyFieldDefaults(prev, nextSchema, false),
-      name:
-        nameTouchedRef.current || selectedProject?.vehicle_sets?.length
-          ? prev.name
+      // B-95: 차종 세트를 쓰는 프로젝트면 '템플릿 이름 - 차종' 으로 맞춘다.
+      // 차종 세트 적용이 템플릿 확정보다 먼저 돌기 때문에 여기서 다시 만든다.
+      name: nameTouchedRef.current
+        ? prev.name
+        : usesVehicleSet
+          ? composeSubprojectName(templateName, prev.vehicleType)
           : templateName,
       weight: templateWeight,
     }));
@@ -333,10 +346,14 @@ export default function TeamModal({
     });
   }, [availableAssigneeIds, effectiveSchema]);
 
+  // B-93: 시작일이 상위 프로젝트보다 앞서는 것은 막지 않는다.
+  // 이미 진행 중이던 업무를 나중에 등록할 때 실제 착수일을 적어야 하기 때문이다.
+  // 종료일 상한만 유지한다.
   const outsideProjectRange =
     !!selectedProject &&
-    ((!!selectedProject.start_date && !!f.startDate && f.startDate < selectedProject.start_date) ||
-      (!!selectedProject.end_date && !!f.endDate && f.endDate > selectedProject.end_date));
+    !!selectedProject.end_date &&
+    !!f.endDate &&
+    f.endDate > selectedProject.end_date;
 
   const invalid =
     !derivedName ||
@@ -359,12 +376,16 @@ export default function TeamModal({
       defaultFieldSchema(nextType).section_label;
     const templateWeight = fieldSchemas[nextType]?.weight ?? 5;
     const schema = fieldSchemas[nextType];
+    const usesVehicleSet =
+      mode === 'create' && !!selectedProject?.vehicle_sets?.length;
     setF((prev) => ({
       ...(schema ? applyFieldDefaults(prev, schema, true) : prev),
-      name:
-        nameTouchedRef.current ||
-        (mode === 'create' && selectedProject?.vehicle_sets?.length)
-          ? prev.name
+      // B-95: 차종 세트를 쓰는 프로젝트면 '템플릿 이름 - 차종' 으로 다시 만든다.
+      // 사용자가 이름을 직접 고쳤으면 건드리지 않는다.
+      name: nameTouchedRef.current
+        ? prev.name
+        : usesVehicleSet
+          ? composeSubprojectName(templateName, prev.vehicleType)
           : templateName,
       weight: templateWeight,
     }));
@@ -452,18 +473,24 @@ export default function TeamModal({
     }
   };
 
-  const handleDelete = async () => {
+  // A-28: 브라우저 기본 confirm 대신 슈어로그 UI 확인창을 쓴다 (A-27 과 동일).
+  const handleDelete = () => {
     if (!initial || !canDelete) return;
-    if (!window.confirm(TEXT.deleteConfirm)) return;
+    setDeleteOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!initial) return;
     setSaving(true);
     setError('');
 
     try {
       await apiFetch(`/subprojects/${initial.id}`, { method: 'DELETE' });
+      setDeleteOpen(false);
       onSaved();
       onClose();
     } catch (nextError) {
+      setDeleteOpen(false);
       setError((nextError as Error).message);
     } finally {
       setSaving(false);
@@ -471,11 +498,15 @@ export default function TeamModal({
   };
 
   return (
+    <>
     <Modal
       open={open}
       onClose={onClose}
       size="xl"
       scrollable
+      // B-94: 작성 중에 바깥을 눌러 창이 닫히면 입력이 통째로 날아간다.
+      // 취소/닫기 버튼으로만 닫는다.
+      closeOnBackdrop={false}
       ariaLabel={mode === 'create' ? TEXT.createAria : TEXT.editAria}
     >
       <ModalHeader
@@ -552,6 +583,18 @@ export default function TeamModal({
         />
       </form>
     </Modal>
+
+    {/* 같은 z-index 라 DOM 에서 모달보다 뒤에 와야 위에 그려진다 */}
+    <ConfirmDialog
+      open={deleteOpen}
+      title={TEXT.deleteTitle}
+      description={TEXT.deleteDescription}
+      confirmLabel="삭제"
+      busy={saving}
+      onConfirm={() => void confirmDelete()}
+      onClose={() => setDeleteOpen(false)}
+    />
+    </>
   );
 }
 

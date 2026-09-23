@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   PROJECT_TYPE_LABEL,
   type Project,
@@ -17,6 +17,11 @@ import {
   isTemplateForMajorProject,
 } from '../../lib/templateScope';
 import SubProjectListItem from './SubProjectListItem';
+import SubProjectListToolbar, {
+  applySubProjectFilter,
+  EMPTY_SUBPROJECT_FILTER,
+  type SubProjectListFilter,
+} from './SubProjectListToolbar';
 import { exportSubprojectsCsv, exportSubprojectsXlsx } from '../lib/subprojectExport';
 
 const MULTI_ROLE_KEYS = new Set(['verifier_id', 'reviewer_id', 'inreviewer_id']);
@@ -80,6 +85,14 @@ export default function ProjectCard({
     }
     return { memberFieldKeys, users };
   }, [fieldSchemas, project.id, project.major_project_id, users]);
+  // B-92: 정렬·필터는 이 카드 안에서만 쓰는 화면 상태다. 서버에는 보내지 않는다.
+  const [subFilter, setSubFilter] = useState<SubProjectListFilter>(
+    EMPTY_SUBPROJECT_FILTER,
+  );
+  const visibleSubprojects = useMemo(
+    () => applySubProjectFilter(subprojects, subFilter),
+    [subprojects, subFilter],
+  );
   const total = project.subproject_count ?? subprojects.length;
   const done =
     project.completed_subproject_count ??
@@ -252,14 +265,27 @@ export default function ProjectCard({
 
       {isOpen && (
         <div className="bg-surface-muted px-5 py-5">
+          {/* B-92: 하위 프로젝트가 여러 건일 때만 정렬·필터를 보여준다. */}
+          {subprojects.length > 1 && (
+            <SubProjectListToolbar
+              value={subFilter}
+              onChange={setSubFilter}
+              total={subprojects.length}
+              visible={visibleSubprojects.length}
+            />
+          )}
           {subprojects.length === 0 ? (
             <p className="rounded-[18px] border border-dashed border-border-strong bg-white px-5 py-8 text-center text-sm text-text-subtle">
               아직 등록된 하위 프로젝트가 없습니다.
               {canManageSubprojects ? ' 오른쪽 버튼에서 바로 추가할 수 있습니다.' : ''}
             </p>
+          ) : visibleSubprojects.length === 0 ? (
+            <p className="rounded-[18px] border border-dashed border-border-strong bg-white px-5 py-8 text-center text-sm text-text-subtle">
+              조건에 맞는 하위 프로젝트가 없습니다.
+            </p>
           ) : (
             <ul className="space-y-3">
-              {subprojects.map((sp) => (
+              {visibleSubprojects.map((sp) => (
                 <SubProjectListItem
                   key={sp.id}
                   sp={sp}

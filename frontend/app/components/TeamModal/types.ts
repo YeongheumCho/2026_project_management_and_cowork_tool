@@ -209,3 +209,19 @@ export type FormSetter = <K extends keyof FormState>(
   key: K,
   value: FormState[K],
 ) => void;
+
+/**
+ * 차종 세트를 고른 프로젝트에서 하위 프로젝트 이름을 자동으로 만든다.
+ *
+ * B-95: 예전에는 앞에 중간 프로젝트 이름이 붙었다.
+ * 하위 프로젝트는 중간 프로젝트를 펼쳐서 보기 때문에 그 이름이 중복이라,
+ * 선택한 템플릿 이름을 쓴다.
+ */
+export function composeSubprojectName(
+  templateName: string | null | undefined,
+  vehicleType: string | null | undefined,
+): string {
+  const base = (templateName ?? '').trim();
+  const vehicle = (vehicleType ?? '').trim() || '차종 미입력';
+  return base ? `${base} - ${vehicle}` : vehicle;
+}

@@ -745,6 +745,31 @@ function extractErrorMessage(body: ErrorBody | null, fallback: string) {
   return fallback;
 }
 
+/**
+ * 응답 상태 코드를 담은 오류.
+ *
+ * B-91: 예전에는 그냥 Error 를 던져서 "인증 만료(401)"와
+ * "서버가 잠깐 죽었거나 네트워크가 끊김"을 구분할 수 없었다.
+ * 그래서 백엔드를 재시작하기만 해도 토큰이 지워지고 로그인 화면으로 튕겼다.
+ */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+/**
+ * 인증이 실제로 끊겼을 때만 true.
+ * 네트워크 오류나 서버 오류는 false 다. 403(권한 없음)도 로그인은 살아 있으므로 false.
+ */
+export function isAuthError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
+}
+
 export async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
@@ -760,7 +785,13 @@ export async function apiFetch<T>(
   }
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
-  const res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  } catch {
+    // 네트워크가 끊겼거나 서버가 아직 안 떴을 때. 인증 문제가 아니므로 status 0.
+    throw new ApiError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.', 0);
+  }
 
   if (res.status === 204) {
     return undefined as unknown as T;
@@ -777,8 +808,9 @@ export async function apiFetch<T>(
   }
 
   if (!res.ok) {
-    throw new Error(
+    throw new ApiError(
       extractErrorMessage(body as ErrorBody, `요청 실패 (${res.status})`),
+      res.status,
     );
   }
   if (!isReadOnlyMethod(init.method)) notifyDataChanged();

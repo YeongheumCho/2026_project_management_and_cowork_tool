@@ -21,7 +21,12 @@ from app.models.project import (
     subproject_assignees,
 )
 from app.models.progress_log import ProgressLog
-from app.models.time_entry import STAGE_LABELS, SubProjectTimeEntry
+from app.models.time_entry import (
+    STAGE_FIRST_VERIFY,
+    STAGE_INREVIEW,
+    STAGE_LABELS,
+    SubProjectTimeEntry,
+)
 from app.models.user import User
 from app.models.workflow import ProjectExecutionHistory, WORKLOG_RUNNING, WorkLog
 from app.schemas.project import (
@@ -502,11 +507,9 @@ def _validate_subproject_dates_within_project(
         )
     if project is None:
         return
-    if project.start_date is not None and start_date < project.start_date:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="하위 프로젝트 시작일은 상위 프로젝트 시작일 이후여야 합니다.",
-        )
+    # B-93: 시작일이 상위 프로젝트보다 앞서는 것은 허용한다.
+    # 이미 진행 중이던 업무를 나중에 등록할 때 실제 착수일을 적어야 하기 때문이다.
+    # 종료일 상한은 그대로 둔다 — 상위 기간을 넘겨 끝나는 일정은 계획 오류에 가깝다.
     if project.end_date is not None and end_date > project.end_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -748,3 +751,70 @@ def _serialize_project_response(project: Project) -> ProjectResponse:
         in_progress_subproject_count=in_progress_count,
     )
 
+
+
+# ── B-96: 담당자별 검증 기록 -> 하위 프로젝트 전체 상태 ──────────────
+#
+# 검증 시간 창(B-73)에서 각자 상태를 골라도 목록의
+# "1차 검증: - · InReview: 검증 전" 문구는 그대로였다.
+# 그 문구는 하위 프로젝트의 단일 상태 칸을 읽는데, 담당자별 기록은
+# 별도 표에 들어가 서로 이어져 있지 않았기 때문이다.
+#
+# B-74("각 담당자가 쓴 것을 기반으로 계산")의 취지대로 여기서 굴려 올린다.
+
+# 진행 순서. 앞쪽이 덜 진행된 상태다.
+_FIRST_VERIFY_ORDER = (
+    "not_started",
+    "in_progress",
+    "review_waiting",
+    "review_in_progress",
+    "review_done",
+    "all_pass",
+)
+_INREVIEW_ORDER = (
+    "inreview_waiting",
+    "inreview_in_progress",
+    "inreview_done",
+    "uploaded",
+)
+# 이슈는 순서와 무관하게 먼저 드러나야 한다. 앞에 있을수록 우선.
+_ISSUE_PRIORITY = ("fail_issue", "pass_issue")
+
+
+def _rollup_stage_state(states: list[str], order: tuple[str, ...]) -> str | None:
+    """여러 담당자의 상태를 하나로 합친다.
+
+    - 이슈(FAIL/PASS)가 하나라도 있으면 그것을 쓴다. 묻히면 안 되는 정보다.
+    - 그 밖에는 가장 덜 진행된 상태를 쓴다. 한 사람이라도 안 끝났으면 안 끝난 것이다.
+    """
+    known = [state for state in states if state]
+    if not known:
+        return None
+    for issue in _ISSUE_PRIORITY:
+        if issue in known:
+            return issue
+    ranked = [(order.index(state), state) for state in known if state in order]
+    if not ranked:
+        return None
+    return min(ranked)[1]
+
+
+def _apply_time_entry_rollup(sp: SubProject, entries: list[SubProjectTimeEntry]) -> None:
+    """담당자별 기록의 상태를 하위 프로젝트의 단계 상태 칸에 반영한다.
+
+    해당 단계에 상태를 적은 기록이 하나도 없으면 기존 값을 그대로 둔다
+    (손으로 적어 둔 값을 지우지 않기 위해서다).
+    """
+    first = _rollup_stage_state(
+        [entry.state for entry in entries if entry.stage == STAGE_FIRST_VERIFY],
+        _FIRST_VERIFY_ORDER,
+    )
+    if first is not None:
+        sp.first_verify_status = first
+
+    inreview = _rollup_stage_state(
+        [entry.state for entry in entries if entry.stage == STAGE_INREVIEW],
+        _INREVIEW_ORDER,
+    )
+    if inreview is not None:
+        sp.inreview_status = inreview

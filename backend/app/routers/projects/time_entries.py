@@ -26,6 +26,7 @@ from app.schemas.time_entry import (
     SubProjectTimeSummary,
 )
 from app.routers.projects._helpers import (
+    _apply_time_entry_rollup,
     _can_edit_subproject_progress,
     _load_subproject,
     _sync_subproject_execution_history,
@@ -170,6 +171,10 @@ def upsert_subproject_time_entry(
 
     db.flush()
     db.refresh(sp)
+    # B-96: 담당자별로 고른 상태를 하위 프로젝트 단계 상태에 반영한다.
+    # 그래야 목록의 "1차 검증 / InReview" 문구가 따라 바뀐다.
+    _apply_time_entry_rollup(sp, _load_entries(db, sp.id))
+    db.flush()
     project = db.get(Project, sp.project_id)
     if project is not None:
         _sync_subproject_execution_history(db, project, sp)
@@ -211,6 +216,10 @@ def delete_subproject_time_entry(
     db.delete(entry)
     db.flush()
     db.refresh(sp)
+    # B-96: 담당자별로 고른 상태를 하위 프로젝트 단계 상태에 반영한다.
+    # 그래야 목록의 "1차 검증 / InReview" 문구가 따라 바뀐다.
+    _apply_time_entry_rollup(sp, _load_entries(db, sp.id))
+    db.flush()
     project = db.get(Project, sp.project_id)
     if project is not None:
         _sync_subproject_execution_history(db, project, sp)
