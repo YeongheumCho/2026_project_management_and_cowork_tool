@@ -4,6 +4,7 @@
 KEFICO 5층 업무 반영: 공식검증 / 정기검증 / 변경점검증 / 기타업무 유형별 필드.
 """
 import json
+import re
 from datetime import date, datetime
 from typing import Any, Literal, Optional
 
@@ -15,6 +16,9 @@ ProjectType = str
 VerifyState = Literal[
     "not_started",
     "in_progress",
+    # B-26: 1차 검증 목록에 추가된 리뷰 단계
+    "review_waiting",
+    "review_in_progress",
     "all_pass",
     "fail_issue",
     "pass_issue",
@@ -323,6 +327,24 @@ class SubTaskUpdate(BaseModel):
 
 # ---------- SubProject ----------
 
+# 템플릿 필드 키가 겹칠 수 있는 시스템 칸. 해석 못 하는 글자는 텍스트로 보존한다.
+_FREE_TEXT_DATE_FIELDS = ("completed_on",)
+_FREE_TEXT_INT_FIELDS = (
+    "avg_expected_minutes",
+    "first_setup_min",
+    "first_aud_min",
+    "first_review_min",
+    "inreview_setup_min",
+    "inreview_aud_min",
+    "inreview_feedback_min",
+    "change_feedback_min",
+    "change_revalidate_min",
+    "weight",
+)
+_FREE_TEXT_FLOAT_FIELDS = ("etc_days",)
+_ETC_MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
+
+
 class _SubProjectKeficoFields(BaseModel):
     """KEFICO 5층 업무용 공통 선택 필드 (create/update 공유)."""
 
@@ -378,8 +400,58 @@ class _SubProjectKeficoFields(BaseModel):
     # 가중치 (1~10, 템플릿에서 상속)
     weight: Optional[int] = Field(default=None, ge=1, le=10)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _keep_free_text(cls, data):
+        """템플릿에서 텍스트로 만든 값이 날짜·숫자 칸으로 들어와도 그대로 보존한다.
+
+        템플릿 필드의 키를 사용자가 직접 적기 때문에 completed_on 같은
+        시스템 칸과 겹칠 수 있다. 그때 "25년 9월" 처럼 날짜가 아닌 글자가 오면
+        예전에는 영어 오류만 뜨고 저장이 막혔다.
+        이제는 해석할 수 없는 값을 custom_fields 에 텍스트로 옮겨 담고
+        해당 칸은 비워 둔다. 입력한 내용이 사라지지 않는다.
+        """
+        if not isinstance(data, dict):
+            return data
+
+        moved: dict[str, str] = {}
+
+        def unparsable(name: str, parse) -> None:
+            raw = data.get(name)
+            if not isinstance(raw, str) or not raw.strip():
+                return
+            try:
+                parse(raw.strip())
+            except (ValueError, TypeError):
+                moved[name] = raw.strip()
+                data[name] = None
+
+        for name in _FREE_TEXT_DATE_FIELDS:
+            unparsable(name, date.fromisoformat)
+        for name in _FREE_TEXT_INT_FIELDS:
+            unparsable(name, int)
+        for name in _FREE_TEXT_FLOAT_FIELDS:
+            unparsable(name, float)
+
+        # 기타 업무 '월'은 YYYY-MM 형식만 받는다
+        etc_month = data.get("etc_month")
+        if isinstance(etc_month, str) and etc_month.strip():
+            if not _ETC_MONTH_RE.match(etc_month.strip()):
+                moved["etc_month"] = etc_month.strip()
+                data["etc_month"] = None
+
+        # custom_fields 를 여기서 직접 만들지 않는다.
+        # 부분 수정(PUT 한 칸만) 때 기존 custom_fields 를 통째로 지워버리기 때문이다.
+        # 라우터가 저장된 값 위에 얹도록 별도 칸으로 넘긴다.
+        data["free_text_overflow"] = moved or None
+        return data
+
     # 커스텀 필드 (자유 형식)
     custom_fields: Optional[dict[str, Any]] = None
+
+    # 해석하지 못해 텍스트로 보존할 값. _keep_free_text 가 채우고 라우터가 합친다.
+    # 클라이언트가 보낸 값은 위 검증기가 항상 덮어쓰므로 무시된다.
+    free_text_overflow: Optional[dict[str, str]] = None
 
 
 class SubProjectCreate(_SubProjectKeficoFields):

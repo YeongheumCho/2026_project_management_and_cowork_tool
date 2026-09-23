@@ -1,5 +1,6 @@
 'use client';
 
+import { EXPORT_HEADERS as SHARED_EXPORT_HEADERS } from './subprojectCsvColumns';
 import {
   PROJECT_TYPE_LABEL,
   VERIFICATION_LEVEL_LABEL,
@@ -10,57 +11,18 @@ import {
 import { SUBPROJECT_STATUS_LABEL } from '../../lib/subprojectStatus';
 
 type ExportCell = string | number;
-type ExportRow = ExportCell[];
 
-const EXPORT_HEADERS = [
-  '대프로젝트',
-  '프로젝트',
-  '프로젝트 유형',
-  '하위 프로젝트',
-  '담당자',
-  '시작일',
-  '종료일',
-  '상태',
-  '진행률(%)',
-  '우선순위',
-  '제어기명',
-  '버전 정보',
-  '국가',
-  'TO 번호',
-  'TO 담당자',
-  '검증 LEVEL',
-  '차종',
-  '기능명',
-  '기능 담당자 ID',
-  '검증 담당자',
-  '리뷰 담당자',
-  '검증 자리',
-  '제어기 번호',
-  '평균 예상 소요(분)',
-  '가중치',
-  '업로드 완료',
-  '완료일',
-  '1차 검증 상태',
-  '1차 Setup(분)',
-  '1차 AUD(분)',
-  '1차 Review(분)',
-  'InReview 상태',
-  'InReview Setup(분)',
-  'InReview AUD(분)',
-  'InReview 반영(분)',
-  'CR 번호',
-  'IP 주소',
-  '변경점 Feedback(분)',
-  '변경점 재검증(분)',
-  'LIN/STd 대기 사유',
-  '기타 구분',
-  '기타 월',
-  '기타 일수',
-  '기타 메모',
-  '특이사항',
-  '이슈 / 진행 상황',
-  '사용자 정의 필드',
-];
+const EXPORT_HEADERS = SHARED_EXPORT_HEADERS;
+
+/**
+ * 한 행의 칸 수를 머리글 수와 같게 강제한다.
+ * 예전에는 행이 머리글보다 두 칸 많아, 엑셀에서 마지막 두 열에 이름이 없었고
+ * 그 파일을 고쳐서 다시 가져오면 열이 어긋났다. 이제 어긋나면 컴파일이 깨진다.
+ */
+type Repeat<T, N extends number, R extends T[] = []> = R['length'] extends N
+  ? R
+  : Repeat<T, N, [...R, T]>;
+type ExportRow = Repeat<ExportCell, (typeof EXPORT_HEADERS)['length']>;
 
 const XLSX_FILES = [
   {

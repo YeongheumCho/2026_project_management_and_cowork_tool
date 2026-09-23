@@ -101,7 +101,7 @@ def create_project_execution_history(
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="?ъ슜?먮? 李얠쓣 ???놁뒿?덈떎.",
+            detail="사용자를 찾을 수 없습니다.",
         )
 
     subproject: SubProject | None = None
@@ -114,14 +114,14 @@ def create_project_execution_history(
     if payload.project_id is not None and not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="?꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
+            detail="프로젝트를 찾을 수 없습니다.",
         )
 
     project_name = (payload.project_name or (project.name if project else None) or "").strip()
     if not project_name:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?꾨줈?앺듃紐낆쓣 ?낅젰?댁＜?몄슂.",
+            detail="프로젝트명을 입력해주세요.",
         )
 
     history = ProjectExecutionHistory(
@@ -158,46 +158,46 @@ def update_project_execution_history(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    """愿由ъ옄: ?낅Т ?대젰 ???섎룞 ?몄쭛. ?몄쭛 ??manual_override=True 濡??쒖떆?섏뼱
-    ?댄썑 SubProject 蹂寃쎌뿉 ?섑븳 ?먮룞 ?숆린?붽? ???됱쓣 ??뼱?곗? ?딅뒗??
+    """관리자: 업무 이력 행 수동 편집. 편집 시 manual_override=True 로 표시되어
+    이후 SubProject 변경에 의한 자동 동기화가 이 행을 덮어쓰지 않는다.
     """
     history = db.get(ProjectExecutionHistory, history_id)
     if not history:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="?낅Т ?대젰??李얠쓣 ???놁뒿?덈떎.",
+            detail="업무 이력을 찾을 수 없습니다.",
         )
 
     data = payload.model_dump(exclude_unset=True)
     if not data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?섏젙???꾨뱶媛 ?놁뒿?덈떎.",
+            detail="수정할 필드가 없습니다.",
         )
 
     if "started_on" in data and "ended_on" in data:
         if data["started_on"] and data["ended_on"] and data["started_on"] > data["ended_on"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="?쒖옉?쇱씠 醫낅즺?쇰낫????쓣 ???놁뒿?덈떎.",
+                detail="시작일이 종료일보다 늦을 수 없습니다.",
             )
     elif "started_on" in data and history.ended_on:
         if data["started_on"] and data["started_on"] > history.ended_on:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="?쒖옉?쇱씠 醫낅즺?쇰낫????쓣 ???놁뒿?덈떎.",
+                detail="시작일이 종료일보다 늦을 수 없습니다.",
             )
     elif "ended_on" in data and history.started_on:
         if data["ended_on"] and history.started_on > data["ended_on"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="?쒖옉?쇱씠 醫낅즺?쇰낫????쓣 ???놁뒿?덈떎.",
+                detail="시작일이 종료일보다 늦을 수 없습니다.",
             )
 
     if "worked_minutes" in data and data["worked_minutes"] is not None and data["worked_minutes"] < 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?뚯슂 ?쒓컙? ?뚯닔?????놁뒿?덈떎.",
+            detail="소요 시간은 음수일 수 없습니다.",
         )
 
     for field, value in data.items():
@@ -219,14 +219,14 @@ def delete_project_execution_history(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    """愿由ъ옄: ?낅Т ?대젰 ??젣. SubProject媛 ?꾨즺 ?곹깭濡??щ룞湲고솕?섎㈃ ???먮룞 ?됱씠
-    ?앹꽦?????덉쑝?? ?섎룞 ?몄쭛???됱? ?ㅼ떆 留뚮뱾?댁?吏 ?딅뒗??
+    """관리자: 업무 이력 삭제. SubProject가 완료 상태로 재동기화되면 새 자동 행이
+    생성될 수 있으나, 수동 편집한 행은 다시 만들어지지 않는다.
     """
     history = db.get(ProjectExecutionHistory, history_id)
     if not history:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="?낅Т ?대젰??李얠쓣 ???놁뒿?덈떎.",
+            detail="업무 이력을 찾을 수 없습니다.",
         )
     db.delete(history)
     db.commit()

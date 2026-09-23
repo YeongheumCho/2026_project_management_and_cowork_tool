@@ -1,18 +1,18 @@
 """
-?꾨줈?앺듃/?뚰봽濡쒖젥???몃? ?쒖뒪??REST API.
+프로젝트/소프로젝트/세부 태스크 REST API.
 
-?붾뱶?ъ씤???붿빟
+엔드포인트 요약
   # Projects
-  POST   /projects                     愿由ъ옄: 理쒖긽???꾨줈?앺듃 ?앹꽦
-  GET    /projects                     ?꾩껜 ?ъ슜?? ?꾨줈?앺듃 紐⑸줉
+  POST   /projects                     관리자: 최상위 프로젝트 생성
+  GET    /projects                     전체 사용자: 프로젝트 목록
   # SubProjects
-  POST   /subprojects                  愿由ъ옄: ?뚰봽濡쒖젥???앹꽦 (?꾨줈?앺듃 ?좏삎???곕씪 ?몃? ?쒖뒪???먮룞 ?앹꽦)
-  GET    /subprojects                  荑쇰━: ?project_id, ?assignee_id
-  GET    /subprojects/{id}             ?④굔 議고쉶
-  PUT    /subprojects/{id}             愿由ъ옄: KEFICO ?꾨뱶 ?ы븿 遺遺??섏젙
-  DELETE /subprojects/{id}             愿由ъ옄: 誘몄셿猷??곹깭?먯꽌留???젣
+  POST   /subprojects                  관리자: 소프로젝트 생성 (프로젝트 유형에 따라 세부 태스크 자동 생성)
+  GET    /subprojects                  쿼리: ?project_id, ?assignee_id
+  GET    /subprojects/{id}             단건 조회
+  PUT    /subprojects/{id}             관리자: KEFICO 필드 포함 부분 수정
+  DELETE /subprojects/{id}             관리자: 미완료 상태에서만 삭제
   # SubTasks
-  PATCH  /subtasks/{id}                泥댄겕/?댁젣 ???대떦??蹂몄씤 ?먮뒗 愿由ъ옄
+  PATCH  /subtasks/{id}                체크/해제 — 담당자 본인 또는 관리자
 """
 from fastapi import APIRouter
 

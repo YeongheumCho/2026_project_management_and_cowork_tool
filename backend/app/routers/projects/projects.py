@@ -226,12 +226,17 @@ def update_project(
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="?꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
+            detail="프로젝트를 찾을 수 없습니다.",
         )
 
     major_project = _load_major_project_for_user(db, payload.major_project_id, _)
     _ensure_project_type_allowed(major_project, payload.project_type)
-    participants = _load_project_participants_for_major(db, major_project, payload.participant_ids)
+    # 이미 참여자로 등록된 사람은 퇴사(비활성)했어도 그대로 유지한다.
+    # 그러지 않으면 퇴사자가 남은 프로젝트는 날짜 하나 바꾸는 것도 막힌다.
+    existing_participant_ids = {user.id for user in project.participants}
+    participants = _load_project_participants_for_major(
+        db, major_project, payload.participant_ids, keep_ids=existing_participant_ids
+    )
 
     participant_id_set = {user.id for user in participants}
     invalid_assignees = [
@@ -243,7 +248,7 @@ def update_project(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                "?꾩옱 諛곗젙???섏쐞 ?꾨줈?앺듃 ?대떦?먭? ??李몄뿬 ?몄썝???ы븿?섏? ?딆뒿?덈떎: "
+                "현재 배정된 하위 프로젝트 담당자가 새 참여 인원에 포함되지 않습니다: "
                 + ", ".join(invalid_assignees[:3])
             ),
         )
@@ -283,7 +288,7 @@ def delete_project(
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="?꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
+            detail="프로젝트를 찾을 수 없습니다.",
         )
 
     db.delete(project)

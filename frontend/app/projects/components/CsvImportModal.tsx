@@ -10,13 +10,15 @@ import {
   type VerificationLevel,
 } from '../../lib/api';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
+import { findColumn, missingRequiredColumns } from '../lib/subprojectCsvColumns';
 
 type ParsedRow = {
   function_name: string;
   avg_expected_minutes: number | null;
   weight: number | null;
   assignee_name: string;
-  assignee_id: number | null;
+  /** 내보내기는 담당자가 여러 명이면 한 칸에 쉼표로 넣는다 */
+  assignee_ids: number[];
   verification_level: VerificationLevel | null;
   error: string | null;
 };
@@ -31,28 +33,7 @@ type Props = {
   onImported: () => Promise<void>;
 };
 
-const FUNCTION_HEADERS = ['기능명', '검증기능', '검증 기능', 'function_name', 'function', 'name'];
-const MINUTE_HEADERS = [
-  '평균소요시간(분)',
-  '평균 소요 시간(분)',
-  '평균소요시간',
-  '평균 소요 시간',
-  '평균소요',
-  'avg_expected_minutes',
-  'minutes',
-];
-const ASSIGNEE_HEADERS = ['담당자', '담당자명', 'assignee', 'assignee_name'];
-const WEIGHT_HEADERS = ['가중치', 'weight'];
-const LEVEL_HEADERS = [
-  'Lv',
-  'LV',
-  'level',
-  '검증Lv',
-  '검증LV',
-  '검증Level',
-  '검증LEVEL',
-  'verification_level',
-];
+// 열 이름은 내보내기와 한 곳에서 공유한다 -> lib/subprojectCsvColumns.ts
 const LEVEL_ALIASES: Record<string, VerificationLevel> = {
   basic: 'basic',
   기초: 'basic',
@@ -93,15 +74,6 @@ function parseCsvLine(line: string): string[] {
   return cols;
 }
 
-function normalizeHeader(value: string): string {
-  return value.replace(/^\uFEFF/, '').replace(/\s+/g, '').toLowerCase();
-}
-
-function findHeaderIndex(headers: string[], aliases: string[]): number {
-  const normalizedAliases = aliases.map(normalizeHeader);
-  return headers.findIndex((header) => normalizedAliases.includes(normalizeHeader(header)));
-}
-
 function parseMinutes(raw: string): number | null {
   const normalized = raw.trim().replace(/분/g, '').replace(/,/g, '');
   if (!normalized) return null;
@@ -132,39 +104,57 @@ function parseCsv(text: string, assigneeOptions: UserBrief[]): ParsedRow[] {
   if (lines.length < 2) return [];
 
   const headers = parseCsvLine(lines[0]);
-  const functionIndex = findHeaderIndex(headers, FUNCTION_HEADERS);
-  const minuteIndex = findHeaderIndex(headers, MINUTE_HEADERS);
-  const assigneeIndex = findHeaderIndex(headers, ASSIGNEE_HEADERS);
-  const weightIndex = findHeaderIndex(headers, WEIGHT_HEADERS);
-  const levelIndex = findHeaderIndex(headers, LEVEL_HEADERS);
+  const nameIndex = findColumn(headers, 'functionName');
+  const subprojectIndex = findColumn(headers, 'subprojectName');
+  const minuteIndex = findColumn(headers, 'minutes');
+  const assigneeIndex = findColumn(headers, 'assignee');
+  const weightIndex = findColumn(headers, 'weight');
+  const levelIndex = findColumn(headers, 'level');
 
   return lines.slice(1).map((line) => {
     const cols = parseCsvLine(line);
-    const functionName = (cols[functionIndex >= 0 ? functionIndex : 0] ?? '').trim();
-    const minutes = parseMinutes(cols[minuteIndex >= 0 ? minuteIndex : 1] ?? '');
-    const assigneeName = (cols[assigneeIndex >= 0 ? assigneeIndex : 2] ?? '').trim();
+    // 기능명이 비어 있으면 하위 프로젝트 이름을 쓴다.
+    // 내보낸 파일에는 기능명이 빈 줄이 많아 그대로는 되돌릴 수 없었다.
+    const rawFunction = nameIndex >= 0 ? (cols[nameIndex] ?? '').trim() : '';
+    const rawSubproject = subprojectIndex >= 0 ? (cols[subprojectIndex] ?? '').trim() : '';
+    const functionName = rawFunction || rawSubproject;
+    const minutes = parseMinutes(minuteIndex >= 0 ? (cols[minuteIndex] ?? '') : '');
+    const assigneeName = assigneeIndex >= 0 ? (cols[assigneeIndex] ?? '').trim() : '';
     const weightRaw = weightIndex >= 0 ? (cols[weightIndex] ?? '') : '';
     const weight = parseWeight(weightRaw);
-    const levelRaw = cols[levelIndex >= 0 ? levelIndex : 3] ?? '';
-    const assigneeMatches = assigneeOptions.filter((user) => user.name.trim() === assigneeName);
+    const levelRaw = levelIndex >= 0 ? (cols[levelIndex] ?? '') : '';
     const verificationLevel = normalizeLevel(levelRaw);
     const errors: string[] = [];
 
-    if (!functionName) errors.push('기능명 누락');
-    if (minutes === null) errors.push('평균 소요 시간은 1분 이상의 숫자로 입력');
+    // 담당자는 '관리자, 미분류인원' 처럼 한 칸에 여러 명이 올 수 있다
+    const assigneeNames = assigneeName
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    const assigneeIds: number[] = [];
+    for (const one of assigneeNames) {
+      const matches = assigneeOptions.filter((user) => user.name.trim() === one);
+      if (matches.length === 1) assigneeIds.push(matches[0].id);
+      else if (matches.length === 0) errors.push(`담당자 없음: ${one}`);
+      else errors.push(`동명이인 담당자: ${one}`);
+    }
+
+    if (!functionName) errors.push('기능명과 하위 프로젝트 이름이 모두 비어 있음');
+    // 소요 시간과 Lv 는 비어 있어도 등록할 수 있다.
+    // 내보낸 파일에는 이 값이 없는 줄이 많아, 필수로 두면 되돌릴 수 없다.
+    if (minuteIndex >= 0) {
+      const raw = (cols[minuteIndex] ?? '').trim();
+      if (raw && minutes === null) errors.push('평균 소요 시간은 1분 이상의 숫자로 입력');
+    }
     if (weightRaw.trim() && weight === null) errors.push('가중치는 1~10 사이 숫자로 입력');
-    if (!assigneeName) errors.push('담당자 누락');
-    else if (assigneeMatches.length === 0) errors.push(`담당자 없음: ${assigneeName}`);
-    else if (assigneeMatches.length > 1) errors.push(`동명이인 담당자: ${assigneeName}`);
-    if (!levelRaw.trim()) errors.push('Lv 누락');
-    else if (verificationLevel === null) errors.push(`Lv 값 오류: ${levelRaw}`);
+    if (levelRaw.trim() && verificationLevel === null) errors.push(`Lv 값 오류: ${levelRaw}`);
 
     return {
       function_name: functionName,
       avg_expected_minutes: minutes,
       weight,
       assignee_name: assigneeName,
-      assignee_id: assigneeMatches.length === 1 ? assigneeMatches[0].id : null,
+      assignee_ids: assigneeIds,
       verification_level: verificationLevel,
       error: errors.length > 0 ? errors.join(', ') : null,
     };
@@ -216,10 +206,22 @@ export default function CsvImportModal({
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = (ev.target?.result as string) ?? '';
+      // 먼저 열 이름부터 본다. 자리 번호로 넘겨짚으면 엉뚱한 열을 읽고
+      // "숫자로 입력하세요" 같은 엉뚱한 오류가 모든 줄에 뜬다.
+      const headerLine = text.replace(/^\uFEFF/, '').split(/\r?\n/)[0] ?? '';
+      const missing = missingRequiredColumns(parseCsvLine(headerLine));
+      if (missing.length > 0) {
+        setRows([]);
+        setFileError(
+          `다음 열을 찾지 못했습니다: ${missing.join(', ')}. \n`
+          + '내보내기로 받은 파일을 그대로 쓰시면 열 이름이 자동으로 맞습니다.',
+        );
+        return;
+      }
       const parsed = parseCsv(text, assigneeOptions);
       setRows(parsed);
       if (parsed.length === 0) {
-        setFileError('불러온 행이 없습니다. 기능명, 평균소요시간(분), 가중치, 담당자, Lv 컬럼을 확인해주세요.');
+        setFileError('머리글 아래에 읽을 행이 없습니다. 내용이 비어 있는지 확인해 주세요.');
       }
     };
     reader.readAsText(file, 'UTF-8');
@@ -248,7 +250,7 @@ export default function CsvImportModal({
             verification_level: row.verification_level,
             start_date: startDate,
             end_date: endDate,
-            assignee_ids: row.assignee_id === null ? [] : [row.assignee_id],
+            assignee_ids: row.assignee_ids,
           }),
         });
         resultList.push({ ...row, status: 'ok', detail: '등록 완료' });
@@ -297,7 +299,7 @@ export default function CsvImportModal({
             CSV로 검증 기능 일괄 등록
           </h2>
           <p className="mt-1 text-micro text-text-subtle">
-            CSV에는 검증할 기능명, 평균 소요 시간, 가중치, 담당자, Lv를 입력하고 기간은 아래 기본값으로 일괄 적용합니다.
+            기능명만 있으면 등록됩니다. 평균 소요 시간·가중치·담당자·Lv는 비워 두고 나중에 채울 수 있으며, 기간은 아래 기본값으로 일괄 적용합니다.
           </p>
         </div>
 
@@ -325,7 +327,7 @@ export default function CsvImportModal({
             양식 다운로드
           </button>
           <p className="text-micro text-text-subtle">
-            컬럼: 기능명 / 평균소요시간(분) / 가중치(선택) / 담당자 / Lv
+            컬럼: 기능명(또는 하위 프로젝트) / 담당자 · 평균 소요 시간·가중치·Lv 는 선택
           </p>
         </div>
 

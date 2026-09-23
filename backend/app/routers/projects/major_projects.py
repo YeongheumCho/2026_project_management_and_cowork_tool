@@ -83,7 +83,7 @@ def update_major_project(
     if not major_project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="??꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
+            detail="대프로젝트를 찾을 수 없습니다.",
         )
 
     next_project_types = list(dict.fromkeys(payload.project_types))
@@ -140,17 +140,17 @@ def delete_major_project(
     if not major_project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="??꾨줈?앺듃瑜?李얠쓣 ???놁뒿?덈떎.",
+            detail="대프로젝트를 찾을 수 없습니다.",
         )
     if major_project.is_default:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="湲곕낯 ??꾨줈?앺듃????젣?????놁뒿?덈떎.",
+            detail="기본 대프로젝트는 삭제할 수 없습니다.",
         )
     if major_project.projects:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="?뚯냽 以묓봽濡쒖젥?멸? ?덈뒗 ??꾨줈?앺듃????젣?????놁뒿?덈떎.",
+            detail="소속 중프로젝트가 있는 대프로젝트는 삭제할 수 없습니다.",
         )
     db.delete(major_project)
     db.commit()
