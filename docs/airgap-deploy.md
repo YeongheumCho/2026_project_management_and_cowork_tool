@@ -164,10 +164,9 @@ cd D:\surelog-bundle-260915
 스크립트가 순서대로 처리합니다.
 
 1. 이미지 적재 (`docker load`)
-2. DB 백업 (`backups\full_날짜.sql`)
-3. 소스 덮어쓰기 — `.env`, `uploads`, `backups` 는 보존
-4. `.env` 확인
-5. `docker compose up -d`
+2. 소스 덮어쓰기 — `.env`, `uploads`, `backups` 는 보존
+3. `.env` 확인
+4. `docker compose up -d`
 
 끝나면 `http://localhost` 또는 다른 PC 에서 `http://컴퓨터이름` 으로 접속합니다.
 
@@ -186,27 +185,6 @@ docker load -i D:\surelog-bundle-260915\images.tar
 
 # 들어왔는지 확인
 docker images | Select-String "surelog"
-```
-
-</details>
-
-<details>
-<summary><strong>DB 백업 (갱신 전에 권장)</strong></summary>
-
-```powershell
-cd C:\surelog
-
-# 전체 백업
-docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > backups\full_260915.sql
-
-# 사용자 테이블만
-docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t users --data-only --column-inserts' > backups\users_260915.sql
-```
-
-되돌릴 때는 반대로 넣습니다.
-
-```powershell
-Get-Content backups\full_260915.sql | docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 ```
 
 </details>
@@ -348,8 +326,6 @@ docker load -i D:\surelog-bundle-260901\images.tar
 robocopy D:\surelog-bundle-260901\source C:\surelog /E /XF .env /XD uploads backups
 docker compose up -d
 ```
-
-DB 까지 되돌려야 하면 백업 SQL 을 넣습니다. 위 "DB 백업" 항목을 보세요.
 
 ---
 

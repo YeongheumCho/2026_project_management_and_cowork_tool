@@ -8,9 +8,8 @@
 
     하는 일
       1. 실어 온 이미지 적재
-      2. DB 백업 (갱신일 때만)
-      3. 소스 덮어쓰기 (.env·uploads·backups 는 보존)
-      4. 컨테이너 재생성
+      2. 소스 덮어쓰기 (.env·uploads·backups 는 보존)
+      3. 컨테이너 재생성
 
 .EXAMPLE
     .\import-bundle.ps1
@@ -24,9 +23,7 @@ param(
     # 서비스가 설치된(또는 설치할) 위치
     [string]$TargetDir = "",
     # 이미지만 적재하고 멈춘다
-    [switch]$LoadOnly,
-    # DB 백업을 건너뛴다
-    [switch]$SkipBackup
+    [switch]$LoadOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -71,7 +68,7 @@ docker version --format '{{.Server.Version}}' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "도커가 실행 중이 아닙니다. Rancher Desktop 을 먼저 켜세요." }
 
 # ── 1. 이미지 적재 ────────────────────────────────────────────────
-Write-Host "`n[1/5] 이미지 적재 (수 분 걸립니다)" -ForegroundColor Cyan
+Write-Host "`n[1/4] 이미지 적재 (수 분 걸립니다)" -ForegroundColor Cyan
 Invoke-Native { docker load -i $tar }
 if ($LASTEXITCODE -ne 0) { throw "docker load 실패" }
 
@@ -93,32 +90,8 @@ if ($LoadOnly) {
     return
 }
 
-# ── 2. DB 백업 ────────────────────────────────────────────────────
-if ($isUpdate -and -not $SkipBackup) {
-    Write-Host "`n[2/5] DB 백업" -ForegroundColor Cyan
-    Push-Location $TargetDir
-    $running = docker compose ps --format '{{.Name}}' 2>$null
-    if ($running -match 'cowork_db') {
-        $backupDir = Join-Path $TargetDir 'backups'
-        New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
-        $file = Join-Path $backupDir ("full_" + (Get-Date -Format 'yyMMdd_HHmm') + ".sql")
-        docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' | Out-File -FilePath $file -Encoding utf8
-        if (Test-Path $file) {
-            $mb = [math]::Round((Get-Item $file).Length / 1MB, 1)
-            Write-Host "  $file  ($mb MB)"
-        }
-    }
-    else {
-        Write-Host "  DB 컨테이너가 꺼져 있어 건너뜁니다." -ForegroundColor Yellow
-    }
-    Pop-Location
-}
-else {
-    Write-Host "`n[2/5] DB 백업 건너뜀" -ForegroundColor Yellow
-}
-
-# ── 3. 소스 배치 ──────────────────────────────────────────────────
-Write-Host "`n[3/5] 소스 배치" -ForegroundColor Cyan
+# ── 2. 소스 배치 ──────────────────────────────────────────────────
+Write-Host "`n[2/4] 소스 배치" -ForegroundColor Cyan
 New-Item -ItemType Directory -Force -Path $TargetDir | Out-Null
 # .env·업로드 파일·백업은 덮어쓰지 않는다
 $roboArgs = @($src, $TargetDir, '/E', '/NFL', '/NDL', '/NJH', '/NJS', '/NP', '/R:1', '/W:1',
@@ -130,8 +103,8 @@ Write-Host "  완료 (.env, uploads, backups 는 유지)"
 
 Set-Location $TargetDir
 
-# ── 4. 환경 변수 ──────────────────────────────────────────────────
-Write-Host "`n[4/5] 환경 변수 확인" -ForegroundColor Cyan
+# ── 3. 환경 변수 ──────────────────────────────────────────────────
+Write-Host "`n[3/4] 환경 변수 확인" -ForegroundColor Cyan
 if (-not (Test-Path (Join-Path $TargetDir '.env'))) {
     Copy-Item (Join-Path $TargetDir '.env.example') (Join-Path $TargetDir '.env')
     Write-Host "  .env 를 새로 만들었습니다." -ForegroundColor Yellow
@@ -141,8 +114,8 @@ if (-not (Test-Path (Join-Path $TargetDir '.env'))) {
 }
 Write-Host "  기존 .env 사용"
 
-# ── 5. 기동 ───────────────────────────────────────────────────────
-Write-Host "`n[5/5] 서비스 기동" -ForegroundColor Cyan
+# ── 4. 기동 ───────────────────────────────────────────────────────
+Write-Host "`n[4/4] 서비스 기동" -ForegroundColor Cyan
 # --build 를 쓰지 않는다. 폐쇄망에서는 빌드가 불가능하고, 실어 온 이미지를 그대로 쓴다.
 Invoke-Native { docker compose up -d }
 if ($LASTEXITCODE -ne 0) {
