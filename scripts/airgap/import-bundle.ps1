@@ -31,6 +31,22 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# docker·git 은 진행 상황을 stderr 로 쓴다. PowerShell 5.1 은 출력이 리다이렉트되면
+# (로그 파일로 저장하거나 Tee-Object 로 넘길 때) 그 줄을 오류로 바꾸고,
+# ErrorActionPreference 가 Stop 이면 스크립트를 그 자리에서 끝내 버린다.
+# 그래서 여기서는 stderr 를 일반 출력으로 흘려보내고, 성공 여부는 종료 코드로만 판단한다.
+function Invoke-Native {
+    param([Parameter(Mandatory = $true)][scriptblock]$Command)
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $Command 2>&1 | ForEach-Object { "$_" }
+    }
+    finally {
+        $ErrorActionPreference = $previous
+    }
+}
+
 if ([string]::IsNullOrWhiteSpace($BundleDir)) {
     # 이 스크립트는 source\scripts\airgap 안에 있으므로 세 단계 위가 묶음 폴더다
     $BundleDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
@@ -56,7 +72,7 @@ if ($LASTEXITCODE -ne 0) { throw "도커가 실행 중이 아닙니다. Rancher 
 
 # ── 1. 이미지 적재 ────────────────────────────────────────────────
 Write-Host "`n[1/5] 이미지 적재 (수 분 걸립니다)" -ForegroundColor Cyan
-docker load -i $tar
+Invoke-Native { docker load -i $tar }
 if ($LASTEXITCODE -ne 0) { throw "docker load 실패" }
 
 $required = @('surelog-frontend:latest', 'surelog-backend:latest',
@@ -128,7 +144,7 @@ Write-Host "  기존 .env 사용"
 # ── 5. 기동 ───────────────────────────────────────────────────────
 Write-Host "`n[5/5] 서비스 기동" -ForegroundColor Cyan
 # --build 를 쓰지 않는다. 폐쇄망에서는 빌드가 불가능하고, 실어 온 이미지를 그대로 쓴다.
-docker compose up -d
+Invoke-Native { docker compose up -d }
 if ($LASTEXITCODE -ne 0) {
     Write-Host "`n기동에 실패했습니다. 컨테이너 이름이 충돌하면 아래를 실행하세요:" -ForegroundColor Red
     Write-Host "  docker compose down --remove-orphans" -ForegroundColor Red
