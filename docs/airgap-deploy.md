@@ -125,19 +125,53 @@ git bundle verify main_branch_261001.bundle
 > git bundle create main_branch_full.bundle main_branch
 > ```
 
-**폐쇄망 PC**
+**폐쇄망 PC — 받기 전 확인**
+
+넷 다 기대한 대로 나와야 다음으로 넘어갑니다.
 
 ```powershell
 cd C:\surelog
-git log --oneline -1                                # 현재 커밋 확인
-git pull D:\main_branch_261001.bundle main_branch
-git log --oneline -1                                # 반영 확인
+git branch --show-current                           # main_branch
+git status --short                                  # 아무것도 안 나와야 함
+git log --oneline -1                                # 지난 반영 지점
+git bundle verify D:\main_branch_260928.bundle      # ... is okay
+```
+
+| 확인 | 기대 결과 | 다르면 |
+|---|---|---|
+| `git branch --show-current` | `main_branch` | `git switch main_branch` |
+| `git status --short` | 빈 출력 | 폐쇄망에서 고친 파일이 있다는 뜻입니다. 무엇인지 확인하고, 필요 없는 변경이면 `git stash` 로 치워 둡니다(`git stash pop` 으로 되살릴 수 있습니다) |
+| `git log --oneline -1` | 반영 이력 표의 마지막 커밋 | 폐쇄망에서 커밋을 했거나 지난 번들을 반영하지 않은 것입니다. 아래 `verify` 결과를 봅니다 |
+| `git bundle verify` | `... is okay` | `lacks these prerequisite commits` 면 기준 커밋이 없습니다. 더 이전 커밋부터 담은 번들을 다시 만들어야 합니다 |
+
+`.env`, `uploads\`, `backups\` 는 git 이 무시하므로 `git status` 에 나오지 않는 것이 정상입니다.
+
+**폐쇄망 PC — 받기**
+
+```powershell
+git pull --ff-only D:\main_branch_260928.bundle main_branch
+git log --oneline -1                                # 번들의 끝 커밋이면 성공
+git status --short                                  # 여전히 빈 출력
 ```
 
 > [!WARNING]
-> `git fetch ... main_branch:main_branch` 는 쓰지 마세요.
-> 그 브랜치가 체크아웃돼 있으면 `refusing to fetch into branch` 로 거부됩니다.
-> 체크아웃된 브랜치에 바로 받으려면 `git pull` 을 씁니다.
+> **`--ff-only` 를 꼭 붙이세요.** 폐쇄망에서 누가 커밋을 해 두었다면 그냥 `git pull` 은
+> 말없이 병합 커밋을 만들어 이력이 갈라집니다(2026-09-28 재현 확인).
+> `--ff-only` 는 그런 경우 `Not possible to fast-forward` 로 **아무것도 바꾸지 않고 멈춥니다.**
+>
+> `git fetch ... main_branch:main_branch` 도 쓰지 마세요.
+> 체크아웃된 브랜치라 `refusing to fetch into branch` 로 거부됩니다.
+
+<details>
+<summary><strong>확인 없이 받으면 생기는 일 (재현 결과)</strong></summary>
+
+| 폐쇄망 상태 | `git pull` 결과 |
+|---|---|
+| 기준 커밋이 없음 | `Repository lacks these prerequisite commits` — 받지 못함 |
+| 번들이 바꾸는 파일을 폐쇄망에서 고쳐 둠 | `Your local changes ... would be overwritten` — 아무것도 안 바뀌고 멈춤 |
+| 폐쇄망에서 커밋을 해 둠 | `--ff-only` 없으면 **병합 커밋이 생김**, 있으면 멈춤 |
+
+</details>
 
 받은 뒤 컨테이너를 다시 올립니다.
 
