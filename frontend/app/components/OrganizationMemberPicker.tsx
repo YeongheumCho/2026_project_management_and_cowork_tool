@@ -16,6 +16,7 @@ import {
   textColorForPosition,
 } from './AppShell/colors';
 import { compactPosition } from '../lib/display';
+import { useMyTeam } from '../lib/useMyTeam';
 
 type Props = {
   users: UserBrief[];
@@ -39,17 +40,28 @@ export default function OrganizationMemberPicker({
   className,
 }: Props) {
   const groups = useMemo(() => groupUsersByTeam(users), [users]);
+  // B-98: 화면이 내 팀을 넘기지 않으면 로그인한 사용자의 팀을 직접 받아 펼친다.
+  // 예전에는 대부분의 화면이 이 값을 넘기지 않아 늘 맨 첫 팀이 펼쳐졌다.
+  const loggedInTeam = useMyTeam(myTeam === undefined);
+  const focusTeam = myTeam === undefined ? loggedInTeam : myTeam;
   const [expanded, setExpanded] = useState<Set<string>>(() =>
-    initialExpandedKeys(groups, myTeam),
+    initialExpandedKeys(groups, focusTeam),
   );
+  // 사용자가 직접 펼치거나 접은 뒤에는 자동으로 바꾸지 않는다.
+  const [touched, setTouched] = useState(false);
 
   useEffect(() => {
-    if (groups.length === 0) return;
-    setExpanded((current) => {
-      if (current.size > 0) return current;
-      return initialExpandedKeys(groups, myTeam);
-    });
-  }, [groups, myTeam]);
+    if (groups.length === 0 || touched) return;
+    // 내 팀 정보는 늦게 도착하므로, 도착하면 그 팀 경로로 다시 맞춘다.
+    // 이미 선택된 사람이 있는 팀은 계속 펼쳐 둔다.
+    const next = initialExpandedKeys(groups, focusTeam);
+    for (const memberId of selectedIds) {
+      for (const key of expandedKeysForMember(groups, memberId)) next.add(key);
+    }
+    setExpanded(next);
+    // selectedIds 는 일부러 뺀다. 선택할 때마다 펼침이 초기화되면 안 된다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, focusTeam, touched]);
 
   useEffect(() => {
     if (selectedIds.length === 0) return;
@@ -76,6 +88,7 @@ export default function OrganizationMemberPicker({
 
   const toggleGroup = (key: string) => {
     if (disabled) return;
+    setTouched(true);
     setExpanded((current) => {
       const next = new Set(current);
       if (next.has(key)) next.delete(key);

@@ -87,6 +87,15 @@ export async function patchUserRole({ token }: FetchOptions, idnum: string, role
   });
 }
 
+/** 재직/퇴사 상태 변경. 퇴사(비활성) 인원은 프로젝트에 넣을 수 없다. */
+export async function patchUserActive({ token }: FetchOptions, idnum: string, isActive: boolean) {
+  return fetch(`${API_BASE_URL}/auth/users/${idnum}/active`, {
+    method: 'PATCH',
+    headers: authHeaders(token, true),
+    body: JSON.stringify({ is_active: isActive }),
+  });
+}
+
 export async function patchUserProfile(
   { token }: FetchOptions,
   idnum: string,

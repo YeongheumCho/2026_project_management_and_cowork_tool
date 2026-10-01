@@ -12,6 +12,7 @@ import {
   type ProjectType,
   type ProjectVehicleSet,
 } from '../../lib/api';
+import { selectableMembers } from '../../lib/activeMembers';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 import type { VehicleSuggestions } from '../lib/vehicleSuggestions';
 import VehicleSetEditor, { normalizeVehicleSets } from './VehicleSetEditor';
@@ -52,7 +53,11 @@ export default function CreateProjectForm({
     () => majorProjects.find((item) => item.id === majorProjectId) ?? null,
     [majorProjectId, majorProjects],
   );
-  const selectableUsers = selectedMajorProject?.members ?? [];
+  // 새 프로젝트이므로 퇴사(비활성) 인원은 고를 수 없다.
+  const selectableUsers = useMemo(
+    () => selectableMembers(selectedMajorProject?.members ?? []),
+    [selectedMajorProject],
+  );
   const availableProjectTypes = useMemo(
     () =>
       selectedMajorProject?.project_types?.length

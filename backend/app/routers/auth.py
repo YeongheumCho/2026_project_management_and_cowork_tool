@@ -8,6 +8,7 @@ from app.dependencies import get_current_user, get_db, require_admin
 from app.models.user import User
 from app.schemas.auth import TokenResponse
 from app.schemas.user import (
+    UserActiveUpdate,
     UserCreate,
     UserPasswordReset,
     UserProfileUpdate,
@@ -154,6 +155,38 @@ def update_user_role(
         )
 
     target_user.role = payload.role
+    db.commit()
+    db.refresh(target_user)
+    return target_user
+
+
+@router.patch("/users/{idnum}/active", response_model=UserResponse)
+def update_user_active(
+    idnum: str,
+    payload: UserActiveUpdate,
+    current_admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """재직/퇴사 상태를 직접 바꾼다.
+
+    퇴사 처리는 보통 조직도 동기화가 하지만, 그룹웨어 조직도에 없는 인원(인턴 등)이
+    잘못 비활성화되면 관리자가 되돌릴 방법이 없었다. 비활성 인원은 프로젝트에 넣을 수 없다.
+    다음 조직도 동기화 때 그룹웨어에 없으면 다시 비활성으로 바뀐다.
+    """
+    target_user = db.scalar(select(User).where(User.idnum == idnum))
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다.",
+        )
+
+    if current_admin.idnum == target_user.idnum and not payload.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="자기 자신은 퇴사 처리할 수 없습니다.",
+        )
+
+    target_user.is_active = payload.is_active
     db.commit()
     db.refresh(target_user)
     return target_user

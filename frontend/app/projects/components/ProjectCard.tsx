@@ -241,11 +241,13 @@ export default function ProjectCard({
                   </ActionButton>
                   <ActionButton
                     onClick={() => exportSubprojectsCsv(project, subprojects, exportOptions)}
+                    title="메모장으로 열고 고칠 수 있습니다. 고친 파일은 'CSV 업무 가져오기'로 다시 넣을 수 있습니다."
                   >
                     CSV 추출
                   </ActionButton>
                   <ActionButton
                     onClick={() => exportSubprojectsXlsx(project, subprojects, exportOptions)}
+                    title="엑셀이 있는 PC에서 보고서·공유용으로 씁니다. 가져오기에는 CSV를 쓰세요."
                   >
                     XLSX 추출
                   </ActionButton>
@@ -315,10 +317,13 @@ function ActionButton({
   children,
   onClick,
   tone = 'default',
+  title,
 }: {
   children: ReactNode;
   onClick: () => void;
   tone?: 'default' | 'danger';
+  /** 마우스를 올리면 보이는 짧은 설명 */
+  title?: string;
 }) {
   const className =
     tone === 'danger'
@@ -326,7 +331,7 @@ function ActionButton({
       : 'rounded-[14px] border border-brand-soft bg-white px-4 py-2 text-micro font-bold text-brand transition hover:bg-brand-soft';
 
   return (
-    <button type="button" onClick={onClick} className={className}>
+    <button type="button" onClick={onClick} className={className} title={title}>
       {children}
     </button>
   );

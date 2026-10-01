@@ -49,6 +49,9 @@ class ProjectParticipantBrief(BaseModel):
     office: str | None = None
     team: str | None = None
     position: str | None = None
+    # 퇴사(비활성) 인원도 기존 참여자로 남아 있을 수 있다(E-3).
+    # 화면이 선택 목록에서 이들을 걸러내려면 이 값이 필요하다.
+    is_active: bool = True
 
     model_config = ConfigDict(from_attributes=True)
 

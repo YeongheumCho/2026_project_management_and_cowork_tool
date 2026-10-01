@@ -50,6 +50,7 @@ type Props = {
   onUserDelete: (member: UserResponse) => void;
   onPasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
   onProfileSave: (member: UserResponse, payload: UserProfileUpdatePayload) => Promise<boolean>;
+  onReactivate?: (member: UserResponse) => void;
 };
 
 type RoleFilter = 'all' | 'admin' | 'member';
@@ -67,6 +68,7 @@ export default function UserTable({
   onUserDelete,
   onPasswordReset,
   onProfileSave,
+  onReactivate,
 }: Props) {
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
@@ -215,6 +217,7 @@ export default function UserTable({
                     onOpenHistory={handleOpenHistory}
                     onPasswordReset={onPasswordReset}
                     onProfileSave={onProfileSave}
+                    onReactivate={onReactivate}
                   />
                 ))}
               </tbody>

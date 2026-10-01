@@ -26,7 +26,10 @@ export default function Modal({
   open,
   onClose,
   size = 'md',
-  closeOnBackdrop = true,
+  // B-94: 입력 중에 창 바깥을 잘못 눌러 내용이 날아가는 일이 잦았다.
+  // 기본은 닫히지 않게 하고, 취소·닫기 버튼이나 Esc 로만 닫는다.
+  // 입력이 없는 짧은 확인창(ConfirmDialog)만 명시적으로 켠다.
+  closeOnBackdrop = false,
   closeOnEsc = true,
   scrollable = false,
   ariaLabel,

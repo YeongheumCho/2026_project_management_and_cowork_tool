@@ -330,25 +330,59 @@ def _load_major_project_for_user(
     return major_project
 
 
+def _load_active_users_keeping(
+    db: Session,
+    user_ids: list[int],
+    keep_ids: set[int],
+    role_label: str,
+) -> list[User]:
+    """재직 중인 사용자만 불러온다. 단 keep_ids 에 든 사람은 퇴사했어도 통과시킨다.
+
+    거부할 때는 누가 왜 막혔는지 이름을 적어 준다.
+    예전 문구("유효하지 않은 참여자가 포함되어 있습니다")만으로는
+    퇴사 처리된 사람이 섞인 건지 알 수 없어, 재직 중인 인턴을 넣다가 막힌 것처럼 보였다.
+    """
+    unique_ids = list(dict.fromkeys(user_ids))
+    found = {
+        user.id: user
+        for user in db.scalars(select(User).where(User.id.in_(unique_ids))).all()
+    }
+    missing = [user_id for user_id in unique_ids if user_id not in found]
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"존재하지 않는 사용자가 {role_label}에 포함되어 있습니다.",
+        )
+    blocked = [
+        found[user_id].name
+        for user_id in unique_ids
+        if not found[user_id].is_active and user_id not in keep_ids
+    ]
+    if blocked:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"퇴사(비활성) 처리된 인원은 {role_label}에 새로 넣을 수 없습니다: "
+                + ", ".join(blocked)
+            ),
+        )
+    return [found[user_id] for user_id in unique_ids]
+
+
 def _load_major_project_members(
     db: Session,
     member_ids: list[int],
+    keep_ids: set[int] | None = None,
 ) -> list[User]:
+    """대프로젝트 참여자를 검증해서 불러온다.
+
+    keep_ids 는 이미 이 대프로젝트(또는 그 아래 프로젝트)에 들어 있던 사람이다.
+    퇴사했어도 그대로 둔다. 그러지 않으면 퇴사자가 한 명이라도 남은 대프로젝트는
+    재직 중인 인턴을 새로 넣는 것조차 막힌다(2026-10-01 재현).
+    """
     if not member_ids:
         return []
-    unique_ids = list(dict.fromkeys(member_ids))
-    members = db.scalars(
-        select(User)
-        .where(User.id.in_(unique_ids), User.is_active.is_(True))
-        .order_by(User.name.asc())
-    ).all()
-    if len(members) != len(unique_ids):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="유효하지 않은 대프로젝트 참여자가 포함되어 있습니다.",
-        )
-    order = {user_id: index for index, user_id in enumerate(unique_ids)}
-    return sorted(members, key=lambda user: order[user.id])
+    return _load_active_users_keeping(db, member_ids, keep_ids or set(), "대프로젝트 참여자")
 
 
 def _load_project_participants_for_major(
@@ -383,21 +417,7 @@ def _load_project_participants_for_major(
             detail="중프로젝트 참여자는 선택한 대프로젝트 참여자 안에서만 선택할 수 있습니다.",
         )
     # 이미 등록돼 있던 사람은 비활성이어도 함께 불러온다
-    active_or_kept = User.is_active.is_(True)
-    if keep_ids:
-        active_or_kept = or_(active_or_kept, User.id.in_(keep_ids))
-    participants = db.scalars(
-        select(User)
-        .where(User.id.in_(unique_ids), active_or_kept)
-        .order_by(User.name.asc())
-    ).all()
-    if len(participants) != len(unique_ids):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="유효하지 않은 프로젝트 참여 인원이 포함되어 있습니다.",
-        )
-    order = {user_id: index for index, user_id in enumerate(unique_ids)}
-    return sorted(participants, key=lambda user: order[user.id])
+    return _load_active_users_keeping(db, unique_ids, keep_ids, "프로젝트 참여 인원")
 
 
 def _get_visible_project_ids_for_user(db: Session, current_user: User) -> set[int]:

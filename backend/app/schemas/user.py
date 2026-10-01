@@ -49,6 +49,10 @@ class UserRoleUpdate(BaseModel):
     role: str = Field(pattern="^(admin|member)$")
 
 
+class UserActiveUpdate(BaseModel):
+    is_active: bool
+
+
 class UserPasswordReset(BaseModel):
     password: str = Field(min_length=8, max_length=128)
 

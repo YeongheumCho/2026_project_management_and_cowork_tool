@@ -7,6 +7,7 @@ import {
   deleteUser,
   fetchMe,
   fetchUsers,
+  patchUserActive,
   patchUserProfile,
   patchUserRole,
   resetUserPassword,
@@ -30,6 +31,7 @@ type UseAdminUsersResult = {
   handleUserDelete: (member: UserResponse) => Promise<void>;
   handlePasswordReset: (member: UserResponse, newPassword: string) => Promise<boolean>;
   handleProfileSave: (member: UserResponse, payload: UserProfileUpdatePayload) => Promise<boolean>;
+  handleReactivate: (member: UserResponse) => Promise<void>;
 };
 
 export function useAdminUsers(enabled = true): UseAdminUsersResult {
@@ -269,6 +271,38 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
     }
   };
 
+  // 퇴사(비활성) 처리된 사람을 재직으로 되돌린다.
+  // 조직도 동기화에서 빠진 인턴처럼 잘못 비활성화된 경우를 위해 둔다.
+  // 비활성 인원은 프로젝트·대프로젝트에 새로 넣을 수 없기 때문이다.
+  const handleReactivate = async (member: UserResponse) => {
+    const token = localStorage.getItem('access_token');
+    if (!token) { router.replace('/login'); return; }
+
+    setSavingId(member.idnum);
+    setMessage(null);
+
+    try {
+      const res = await patchUserActive({ token }, member.idnum, true);
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage((data as ErrorResponse).detail ?? '재직 전환에 실패했습니다.');
+        return;
+      }
+      const updated = data as UserResponse;
+      setUsers((prev) =>
+        prev.map((current) => (current.idnum === updated.idnum ? updated : current)),
+      );
+      setMessage(
+        `${updated.name}님을 재직으로 전환했습니다. 이제 프로젝트에 넣을 수 있습니다. `
+          + '(다음 조직도 동기화 때 그룹웨어에 없으면 다시 퇴사로 바뀝니다.)',
+      );
+    } catch {
+      setMessage('재직 전환 중 오류가 발생했습니다.');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   return {
     user,
     users,
@@ -283,5 +317,6 @@ export function useAdminUsers(enabled = true): UseAdminUsersResult {
     handleUserDelete,
     handlePasswordReset,
     handleProfileSave,
+    handleReactivate,
   };
 }

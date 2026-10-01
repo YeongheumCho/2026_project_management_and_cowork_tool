@@ -16,6 +16,8 @@ type Props = {
   onOpenHistory?: (member: UserResponse) => void;
   onPasswordReset?: (member: UserResponse, newPassword: string) => Promise<boolean>;
   onProfileSave?: (member: UserResponse, payload: UserProfileUpdatePayload) => Promise<boolean>;
+  /** 퇴사(비활성) 인원을 재직으로 되돌린다 */
+  onReactivate?: (member: UserResponse) => void;
 };
 
 type ProfileForm = {
@@ -45,6 +47,7 @@ export default function UserRoleRow({
   onOpenHistory,
   onPasswordReset,
   onProfileSave,
+  onReactivate,
 }: Props) {
   const isSaving = savingId === member.idnum;
   const isDeleting = deletingId === member.idnum;
@@ -159,9 +162,22 @@ export default function UserRoleRow({
               활성
             </span>
           ) : (
-            <span className="rounded-full bg-surface-subtle px-2 py-1 text-tiny font-semibold text-text-subtle">
-              비활성
-            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="rounded-full bg-surface-subtle px-2 py-1 text-tiny font-semibold text-text-subtle">
+                비활성
+              </span>
+              {onReactivate && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onReactivate(member); }}
+                  disabled={disabled}
+                  title="퇴사(비활성) 인원은 프로젝트에 넣을 수 없습니다. 실제로 재직 중이면 되돌리세요."
+                  className="rounded-lg border border-brand-soft bg-white px-2 py-1 text-tiny font-semibold text-brand transition hover:bg-brand-soft disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  재직으로 전환
+                </button>
+              )}
+            </div>
           )}
         </td>
         <td className="py-3">

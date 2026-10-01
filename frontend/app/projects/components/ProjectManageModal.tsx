@@ -12,6 +12,7 @@ import {
   type ProjectType,
   type ProjectVehicleSet,
 } from '../../lib/api';
+import { selectableMembers } from '../../lib/activeMembers';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 import type { VehicleSuggestions } from '../lib/vehicleSuggestions';
 import VehicleSetEditor, { normalizeVehicleSets } from './VehicleSetEditor';
@@ -69,7 +70,15 @@ export default function ProjectManageModal({
     () => majorProjects.find((item) => item.id === majorProjectId) ?? null,
     [majorProjectId, majorProjects],
   );
-  const selectableUsers = selectedMajorProject?.members ?? [];
+  // 퇴사자는 숨기되, 이 프로젝트에 이미 들어 있던 사람은 남긴다(E-3).
+  const selectableUsers = useMemo(
+    () =>
+      selectableMembers(
+        selectedMajorProject?.members ?? [],
+        project?.participants.map((member) => member.id) ?? [],
+      ),
+    [selectedMajorProject, project],
+  );
   const availableProjectTypes = useMemo(
     () =>
       selectedMajorProject?.project_types?.length
