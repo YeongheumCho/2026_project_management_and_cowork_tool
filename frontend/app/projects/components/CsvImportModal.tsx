@@ -9,6 +9,7 @@ import {
   type UserBrief,
   type VerificationLevel,
 } from '../../lib/api';
+import { restoreCsvFormula } from '../../lib/csvSafety';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 import { findColumn, missingRequiredColumns } from '../lib/subprojectCsvColumns';
 
@@ -89,7 +90,8 @@ export function parseCsvLine(line: string): string[] {
   }
 
   cols.push(current.trim());
-  return cols;
+  // 우리가 내보낼 때 수식 막으려고 붙인 작은따옴표를 뗀다 (csvSafety 참고)
+  return cols.map(restoreCsvFormula);
 }
 
 function parseMinutes(raw: string): number | null {

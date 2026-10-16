@@ -1,4 +1,5 @@
 import type { EquipmentColumn } from '../lib/api';
+import { neutralizeCsvFormula, restoreCsvFormula } from '../lib/csvSafety';
 
 /** 한 줄의 값. { "<열 id>": 값 } */
 export type EquipmentValues = Record<string, string>;
@@ -35,7 +36,8 @@ export function equipmentGroup(values: EquipmentValues, columns: EquipmentColumn
 }
 
 function csvCell(value: string | undefined): string {
-  const text = value ?? '';
+  // 엑셀이 수식으로 실행하지 않게 (csvSafety 참고)
+  const text = neutralizeCsvFormula(value ?? '');
   return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
@@ -57,7 +59,7 @@ export function parseCsvText(text: string): string[][] {
   let inQuotes = false;
   const pushRow = () => {
     row.push(cell);
-    if (row.some((value) => value.trim())) rows.push(row.map((value) => value.trim()));
+    if (row.some((value) => value.trim())) rows.push(row.map((value) => restoreCsvFormula(value.trim())));
     row = [];
     cell = '';
   };
