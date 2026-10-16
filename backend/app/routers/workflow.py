@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import date, datetime, timezone
 from uuid import uuid4
 
@@ -401,6 +402,28 @@ def _extract_json_block(text: str) -> dict | list | None:
     return None
 
 
+# 챗봇 서비스가 Claude 에 붙을 수 있는지 5분간 기억한다.
+# 폐쇄망에서는 매 추천마다 Claude 호출이 30초 동안 기다린 뒤에야 규칙 기반 추천으로 넘어갔다.
+_CLAUDE_AVAILABILITY_TTL_SEC = 300
+_claude_availability: dict[str, float | bool] = {"checked_at": 0.0, "ok": False}
+
+
+async def _claude_available() -> bool:
+    now = time.monotonic()
+    checked_at = float(_claude_availability["checked_at"])
+    if checked_at and now - checked_at < _CLAUDE_AVAILABILITY_TTL_SEC:
+        return bool(_claude_availability["ok"])
+    health_url = settings.AI_CHATBOT_URL.rstrip("/") + "/health"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(health_url)
+        ok = response.status_code == 200 and bool(response.json().get("available"))
+    except Exception:
+        ok = False
+    _claude_availability.update(checked_at=now, ok=ok)
+    return ok
+
+
 async def _rerank_candidates_with_claude(
     payload: RecommendationRequest,
     candidates: list[RecommendationCandidate],
@@ -408,6 +431,8 @@ async def _rerank_candidates_with_claude(
 ) -> tuple[list[RecommendationCandidate], bool, list[str]]:
     if not settings.AI_ASSIGNMENT_USE_CLAUDE or not candidates:
         return candidates, False, []
+    if not await _claude_available():
+        raise ValueError("Claude 에 연결할 수 없어 규칙 기반 추천만 보여 줍니다.")
 
     shortlist = [
         {
