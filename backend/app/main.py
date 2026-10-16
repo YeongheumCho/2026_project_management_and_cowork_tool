@@ -9,6 +9,7 @@ from app.db import engine
 from app.models import Base  # noqa: F401
 from app.models.project import DEFAULT_PROJECT_TYPES_JSON
 from app.routers.auth import router as auth_router
+from app.routers.equipment import router as equipment_router
 from app.routers.field_schemas import router as field_schemas_router
 from app.routers.projects import router as projects_router
 from app.routers.templates import router as templates_router
@@ -267,6 +268,7 @@ app.include_router(projects_router)
 app.include_router(templates_router)
 app.include_router(field_schemas_router)
 app.include_router(workflow_router)
+app.include_router(equipment_router)
 
 @app.get("/")
 def root():

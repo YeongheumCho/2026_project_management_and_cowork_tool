@@ -18,6 +18,7 @@ from app.models.project import (  # noqa: F401
     DEFAULT_SUBTASK_TEMPLATE,
 )
 from app.models.progress_log import ProgressLog  # noqa: F401
+from app.models.equipment import Equipment, EquipmentHistory  # noqa: F401
 from app.models.time_entry import (  # noqa: F401
     STAGE_CHANGE,
     STAGE_FIRST_VERIFY,

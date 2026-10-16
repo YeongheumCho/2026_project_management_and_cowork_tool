@@ -53,7 +53,7 @@ const LEVEL_ALIASES: Record<string, VerificationLevel> = {
  * 한글 열 이름이 깨져 "열을 찾지 못했습니다" 로 끝났다.
  * UTF-8 로 엄격하게 읽어 보고, 깨진 바이트가 있으면 CP949(EUC-KR)로 다시 읽는다.
  */
-function decodeCsvBytes(buffer: ArrayBuffer | null | undefined): string {
+export function decodeCsvBytes(buffer: ArrayBuffer | null | undefined): string {
   if (!buffer) return '';
   const bytes = new Uint8Array(buffer);
   try {
@@ -63,7 +63,7 @@ function decodeCsvBytes(buffer: ArrayBuffer | null | undefined): string {
   }
 }
 
-function parseCsvLine(line: string): string[] {
+export function parseCsvLine(line: string): string[] {
   const cols: string[] = [];
   let current = '';
   let inQuotes = false;

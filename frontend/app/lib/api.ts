@@ -218,6 +218,43 @@ export type MajorProject = MajorProjectBrief & {
   created_at: string;
 };
 
+// 장비 현황표. 누구나 보고 고친다. 비밀번호 칸도 그대로 주고받는다 (폐쇄망 전용).
+export type EquipmentFields = {
+  name: string;
+  equipment_no: string | null;
+  owner_name: string | null;
+  owner_idnum: string | null;
+  ip: string | null;
+  pc_no: string | null;
+  user_name: string | null;
+  controller: string | null;
+  prof: string | null;
+  col_582: string | null;
+  daas_password: string | null;
+  internal_password: string | null;
+  note: string | null;
+};
+
+export type Equipment = EquipmentFields & {
+  id: number;
+  sort_order: number;
+  version: number;
+  updated_by: number | null;
+  updated_by_name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EquipmentHistory = {
+  id: number;
+  equipment_id: number;
+  equipment_name: string;
+  action: 'create' | 'update' | 'delete';
+  changes: Record<string, [string | null, string | null]>;
+  user_name: string | null;
+  created_at: string;
+};
+
 export type ProgressLog = {
   id: number;
   project_id: number;
