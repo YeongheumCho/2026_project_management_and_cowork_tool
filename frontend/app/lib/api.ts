@@ -100,6 +100,8 @@ export type SubProject = {
   id: number;
   project_id: number;
   name: string;
+  /** 편집 창 저장 때 보내 동시 편집 덮어쓰기를 막는다 */
+  edit_version?: number;
   assignee_id: number | null;
   assignee: { id: number; name: string } | null;
   assignee_ids: number[];
@@ -176,6 +178,8 @@ export type SubProject = {
 
 export type Project = {
   id: number;
+  /** 편집 창 저장 때 보내 동시 편집 덮어쓰기를 막는다 */
+  edit_version?: number;
   major_project_id?: number | null;
   major_project?: MajorProjectBrief | null;
   name: string;
@@ -812,9 +816,41 @@ export function isAuthError(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401;
 }
 
+// 같은 목록을 동시에 요청하면 한 번만 보낸다.
+// 화면마다 사이드바(useSidebarData)와 페이지가 /projects·/subprojects 등을 함께 읽어서
+// 탭을 옮길 때마다 같은 요청이 두 번씩 나갔다. 진행 중인 요청만 나눠 쓰므로
+// 저장 직후 다시 읽는 값이 옛 값이 되는 일은 없다.
+const inflightGets = new Map<string, Promise<unknown>>();
+
+function cloneResult<T>(value: T): T {
+  if (value === undefined || value === null) return value;
+  // 받은 쪽이 배열을 정렬하는 등 고쳐도 서로 영향이 없게 따로 복사해 준다.
+  return typeof structuredClone === 'function'
+    ? structuredClone(value)
+    : (JSON.parse(JSON.stringify(value)) as T);
+}
+
 export async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
+): Promise<T> {
+  const shareable = isReadOnlyMethod(init.method) && !init.body && !init.signal;
+  if (!shareable) return requestJson<T>(path, init);
+
+  const token =
+    typeof window !== 'undefined' ? window.localStorage.getItem('access_token') : null;
+  const key = `${token ?? ''} ${path}`;
+  let pending = inflightGets.get(key) as Promise<T> | undefined;
+  if (!pending) {
+    pending = requestJson<T>(path, init).finally(() => inflightGets.delete(key));
+    inflightGets.set(key, pending);
+  }
+  return cloneResult(await pending);
+}
+
+async function requestJson<T>(
+  path: string,
+  init: RequestInit,
 ): Promise<T> {
   const token =
     typeof window !== 'undefined'
