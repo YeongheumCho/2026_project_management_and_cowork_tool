@@ -40,6 +40,7 @@ Run commands from the owning service directory unless the task is Docker-wide.
 - Dev: `npm run dev`
 - Build: `npm run build`
 - Lint: `npm run lint`
+- Tests: `npm test` (vitest, `frontend/tests/`)
 
 ### Backend
 
@@ -68,7 +69,7 @@ Run commands from the owning service directory unless the task is Docker-wide.
 
 Choose the smallest verification set that proves the change.
 
-- Frontend-only UI or state changes: run `npm run lint` in `frontend/`
+- Frontend-only UI or state changes: run `npm run lint` in `frontend/` (and `npm test` when logic in `frontend/tests/` coverage changes)
 - Backend API or auth changes: run `pytest` in `backend/`
 - Realtime changes: run `pytest` in `realtime/`
 - AI chatbot changes: run `pytest` in `ai-chatbot/`
