@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class UserCreate(BaseModel):
@@ -14,6 +14,15 @@ class UserCreate(BaseModel):
     position: str | None = Field(default=None, max_length=50)
     email: str | None = Field(default=None, max_length=120)
     phone: str | None = Field(default=None, max_length=20)
+
+    @field_validator("idnum", mode="before")
+    @classmethod
+    def _normalize_idnum(cls, value):
+        # 사번은 숫자 9자리다 (그룹웨어·인원 동기화와 같은 규칙). 예전에는 "abc" 도 만들어졌다.
+        text = str(value or "").strip()
+        if not text.isdigit():
+            raise ValueError("사번은 숫자로 입력해 주세요.")
+        return text.zfill(9)
 
 
 class UserResponse(BaseModel):

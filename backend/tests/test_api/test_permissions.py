@@ -162,3 +162,24 @@ def test_stopwatch_completion_writes_one_history_row(env):
     state["user"] = "admin"
     rows = [r for r in client.get("/projects/history").json() if r["subproject_id"] == ids["assigned"]]
     assert len(rows) == 1
+
+
+def test_user_with_records_cannot_be_deleted(env):
+    """계정 삭제가 업무 기록까지 지우던 문제: 기록이 있으면 막고 퇴사 처리를 안내한다."""
+    client, state, ids = env
+    client.post(f"/subprojects/{ids['assigned']}/progress", json={"progress_percent": 10, "work_date": "2026-03-01"})
+    state["user"] = "admin"
+    r = client.delete("/auth/users/2")
+    assert r.status_code == 409 and "퇴사 처리" in r.json()["detail"]
+    # 기록이 없는 계정은 지울 수 있다
+    assert client.delete("/auth/users/3").status_code == 204
+
+
+@pytest.mark.parametrize("idnum,expected", [("123456", 201), ("abc", 422), ("12a456789", 422)])
+def test_admin_created_idnum_is_digits(env, idnum, expected):
+    client, state, _ = env
+    state["user"] = "admin"
+    r = client.post("/auth/users", json={"idnum": idnum, "name": "새사람", "password": "abcdefgh1"})
+    assert r.status_code == expected
+    if expected == 201:
+        assert r.json()["idnum"] == "000123456"

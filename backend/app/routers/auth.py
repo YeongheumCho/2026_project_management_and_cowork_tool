@@ -5,7 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password, verify_password
 from app.dependencies import INACTIVE_ACCOUNT_DETAIL, get_current_user, get_db, require_admin
+from app.models.progress_log import ProgressLog
+from app.models.time_entry import SubProjectTimeEntry
 from app.models.user import User
+from app.models.workflow import ProjectExecutionHistory, WorkLog
 from app.schemas.auth import TokenResponse
 from app.schemas.user import (
     UserActiveUpdate,
@@ -216,6 +219,21 @@ def delete_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="마지막 관리자 계정은 삭제할 수 없습니다.",
+        )
+
+    # 계정을 지우면 그 사람의 진행률 기록·스톱워치 기록·수행 이력·검증 시간이 함께 지워지고
+    # 하위 프로젝트 진행률 계산에서도 빠진다. 퇴사자는 '퇴사 처리'로 기록을 남긴다.
+    record_counts = [
+        db.scalar(select(func.count()).select_from(model).where(model.user_id == target_user.id)) or 0
+        for model in (WorkLog, ProgressLog, ProjectExecutionHistory, SubProjectTimeEntry)
+    ]
+    if any(record_counts):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"{target_user.name}님은 업무 기록(진행률·스톱워치·수행 이력·검증 시간)이 있어 삭제할 수 없습니다. "
+                "기록을 남긴 채 쓰지 못하게 하려면 '퇴사 처리'를 해 주세요."
+            ),
         )
 
     db.delete(target_user)
