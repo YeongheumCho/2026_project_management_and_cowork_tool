@@ -80,3 +80,26 @@ def test_token_stops_working_after_deactivation(env):
     r = client.get("/auth/me", headers=headers)
     assert r.status_code == 401
     assert "퇴사" in r.json()["detail"]
+
+
+def test_signup_is_closed(env):
+    """계정은 인원 동기화로만 만든다. 회원가입으로 관리자 계정을 만들던 길을 막았다."""
+    client, _ = env
+    r = client.post(
+        "/auth/signup",
+        json={"idnum": "300", "name": "가입시도", "password": PASSWORD, "role": "admin"},
+    )
+    assert r.status_code in (404, 405)
+
+
+def test_auth_errors_are_korean(env):
+    client, Session = env
+    r = client.get("/auth/me", headers={"Authorization": "Bearer broken"})
+    assert r.status_code == 401 and "다시 로그인" in r.json()["detail"]
+
+    token = _login(client, "100").json()["access_token"]
+    with Session() as db:
+        db.query(User).filter(User.idnum == "100").delete()
+        db.commit()
+    r = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 401 and "계정을 찾을 수 없습니다" in r.json()["detail"]

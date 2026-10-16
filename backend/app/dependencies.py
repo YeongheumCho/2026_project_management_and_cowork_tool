@@ -32,7 +32,8 @@ def get_current_user(
 ) -> User:
     credentials_exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid token.",
+        # 8시간이 지나 만료되었거나 서버 키가 바뀐 경우. 화면에 그대로 보이므로 한국어로 둔다.
+        detail="로그인이 만료되었습니다. 다시 로그인해 주세요.",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
@@ -45,9 +46,11 @@ def get_current_user(
 
     user = db.scalar(select(User).where(User.idnum == userid))
     if not user:
+        # 계정이 삭제된 경우. 401 이어야 화면이 토큰을 지우고 로그인 화면으로 보낸다.
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found.",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="계정을 찾을 수 없습니다. 다시 로그인해 주세요.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     # 로그인한 뒤 퇴사(비활성) 처리되면 남은 토큰으로도 쓰지 못하게 한다.
     # 401 이면 화면이 토큰을 지우고 로그인 화면으로 보낸다.
@@ -64,6 +67,6 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin privileges are required.",
+            detail="관리자만 사용할 수 있습니다.",
         )
     return current_user
