@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AppShell from '../components/AppShell';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { apiFetch, type Equipment, type EquipmentColumn } from '../lib/api';
+import { toISODate } from '../lib/calendar';
 import { useMe } from '../lib/useMe';
 import { decodeCsvBytes } from '../projects/components/CsvImportModal';
 import ColumnManager from './ColumnManager';
@@ -298,7 +299,8 @@ export default function EquipmentPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `장비현황_${new Date().toISOString().slice(0, 10)}.csv`;
+    // toISOString 은 UTC 라 오전 9시 전에는 전날로 찍힌다. 로컬 날짜를 쓴다.
+    a.download = `장비현황_${toISODate(new Date())}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
