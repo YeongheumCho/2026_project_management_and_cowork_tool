@@ -22,7 +22,7 @@ flowchart LR
 |---|:---:|---|
 | **frontend** | 안 함 | **소스가 바뀌면 항상.** 빌드 결과가 이미지 안에 있습니다 |
 | backend | `./backend:/app` | `requirements.txt` 나 `Dockerfile` 이 바뀔 때만 |
-| realtime | `./realtime:/app` | 위와 같음 |
+| realtime | `./realtime:/app` | 2026-10-16 부터 기본으로 띄우지 않아 싣지 않음 (필요하면 `docker compose --profile realtime up -d`) |
 | ai-chatbot | `./ai-chatbot:/app` | 위와 같음 |
 | postgres · redis · caddy | - | 버전을 올릴 때만 |
 

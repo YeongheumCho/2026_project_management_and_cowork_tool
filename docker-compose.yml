@@ -64,7 +64,10 @@ services:
         condition: service_healthy
 
   # ── Realtime Server (WebSocket) ──────────────
+  # 지금 화면에서 쓰지 않아 기본으로는 띄우지 않는다 (2026-10-16).
+  # 필요하면: docker compose --profile realtime up -d
   realtime:
+    profiles: ["realtime"]
     build:
       context: ./realtime
       dockerfile: Dockerfile
@@ -118,7 +121,6 @@ services:
       - "127.0.0.1:3000:3000"
     depends_on:
       - backend
-      - realtime
 
   caddy:
     image: caddy:2-alpine

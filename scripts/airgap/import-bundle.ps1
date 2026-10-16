@@ -73,7 +73,7 @@ Invoke-Native { docker load -i $tar }
 if ($LASTEXITCODE -ne 0) { throw "docker load 실패" }
 
 $required = @('surelog-frontend:latest', 'surelog-backend:latest',
-              'surelog-realtime:latest', 'surelog-ai-chatbot:latest',
+              'surelog-ai-chatbot:latest',
               'postgres:16-alpine', 'redis:7-alpine', 'caddy:2-alpine')
 $missing = @()
 foreach ($img in $required) {
@@ -118,6 +118,11 @@ Write-Host "  기존 .env 사용"
 Write-Host "`n[4/4] 서비스 기동" -ForegroundColor Cyan
 # --build 를 쓰지 않는다. 폐쇄망에서는 빌드가 불가능하고, 실어 온 이미지를 그대로 쓴다.
 Invoke-Native { docker compose up -d }
+# 실시간 서버는 이제 기본으로 띄우지 않는다. 예전에 떠 있던 컨테이너가 남아 있으면 정리한다.
+if (-not [string]::IsNullOrWhiteSpace((docker ps -aq --filter "name=^cowork_realtime$"))) {
+    Invoke-Native { docker rm -f cowork_realtime } | Out-Null
+    Write-Host "  쓰지 않는 실시간 서버(cowork_realtime)를 정리했습니다." -ForegroundColor DarkGray
+}
 if ($LASTEXITCODE -ne 0) {
     Write-Host "`n기동에 실패했습니다. 컨테이너 이름이 충돌하면 아래를 실행하세요:" -ForegroundColor Red
     Write-Host "  docker compose down --remove-orphans" -ForegroundColor Red
