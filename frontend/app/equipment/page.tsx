@@ -246,7 +246,7 @@ export default function EquipmentPage() {
     setGroup('전체');
     // 새 줄의 첫 칸으로 바로 이동
     window.setTimeout(() => {
-      document.querySelector<HTMLInputElement>(`[data-row="${key}"] input`)?.focus();
+      document.querySelector<HTMLTextAreaElement>(`[data-row="${key}"] textarea`)?.focus();
     }, 0);
   }
 
@@ -256,7 +256,7 @@ export default function EquipmentPage() {
     setRows((current) => [...current, { key, saved: null, draft: { ...row.draft } }]);
     setGroup('전체');
     window.setTimeout(() => {
-      document.querySelector<HTMLInputElement>(`[data-row="${key}"] input`)?.focus();
+      document.querySelector<HTMLTextAreaElement>(`[data-row="${key}"] textarea`)?.focus();
     }, 0);
   }
 
@@ -286,8 +286,9 @@ export default function EquipmentPage() {
     }
   }
 
-  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>, row: Row) {
-    if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>, row: Row) {
+    // Enter 는 저장, Shift+Enter 는 칸 안에서 줄바꿈 (비고처럼 여러 줄인 값).
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       void saveRow(row);
     }
@@ -364,7 +365,7 @@ export default function EquipmentPage() {
         <div>
           <h1 className="text-xl font-bold tracking-[-0.3px] text-text">장비 현황</h1>
           <p className="mt-1 text-small text-text-subtle">
-            누구나 보고 고칠 수 있습니다. 칸을 고친 뒤 Enter 나 저장을 누르면 그 줄만 저장되고, 변경 이력에 남습니다.
+            누구나 보고 고칠 수 있습니다. 칸을 고친 뒤 Enter 나 저장을 누르면 그 줄만 저장되고, 변경 이력에 남습니다. 칸 안에서 줄을 바꾸려면 Shift+Enter 를 누릅니다.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -481,13 +482,15 @@ export default function EquipmentPage() {
                           : ''
                       }`}
                     >
-                      <input
+                      {/* 한 줄 입력칸이면 여러 줄 값의 줄바꿈이 보이지 않아, 줄 수만큼 높아지는 칸을 쓴다. */}
+                      <textarea
                         value={row.draft[column.id] ?? ''}
                         title={row.draft[column.id] || undefined}
+                        rows={Math.min(6, (row.draft[column.id] ?? '').split('\n').length)}
                         onChange={(event) => setCell(row.key, column.id, event.target.value)}
                         onKeyDown={(event) => handleKeyDown(event, row)}
                         aria-label={column.label}
-                        className="w-full bg-transparent px-2 py-2 text-small text-text outline-none focus:bg-white focus:ring-2 focus:ring-brand/40"
+                        className="block w-full resize-none bg-transparent px-2 py-2 text-small leading-5 text-text outline-none focus:bg-white focus:ring-2 focus:ring-brand/40"
                       />
                     </td>
                   ))}
