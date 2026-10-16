@@ -1,8 +1,16 @@
+# 컨테이너 로그는 10MB 파일 3개까지만 남긴다. 제한이 없으면 오래 켜 둔 PC 의 디스크를 계속 차지한다.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # ── PostgreSQL ──────────────────────────────
   db:
     image: postgres:16-alpine
     container_name: cowork_db
+    logging: *default-logging
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -23,6 +31,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: cowork_redis
+    logging: *default-logging
     restart: unless-stopped
     ports:
       - "127.0.0.1:6379:6379"
@@ -39,6 +48,7 @@ services:
       dockerfile: Dockerfile
     image: surelog-backend:latest
     container_name: cowork_backend
+    logging: *default-logging
     restart: unless-stopped
     env_file:
       - .env
@@ -60,6 +70,7 @@ services:
       dockerfile: Dockerfile
     image: surelog-realtime:latest
     container_name: cowork_realtime
+    logging: *default-logging
     restart: unless-stopped
     env_file:
       - .env
@@ -80,6 +91,7 @@ services:
       dockerfile: Dockerfile
     image: surelog-ai-chatbot:latest
     container_name: cowork_ai_chatbot
+    logging: *default-logging
     restart: unless-stopped
     env_file:
       - .env
@@ -98,6 +110,7 @@ services:
       dockerfile: Dockerfile
     image: surelog-frontend:latest
     container_name: cowork_frontend
+    logging: *default-logging
     restart: unless-stopped
     env_file:
       - .env
@@ -110,6 +123,7 @@ services:
   caddy:
     image: caddy:2-alpine
     container_name: cowork_caddy
+    logging: *default-logging
     restart: unless-stopped
     ports:
       - "80:80"
