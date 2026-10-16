@@ -32,6 +32,8 @@ type Props = {
   tagColor?: string;
   filterSlot?: ReactNode;
   continuousBars?: boolean;
+  /** 날짜를 눌렀을 때 "N건" 앞에 붙는 말. 프로젝트 단위로 그리는 달력은 '프로젝트' */
+  itemLabel?: string;
 };
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -108,6 +110,7 @@ export default function MonthCalendar({
   tagColor = '#0048FF',
   filterSlot,
   continuousBars = false,
+  itemLabel = '하위 프로젝트',
 }: Props) {
   const days = useMemo(() => getMonthMatrix(year, month), [year, month]);
   const today = toISODate(new Date());
@@ -542,6 +545,7 @@ export default function MonthCalendar({
           ref={popoverRef}
           iso={popoverIso}
           items={popoverItems}
+          itemLabel={itemLabel}
           pos={popoverPos}
           onClose={() => setPopoverIso(null)}
           onSelectSubProject={(sp) => { setPopoverIso(null); onSelectSubProject?.(sp); }}
@@ -559,12 +563,13 @@ const DayPopover = forwardRef<
   {
     iso: string;
     items: SubProject[];
+    itemLabel: string;
     pos: { top: number; left: number; openUp: boolean };
     onClose: () => void;
     onSelectSubProject: (sp: SubProject) => void;
     onSelectDate?: (iso: string) => void;
   }
->(({ iso, items, pos, onClose, onSelectSubProject, onSelectDate }, ref) => (
+>(({ iso, items, itemLabel, pos, onClose, onSelectSubProject, onSelectDate }, ref) => (
   <div
     ref={ref}
     className="fixed z-[9999] w-72 rounded-xl border border-border bg-surface shadow-xl"
@@ -573,7 +578,7 @@ const DayPopover = forwardRef<
     <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
       <div>
         <p className="text-small font-bold text-text">{iso}</p>
-        <p className="text-tiny text-text-subtle">{'소프로젝트'} {items.length}{'건'}</p>
+        <p className="text-tiny text-text-subtle">{itemLabel} {items.length}{'건'}</p>
       </div>
       <button type="button" onClick={onClose} className="rounded-full p-1 text-text-subtle hover:bg-surface-subtle hover:text-text" aria-label="닫기">
         {'✕'}

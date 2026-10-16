@@ -114,7 +114,7 @@ export default function ProjectSummaryGrid({
                     <span className="font-semibold text-text">
                       {subprojectCount}
                     </span>
-                    소프로젝트
+                    하위 프로젝트
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <span className="font-semibold text-text">

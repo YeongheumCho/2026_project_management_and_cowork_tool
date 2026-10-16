@@ -473,7 +473,7 @@ function UserHistoryPanel({
             <thead className="border-b border-border text-tiny font-bold uppercase tracking-[1px] text-text-subtle">
               <tr>
                 <th className="py-2 pr-4">프로젝트</th>
-                <th className="py-2 pr-4">소프로젝트</th>
+                <th className="py-2 pr-4">하위 프로젝트</th>
                 <th className="py-2 pr-4">유형</th>
                 <th className="py-2 pr-4">투입 시간</th>
                 <th className="py-2 pr-4">완료율</th>

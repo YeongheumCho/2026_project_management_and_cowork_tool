@@ -250,6 +250,7 @@ export default function TeamCalendarPage() {
           onSelectDate={(iso) => openCreateProject(iso)}
           title="전체 프로젝트 캘린더"
           continuousBars
+          itemLabel="프로젝트"
         />
 
         {/* 하단 2단: 캘린더 B + 담당자 보드 */}

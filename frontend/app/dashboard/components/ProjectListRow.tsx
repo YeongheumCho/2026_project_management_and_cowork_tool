@@ -26,7 +26,7 @@ export default function ProjectListRow({
     project.completed_subproject_count ??
     subprojects.filter((subproject) => subproject.status === 'completed').length;
   const progress = project.progress_percent ?? 0;
-  const summary = `소프로젝트 ${total}건 · 완료 ${done}건`;
+  const summary = `하위 프로젝트 ${total}건 · 완료 ${done}건`;
 
   const assignees = Array.from(
     new Map(

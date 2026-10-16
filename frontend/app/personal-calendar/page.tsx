@@ -143,7 +143,7 @@ export default function PersonalCalendarPage() {
           />
 
           <aside className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-            <h3 className="text-base font-semibold">담당 소프로젝트</h3>
+            <h3 className="text-base font-semibold">담당 하위 프로젝트</h3>
             <p className="mt-1 text-xs text-text-faint">
               체크박스로 단계별 진척을 기록할 수 있습니다.
             </p>
@@ -156,7 +156,7 @@ export default function PersonalCalendarPage() {
               )}
               {!loading && orderedList.length === 0 && (
                 <p className="py-4 text-center text-sm text-text-faint">
-                  배정된 소프로젝트가 없습니다.
+                  배정된 하위 프로젝트가 없습니다.
                 </p>
               )}
               {orderedList.map((sp) => (

@@ -156,7 +156,7 @@ def _load_subproject(db: Session, subproject_id: int) -> SubProject:
     if not sp:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="소프로젝트를 찾을 수 없습니다.",
+            detail="하위 프로젝트를 찾을 수 없습니다.",
         )
     return sp
 
@@ -481,7 +481,7 @@ def _ensure_subproject_access(db: Session, sp: SubProject, current_user: User) -
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="해당 소프로젝트에 접근할 수 없습니다.",
+        detail="해당 하위 프로젝트에 접근할 수 없습니다.",
     )
 
 
