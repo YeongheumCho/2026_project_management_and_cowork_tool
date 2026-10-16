@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password, verify_password
-from app.dependencies import get_current_user, get_db, require_admin
+from app.dependencies import INACTIVE_ACCOUNT_DETAIL, get_current_user, get_db, require_admin
 from app.models.user import User
 from app.schemas.auth import TokenResponse
 from app.schemas.user import (
@@ -62,6 +62,14 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="사번 또는 비밀번호가 올바르지 않습니다.",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # 퇴사(비활성) 처리된 계정은 로그인하지 못한다.
+    # 비밀번호가 맞을 때만 알려 주어, 비밀번호 없이 계정 상태를 알아낼 수 없게 한다.
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=INACTIVE_ACCOUNT_DETAIL,
         )
 
     access_token = create_access_token(subject=user.idnum)

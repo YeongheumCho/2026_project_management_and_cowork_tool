@@ -15,6 +15,8 @@ from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+INACTIVE_ACCOUNT_DETAIL = "퇴사(비활성) 처리된 계정이라 사용할 수 없습니다. 관리자에게 문의해 주세요."
+
 
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
@@ -46,6 +48,14 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found.",
+        )
+    # 로그인한 뒤 퇴사(비활성) 처리되면 남은 토큰으로도 쓰지 못하게 한다.
+    # 401 이면 화면이 토큰을 지우고 로그인 화면으로 보낸다.
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=INACTIVE_ACCOUNT_DETAIL,
+            headers={"WWW-Authenticate": "Bearer"},
         )
     return user
 
