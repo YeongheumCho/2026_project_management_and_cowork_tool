@@ -175,6 +175,8 @@ class ProjectUpdate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     vehicle_sets: list[ProjectVehicleSet] = Field(default_factory=list)
+    # 편집 창을 열 때 받은 버전. 보내지 않으면(예전 화면) 확인하지 않는다.
+    edit_version: Optional[int] = None
 
     @model_validator(mode="after")
     def _check_dates(self):
@@ -196,6 +198,7 @@ class ProjectResponse(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     vehicle_sets: list[ProjectVehicleSet] = Field(default_factory=list)
+    edit_version: int = 1
     created_by: Optional[int] = None
     created_by_name: Optional[str] = None
     created_at: datetime
@@ -481,6 +484,8 @@ class SubProjectUpdate(_SubProjectKeficoFields):
     assignee_ids: list[int] | None = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    # 편집 창을 열 때 받은 버전. 보내지 않으면(예전 화면) 확인하지 않는다.
+    edit_version: Optional[int] = None
 
     @model_validator(mode="after")
     def _check_dates(self):
@@ -504,6 +509,7 @@ class SubProjectResponse(BaseModel):
     id: int
     project_id: int
     name: str
+    edit_version: int = 1
     assignee_id: Optional[int] = None
     assignee: Optional[AssigneeBrief] = None
     assignee_ids: list[int] = []

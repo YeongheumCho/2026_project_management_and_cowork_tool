@@ -18,6 +18,7 @@ from app.schemas.project import (
     ProjectUpdate,
 )
 from app.routers.projects._helpers import (
+    _check_edit_version,
     _KEFICO_COPY_FIELDS,
     _ensure_project_type_allowed,
     _get_visible_project_ids_for_user,
@@ -228,6 +229,7 @@ def update_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="프로젝트를 찾을 수 없습니다.",
         )
+    _check_edit_version(project.edit_version, payload.edit_version, "프로젝트를")
 
     major_project = _load_major_project_for_user(db, payload.major_project_id, _)
     _ensure_project_type_allowed(major_project, payload.project_type)
@@ -265,6 +267,7 @@ def update_project(
         ensure_ascii=False,
     )
     project.participants = participants
+    project.edit_version = (project.edit_version or 1) + 1
     db.commit()
     project = db.scalar(
         select(Project)

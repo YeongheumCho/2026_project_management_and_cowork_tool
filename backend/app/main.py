@@ -74,6 +74,8 @@ def _ensure_additive_schema_updates() -> None:
         statements.append(
             "ALTER TABLE subprojects ADD COLUMN created_by INTEGER REFERENCES users(id) ON DELETE SET NULL"
         )
+    if "edit_version" not in subproject_columns:
+        statements.append("ALTER TABLE subprojects ADD COLUMN edit_version INTEGER NOT NULL DEFAULT 1")
 
     if "projects" in table_names:
         project_columns = {
@@ -89,6 +91,8 @@ def _ensure_additive_schema_updates() -> None:
             statements.append("ALTER TABLE projects ADD COLUMN end_date DATE")
         if "vehicle_sets" not in project_columns:
             statements.append("ALTER TABLE projects ADD COLUMN vehicle_sets TEXT NOT NULL DEFAULT '[]'")
+        if "edit_version" not in project_columns:
+            statements.append("ALTER TABLE projects ADD COLUMN edit_version INTEGER NOT NULL DEFAULT 1")
 
     if "project_field_schemas" in table_names:
         field_schema_columns = {

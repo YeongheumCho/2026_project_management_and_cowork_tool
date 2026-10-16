@@ -456,7 +456,8 @@ export default function TeamModal({
           body: JSON.stringify(payload),
         });
       } else if (initial) {
-        const updatable = { ...payload, project_id: undefined };
+        // 창을 연 뒤 다른 사람이 먼저 저장했으면 서버가 409 로 막는다.
+        const updatable = { ...payload, project_id: undefined, edit_version: initial.edit_version };
 
         await apiFetch(`/subprojects/${initial.id}`, {
           method: 'PUT',

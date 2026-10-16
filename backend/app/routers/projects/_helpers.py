@@ -743,6 +743,18 @@ def _subproject_effective_weight(subproject: SubProject) -> float:
     )
 
 
+def _check_edit_version(current: int, expected: int | None, target: str) -> None:
+    """편집 창을 연 뒤 다른 사람이 먼저 저장했으면 덮어쓰지 않고 막는다."""
+    if expected is not None and expected != current:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"다른 사람이 먼저 이 {target} 고쳤습니다. "
+                "입력한 내용을 따로 적어 두고, 창을 닫았다가 다시 열어 최신 내용에서 고쳐 주세요."
+            ),
+        )
+
+
 def _serialize_project_response(project: Project) -> ProjectResponse:
     subprojects = list(project.subprojects or [])
     total_weight = sum(_subproject_effective_weight(subproject) for subproject in subprojects)
@@ -764,6 +776,7 @@ def _serialize_project_response(project: Project) -> ProjectResponse:
         start_date=project.start_date,
         end_date=project.end_date,
         vehicle_sets=project.vehicle_sets,
+        edit_version=project.edit_version or 1,
         created_by=project.created_by,
         created_by_name=project.created_by_name,
         created_at=project.created_at,

@@ -110,6 +110,8 @@ export default function ProjectManageModal({
           end_date: endDate || null,
           participant_ids: participantIds,
           vehicle_sets: normalizeVehicleSets(vehicleSets),
+          // 창을 연 뒤 다른 사람이 먼저 저장했으면 서버가 409 로 막는다.
+          edit_version: project.edit_version,
         }),
       });
       await onSaved();

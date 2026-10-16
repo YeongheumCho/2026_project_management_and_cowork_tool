@@ -188,6 +188,9 @@ class Project(Base):
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     vehicle_sets: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    # 편집 창에서 저장할 때마다 1씩 오른다. 진행률·검증 시간 기록으로는 오르지 않는다.
+    # 편집 창을 연 뒤 다른 사람이 먼저 저장했으면 덮어쓰지 않고 막는 데 쓴다.
+    edit_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
@@ -302,6 +305,10 @@ class SubProject(Base):
 
     # ---------- 커스텀 필드 (자유 형식 JSON) ----------
     custom_fields: Mapped[str] = mapped_column(Text, nullable=True)             # dict[str, Any] as JSON
+
+    # 편집 창에서 저장할 때마다 1씩 오른다. 진행률·검증 시간 기록으로는 오르지 않는다.
+    # 편집 창을 연 뒤 다른 사람이 먼저 저장했으면 덮어쓰지 않고 막는 데 쓴다.
+    edit_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
