@@ -38,6 +38,24 @@ export default function ChatBot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const resizeRef = useRef<ResizeSnapshot | null>(null);
+  // 폐쇄망처럼 Claude 에 연결할 수 없거나 키가 없으면 버튼을 숨긴다 (눌러도 오류만 났다).
+  // 확인 전(null)에도 숨겨, 보였다가 사라지는 깜빡임을 막는다.
+  const [available, setAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${AI_CHATBOT_URL}/api/chat/health`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { available?: boolean } | null) => {
+        if (!cancelled) setAvailable(Boolean(data?.available));
+      })
+      .catch(() => {
+        if (!cancelled) setAvailable(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // 자동 스크롤
   const scrollToBottom = useCallback(() => {
@@ -185,6 +203,8 @@ export default function ChatBot() {
       );
     });
   };
+
+  if (!available) return null;
 
   return (
     <>
