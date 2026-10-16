@@ -5,6 +5,7 @@ import Modal from '../../components/Modal';
 import OrganizationMemberPicker from '../../components/OrganizationMemberPicker';
 import {
   apiFetch,
+  ApiError,
   PROJECT_TYPE_LABEL,
   PROJECT_TYPE_OPTIONS,
   type MajorProject,
@@ -44,9 +45,12 @@ export default function ProjectManageModal({
   const [vehicleSets, setVehicleSets] = useState<ProjectVehicleSet[]>([]);
   const [participantIds, setParticipantIds] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
+  // 창 안에 보여 줄 오류. 바깥 화면으로만 보내면 이 창에 가려 보이지 않았다.
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     if (!open || !project) return;
+    setFormError('');
     setName(project.name);
     setMajorProjectId(project.major_project_id ?? '');
     setType(project.project_type as ProjectType);
@@ -99,6 +103,7 @@ export default function ProjectManageModal({
     if (disabled || !project) return;
 
     setBusy(true);
+    setFormError('');
     try {
       await apiFetch<Project>(`/projects/${project.id}`, {
         method: 'PUT',
@@ -117,7 +122,15 @@ export default function ProjectManageModal({
       await onSaved();
       onClose();
     } catch (error) {
-      onError((error as Error).message);
+      const message = (error as Error).message;
+      if (error instanceof ApiError && error.status === 409) {
+        // 다른 사람이 먼저 저장했다. 목록을 새로 읽어 두면 다시 열 때 최신 내용이 보인다.
+        setFormError(message);
+        await onSaved();
+      } else {
+        setFormError(message);
+        onError(message);
+      }
     } finally {
       setBusy(false);
     }
@@ -271,7 +284,12 @@ export default function ProjectManageModal({
           </div>
         </div>
 
-        <div className="sticky bottom-0 z-10 -mx-6 -mb-6 flex flex-shrink-0 justify-end gap-2 border-t border-border-subtle bg-surface px-6 pb-6 pt-4">
+        <div className="sticky bottom-0 z-10 -mx-6 -mb-6 flex flex-shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border-subtle bg-surface px-6 pb-6 pt-4">
+          {formError && (
+            <p className="mr-auto min-w-0 flex-1 basis-full text-small text-verify-fail-fg sm:basis-0">
+              {formError}
+            </p>
+          )}
           <button
             type="button"
             onClick={onClose}

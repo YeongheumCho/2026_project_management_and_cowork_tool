@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   apiFetch,
+  ApiError,
   defaultFieldSchema,
   effectiveFieldSchema,
   type FieldDefinition,
@@ -468,6 +469,9 @@ export default function TeamModal({
       onSaved();
       onClose();
     } catch (nextError) {
+      // 다른 사람이 먼저 저장했으면(409) 목록을 새로 읽어 둔다.
+      // 창을 닫았다가 다시 열면 최신 내용으로 열린다.
+      if (nextError instanceof ApiError && nextError.status === 409) onSaved();
       setError((nextError as Error).message);
     } finally {
       setSaving(false);
