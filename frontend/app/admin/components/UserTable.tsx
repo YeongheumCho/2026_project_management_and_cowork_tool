@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import {
   fetchUserProjectHistory,
   type ProjectHistoryEntry,
@@ -96,10 +97,8 @@ export default function UserTable({
     [users],
   );
 
-  const handleDelete = (member: UserResponse) => {
-    if (!window.confirm(`${member.name}님 계정을 삭제하시겠습니까?`)) return;
-    onUserDelete(member);
-  };
+  const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null);
+  const handleDelete = (member: UserResponse) => setDeleteTarget(member);
 
   const handleOpenHistory = async (member: UserResponse) => {
     const token = window.localStorage.getItem('access_token');
@@ -257,6 +256,18 @@ export default function UserTable({
           }}
         />
       )}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="계정 삭제"
+        description={deleteTarget ? `${deleteTarget.name}님 계정을 삭제하시겠습니까?` : ''}
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={() => {
+          if (deleteTarget) onUserDelete(deleteTarget);
+          setDeleteTarget(null);
+        }}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

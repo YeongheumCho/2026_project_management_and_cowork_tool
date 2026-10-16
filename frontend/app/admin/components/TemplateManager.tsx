@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import {
   apiFetch,
   defaultFieldSchema,
@@ -400,11 +401,13 @@ export default function TemplateManager() {
     }
   }
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   async function handleDelete() {
+    setConfirmDelete(false);
     if (!activeKey) return;
     const schema = schemas[activeKey];
     if (!schema) return;
-    if (!window.confirm(`"${schema.section_label}" 템플릿을 삭제할까요?`)) return;
 
     try {
       await apiFetch<void>(`/field-schemas/${activeKey}`, { method: 'DELETE' });
@@ -530,7 +533,7 @@ export default function TemplateManager() {
                   {activeKey && (
                     <button
                       type="button"
-                      onClick={() => void handleDelete()}
+                      onClick={() => setConfirmDelete(true)}
                       className="rounded-lg border border-verify-fail-bg px-3 py-2 text-xs font-bold text-verify-fail-fg hover:bg-verify-fail-bg"
                     >
                       템플릿 삭제
@@ -756,6 +759,15 @@ export default function TemplateManager() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmDelete}
+        title="템플릿 삭제"
+        description={`"${schemas[activeKey]?.section_label ?? ''}" 템플릿을 삭제할까요?`}
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={() => void handleDelete()}
+        onClose={() => setConfirmDelete(false)}
+      />
     </section>
   );
 }

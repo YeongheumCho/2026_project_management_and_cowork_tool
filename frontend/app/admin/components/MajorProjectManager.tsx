@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import OrganizationMemberPicker from '../../components/OrganizationMemberPicker';
 import {
   apiFetch,
@@ -165,8 +166,10 @@ export default function MajorProjectManager({ users }: Props) {
     }
   }
 
+  const [removeTarget, setRemoveTarget] = useState<MajorProject | null>(null);
+
   async function remove(item: MajorProject) {
-    if (!window.confirm(`"${item.name}" 대프로젝트를 삭제할까요?`)) return;
+    setRemoveTarget(null);
     try {
       await apiFetch<void>(`/major-projects/${item.id}`, { method: 'DELETE' });
       await load();
@@ -340,7 +343,7 @@ export default function MajorProjectManager({ users }: Props) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => remove(item)}
+                  onClick={() => setRemoveTarget(item)}
                   disabled={item.is_default || item.project_count > 0}
                   className="rounded-lg border border-verify-fail-bg bg-white px-3 py-1.5 text-small font-bold text-verify-fail-fg disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -350,6 +353,15 @@ export default function MajorProjectManager({ users }: Props) {
             </div>
           ))}
       </div>
+      <ConfirmDialog
+        open={removeTarget !== null}
+        title="대프로젝트 삭제"
+        description={removeTarget ? `"${removeTarget.name}" 대프로젝트를 삭제할까요?` : ''}
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={() => removeTarget && void remove(removeTarget)}
+        onClose={() => setRemoveTarget(null)}
+      />
     </section>
   );
 }
