@@ -1,8 +1,10 @@
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
 from app.core.config import settings
+from app.core.validation_messages import validation_exception_handler
 from app.db import engine
 
 # models 패키지 import 시 User / Project / SubProject / SubTask 가 모두 등록된다.
@@ -259,6 +261,8 @@ def _ensure_additive_schema_updates() -> None:
 _ensure_additive_schema_updates()
 
 app = FastAPI(title="KPI Collaboration Tool API")
+# 입력 검사(422) 문구를 한국어로 (화면이 그대로 보여 준다)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 
 

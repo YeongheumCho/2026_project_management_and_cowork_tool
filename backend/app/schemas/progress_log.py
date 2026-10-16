@@ -8,8 +8,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class ProgressLogCreate(BaseModel):
     progress_percent: int = Field(ge=0, le=100)
-    comment: str | None = None
-    work_date: date
+    comment: str | None = Field(default=None, max_length=2000)
+    # 화면의 날짜 칸과 같은 범위. 1900년 같은 잘못 입력한 날짜가 그대로 저장됐다.
+    work_date: date = Field(ge=date(2000, 1, 1), le=date(2100, 12, 31))
 
 
 class ProgressContribution(BaseModel):
