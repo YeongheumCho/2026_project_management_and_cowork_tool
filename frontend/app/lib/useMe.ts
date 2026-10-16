@@ -10,6 +10,14 @@ const RETRY_DELAY_MS = 1500;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** 로그인 화면 주소. 다시 로그인하면 보던 화면으로 돌아가도록 지금 주소를 next 로 넘긴다. */
+export function loginPathWithReturn(): string {
+  if (typeof window === 'undefined') return '/login';
+  const here = `${window.location.pathname}${window.location.search}`;
+  if (!here || here === '/' || here.startsWith('/login')) return '/login';
+  return `/login?next=${encodeURIComponent(here)}`;
+}
+
 /**
  * /auth/me를 호출해 현재 사용자를 가져오는 훅.
  *
@@ -29,13 +37,13 @@ export function useMe() {
 
     const signOut = () => {
       window.localStorage.removeItem('access_token');
-      router.replace('/login');
+      router.replace(loginPathWithReturn());
     };
 
     (async () => {
       const token = window.localStorage.getItem('access_token');
       if (!token) {
-        router.replace('/login');
+        router.replace(loginPathWithReturn());
         return;
       }
 

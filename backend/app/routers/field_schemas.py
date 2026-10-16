@@ -133,9 +133,18 @@ def upsert_field_schema(
         )
         db.add(schema)
     else:
+        if payload.edit_version is not None and payload.edit_version != schema.edit_version:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "다른 관리자가 먼저 이 템플릿을 고쳤습니다. "
+                    "입력한 내용을 따로 적어 두고, 새로고침한 뒤 다시 고쳐 주세요."
+                ),
+            )
         schema.section_label = payload.section_label
         schema.fields_json = fields_json
         schema.weight = payload.weight
+        schema.edit_version = (schema.edit_version or 1) + 1
 
     db.commit()
     db.refresh(schema)

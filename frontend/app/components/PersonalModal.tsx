@@ -90,7 +90,7 @@ export default function PersonalModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} size="lg" ariaLabel={subproject.name}>
+    <Modal open={open} onClose={onClose} size="lg" closeOnEsc ariaLabel={subproject.name}>
       <div className="space-y-5">
         <div>
           <p className="text-nano font-bold uppercase tracking-[1px] text-text-subtle">

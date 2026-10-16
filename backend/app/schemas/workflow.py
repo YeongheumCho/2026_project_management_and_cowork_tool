@@ -1,7 +1,7 @@
 from datetime import date, datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 WorkLogStatus = Literal["running", "paused", "completed"]
@@ -150,6 +150,12 @@ class UserSettingsUpdate(BaseModel):
     new_password: str | None = Field(default=None, min_length=8, max_length=128)
     default_calendar_view: Literal["team", "personal"] | None = None
     notifications_enabled: bool | None = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def _strip_name(cls, value):
+        # 공백만 넣으면 이름이 빈칸으로 저장됐다. 앞뒤 공백을 지운 뒤 길이를 본다.
+        return value.strip() if isinstance(value, str) else value
 
     @model_validator(mode="after")
     def _validate(self):

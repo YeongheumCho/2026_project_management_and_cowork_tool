@@ -100,7 +100,7 @@ For these areas, verify behavior, not just syntax.
 
 Run the smallest relevant verification set:
 
-- Frontend UI/state changes: `npm run lint` in `frontend/`
+- Frontend UI/state changes: `npm run lint` in `frontend/` (and `npm test` when logic covered by `frontend/tests/` changes)
 - Backend API/auth/model changes: `pytest` in `backend/`
 - Realtime changes: `pytest` in `realtime/`
 - AI chatbot changes: `pytest` in `ai-chatbot/`

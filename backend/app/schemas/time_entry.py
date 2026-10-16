@@ -6,6 +6,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.time_entry import TIME_ENTRY_ROLES, TIME_ENTRY_STAGES
+from app.schemas.project import MAX_MINUTES
 
 
 class SubProjectTimeEntryUpsert(BaseModel):
@@ -13,9 +14,9 @@ class SubProjectTimeEntryUpsert(BaseModel):
 
     stage: str
     role: str = "verifier"
-    setup_min: int | None = Field(default=None, ge=0)
-    aud_min: int | None = Field(default=None, ge=0)
-    work_min: int | None = Field(default=None, ge=0)
+    setup_min: int | None = Field(default=None, ge=0, le=MAX_MINUTES)
+    aud_min: int | None = Field(default=None, ge=0, le=MAX_MINUTES)
+    work_min: int | None = Field(default=None, ge=0, le=MAX_MINUTES)
     state: str | None = None
     issue_note: str | None = None
     worked_on: date | None = None

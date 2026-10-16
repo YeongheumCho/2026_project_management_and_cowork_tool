@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.security import create_access_token, hash_password, verify_password
-from app.dependencies import get_current_user, get_db, require_admin
+from app.dependencies import INACTIVE_ACCOUNT_DETAIL, get_current_user, get_db, require_admin
+from app.models.progress_log import ProgressLog
+from app.models.project import MajorProject
+from app.models.time_entry import SubProjectTimeEntry
 from app.models.user import User
+from app.models.workflow import ProjectExecutionHistory, WorkLog
 from app.schemas.auth import TokenResponse
 from app.schemas.user import (
     UserActiveUpdate,
@@ -14,7 +18,6 @@ from app.schemas.user import (
     UserProfileUpdate,
     UserResponse,
     UserRoleUpdate,
-    UserSignupCreate,
     UserSyncChange,
     UserSyncRequest,
     UserSyncResult,
@@ -24,30 +27,20 @@ from app.schemas.user import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def signup(payload: UserSignupCreate, db: Session = Depends(get_db)):
-    existing_user = db.scalar(select(User).where(User.idnum == payload.idnum))
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="이미 사용 중인 사번입니다.",
-        )
+def _join_default_major_project(db: Session, user: User) -> None:
+    """기본 대프로젝트는 재직자 전원이 구성원이다.
 
-    user = User(
-        idnum=payload.idnum,
-        name=payload.name,
-        password_hash=hash_password(payload.password),
-        role=payload.role,
-        center=payload.center,
-        office=payload.office,
-        team=payload.team,
-        position=payload.position,
-        email=payload.email,
+    예전에는 서버가 시작될 때만 맞춰서, 그 뒤에 만든 계정·동기화로 들어온 신규 입사자·
+    재직으로 되돌린 계정은 서버를 다시 켜기 전까지 기본 대프로젝트의 프로젝트가 보이지 않고
+    참여자로도 넣을 수 없었다.
+    """
+    default = db.scalar(
+        select(MajorProject)
+        .options(selectinload(MajorProject.members))
+        .where(MajorProject.is_default.is_(True))
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+    if default is not None and user not in default.members:
+        default.members.append(user)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -62,6 +55,14 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="사번 또는 비밀번호가 올바르지 않습니다.",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # 퇴사(비활성) 처리된 계정은 로그인하지 못한다.
+    # 비밀번호가 맞을 때만 알려 주어, 비밀번호 없이 계정 상태를 알아낼 수 없게 한다.
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=INACTIVE_ACCOUNT_DETAIL,
         )
 
     access_token = create_access_token(subject=user.idnum)
@@ -107,6 +108,7 @@ def create_user(
         phone=payload.phone,
     )
     db.add(user)
+    _join_default_major_project(db, user)
     db.commit()
     db.refresh(user)
     return user
@@ -187,6 +189,8 @@ def update_user_active(
         )
 
     target_user.is_active = payload.is_active
+    if payload.is_active:
+        _join_default_major_project(db, target_user)
     db.commit()
     db.refresh(target_user)
     return target_user
@@ -235,6 +239,21 @@ def delete_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="마지막 관리자 계정은 삭제할 수 없습니다.",
+        )
+
+    # 계정을 지우면 그 사람의 진행률 기록·스톱워치 기록·수행 이력·검증 시간이 함께 지워지고
+    # 하위 프로젝트 진행률 계산에서도 빠진다. 퇴사자는 '퇴사 처리'로 기록을 남긴다.
+    record_counts = [
+        db.scalar(select(func.count()).select_from(model).where(model.user_id == target_user.id)) or 0
+        for model in (WorkLog, ProgressLog, ProjectExecutionHistory, SubProjectTimeEntry)
+    ]
+    if any(record_counts):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"{target_user.name}님은 업무 기록(진행률·스톱워치·수행 이력·검증 시간)이 있어 삭제할 수 없습니다. "
+                "기록을 남긴 채 쓰지 못하게 하려면 '퇴사 처리'를 해 주세요."
+            ),
         )
 
     db.delete(target_user)
@@ -300,6 +319,7 @@ def sync_users(
                 for field in _SYNC_FIELDS:
                     setattr(user, field, getattr(row, field))
                 db.add(user)
+                _join_default_major_project(db, user)
             result.created.append(
                 UserSyncChange(
                     idnum=idnum,
@@ -329,6 +349,7 @@ def sync_users(
             result.reactivated.append(UserSyncChange(idnum=idnum, name=row.name))
             if not payload.dry_run:
                 user.is_active = True
+                _join_default_major_project(db, user)
         elif diffs:
             result.updated.append(
                 UserSyncChange(idnum=idnum, name=row.name, detail=", ".join(diffs))

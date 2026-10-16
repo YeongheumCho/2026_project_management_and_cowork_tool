@@ -156,7 +156,7 @@ def _load_subproject(db: Session, subproject_id: int) -> SubProject:
     if not sp:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="소프로젝트를 찾을 수 없습니다.",
+            detail="하위 프로젝트를 찾을 수 없습니다.",
         )
     return sp
 
@@ -281,6 +281,8 @@ def _serialize_major_project_response(major_project: MajorProject) -> MajorProje
         kickoff_date=major_project.kickoff_date,
         project_types=_major_project_project_types(major_project),
         is_default=bool(major_project.is_default),
+        created_by=major_project.created_by,
+        created_by_name=major_project.created_by_name,
         created_at=major_project.created_at,
         members=list(major_project.members or []),
         project_count=len(major_project.projects or []),
@@ -479,7 +481,7 @@ def _ensure_subproject_access(db: Session, sp: SubProject, current_user: User) -
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="해당 소프로젝트에 접근할 수 없습니다.",
+        detail="해당 하위 프로젝트에 접근할 수 없습니다.",
     )
 
 
@@ -627,6 +629,8 @@ def _sync_subproject_execution_history(
         history.worked_minutes = worked_minutes
         history.completion_rate = float(subproject.progress)
         history.keyword_text = _build_history_keywords(project, subproject)
+    # 같은 요청에서 다시 불려도 방금 만든 줄을 보도록 바로 반영한다 (중복 이력 방지).
+    db.flush()
 
 
 def _load_stage_minutes_map(
@@ -741,6 +745,18 @@ def _subproject_effective_weight(subproject: SubProject) -> float:
     )
 
 
+def _check_edit_version(current: int, expected: int | None, target: str) -> None:
+    """편집 창을 연 뒤 다른 사람이 먼저 저장했으면 덮어쓰지 않고 막는다."""
+    if expected is not None and expected != current:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"다른 사람이 먼저 이 {target} 고쳤습니다. "
+                "입력한 내용을 따로 적어 두고, 창을 닫았다가 다시 열어 최신 내용에서 고쳐 주세요."
+            ),
+        )
+
+
 def _serialize_project_response(project: Project) -> ProjectResponse:
     subprojects = list(project.subprojects or [])
     total_weight = sum(_subproject_effective_weight(subproject) for subproject in subprojects)
@@ -762,7 +778,9 @@ def _serialize_project_response(project: Project) -> ProjectResponse:
         start_date=project.start_date,
         end_date=project.end_date,
         vehicle_sets=project.vehicle_sets,
+        edit_version=project.edit_version or 1,
         created_by=project.created_by,
+        created_by_name=project.created_by_name,
         created_at=project.created_at,
         participants=list(project.participants or []),
         progress_percent=round(weighted_progress, 2),

@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import date, datetime, timezone
 from uuid import uuid4
 
@@ -77,6 +78,11 @@ RECENT_HISTORY_DAYS = 180
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _as_utc(value: datetime) -> datetime:
+    """시간대 없는 값(SQLite 등)은 UTC 로 본다. 빼기 계산에서 시간대가 섞여 오류가 나지 않게 한다."""
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
 
 
 def _deserialize_tasks(template: ProjectTemplate) -> list[dict]:
@@ -396,6 +402,28 @@ def _extract_json_block(text: str) -> dict | list | None:
     return None
 
 
+# 챗봇 서비스가 Claude 에 붙을 수 있는지 5분간 기억한다.
+# 폐쇄망에서는 매 추천마다 Claude 호출이 30초 동안 기다린 뒤에야 규칙 기반 추천으로 넘어갔다.
+_CLAUDE_AVAILABILITY_TTL_SEC = 300
+_claude_availability: dict[str, float | bool] = {"checked_at": 0.0, "ok": False}
+
+
+async def _claude_available() -> bool:
+    now = time.monotonic()
+    checked_at = float(_claude_availability["checked_at"])
+    if checked_at and now - checked_at < _CLAUDE_AVAILABILITY_TTL_SEC:
+        return bool(_claude_availability["ok"])
+    health_url = settings.AI_CHATBOT_URL.rstrip("/") + "/health"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(health_url)
+        ok = response.status_code == 200 and bool(response.json().get("available"))
+    except Exception:
+        ok = False
+    _claude_availability.update(checked_at=now, ok=ok)
+    return ok
+
+
 async def _rerank_candidates_with_claude(
     payload: RecommendationRequest,
     candidates: list[RecommendationCandidate],
@@ -403,6 +431,8 @@ async def _rerank_candidates_with_claude(
 ) -> tuple[list[RecommendationCandidate], bool, list[str]]:
     if not settings.AI_ASSIGNMENT_USE_CLAUDE or not candidates:
         return candidates, False, []
+    if not await _claude_available():
+        raise ValueError("Claude 에 연결할 수 없어 규칙 기반 추천만 보여 줍니다.")
 
     shortlist = [
         {
@@ -613,7 +643,7 @@ def list_work_log_admin_summary(
             continue
         elapsed = log.duration_sec
         if log.status == WORKLOG_RUNNING and log.current_started_at:
-            elapsed += max(0, int((now - log.current_started_at).total_seconds()))
+            elapsed += max(0, int((now - _as_utc(log.current_started_at)).total_seconds()))
             bucket["running_seconds"] = int(bucket["running_seconds"]) + elapsed
             bucket["running_count"] = int(bucket["running_count"]) + 1
         elif log.status == WORKLOG_PAUSED:
@@ -655,6 +685,25 @@ def start_work_log(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if payload.subproject_id is not None:
+        # 예전에는 확인이 없어 남의 하위 프로젝트에도 시간을 쌓을 수 있었고,
+        # 없는 번호를 주면 저장 중 서버 오류(500)가 났다.
+        target = db.scalar(
+            select(SubProject)
+            .options(selectinload(SubProject.assignees))
+            .where(SubProject.id == payload.subproject_id)
+        )
+        if target is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="하위 프로젝트를 찾을 수 없습니다. 삭제됐을 수 있습니다. 새로고침해 주세요.",
+            )
+        if current_user.role != "admin" and current_user.id not in _subproject_assignee_ids(target):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="본인이 담당한 하위 프로젝트만 스톱워치를 시작할 수 있습니다.",
+            )
+
     now = _utcnow()
     running_logs = db.scalars(
         select(WorkLog).where(
@@ -668,7 +717,7 @@ def start_work_log(
             continue
         if running_log.current_started_at:
             running_log.duration_sec += int(
-                (now - running_log.current_started_at).total_seconds()
+                (now - _as_utc(running_log.current_started_at)).total_seconds()
             )
         running_log.current_started_at = None
         running_log.status = WORKLOG_PAUSED
@@ -720,7 +769,7 @@ def pause_work_log(
 
     now = _utcnow()
     if log.current_started_at:
-        log.duration_sec += int((now - log.current_started_at).total_seconds())
+        log.duration_sec += int((now - _as_utc(log.current_started_at)).total_seconds())
     log.current_started_at = None
     log.status = WORKLOG_PAUSED
     db.commit()
@@ -841,6 +890,9 @@ def _sync_completed_subproject_history(
         history.worked_minutes = worked_minutes
         history.completion_rate = 100
         history.keyword_text = _build_history_keywords(project, subproject)
+    # 세션이 autoflush 를 쓰지 않아, 같은 요청에서 이 함수가 다시 불리면
+    # 방금 만든 줄을 못 보고 한 줄 더 만들었다 (완료 한 번에 이력 두 줄).
+    db.flush()
 
 
 def _complete_linked_subproject(
@@ -864,6 +916,10 @@ def _complete_linked_subproject(
         return
 
     assignee_ids = _subproject_assignee_ids(subproject)
+    if not assignee_ids:
+        # 담당자가 없는 하위 프로젝트(B-100)는 "담당자 전원 완료"를 판단할 수 없다.
+        # 예전에는 이 경우 누가 완료를 눌러도 하위 프로젝트가 100%·완료로 바뀌었다.
+        return
     completed_assignee_ids = set[int]()
     if assignee_ids:
         completed_assignee_ids = set(
@@ -920,7 +976,7 @@ def complete_work_log(
 
     now = _utcnow()
     if log.status == WORKLOG_RUNNING and log.current_started_at:
-        log.duration_sec += int((now - log.current_started_at).total_seconds())
+        log.duration_sec += int((now - _as_utc(log.current_started_at)).total_seconds())
     log.current_started_at = None
     log.ended_at = now
     log.status = WORKLOG_COMPLETED
@@ -934,7 +990,7 @@ def complete_work_log(
             continue
         if archived.current_started_at:
             archived.duration_sec += int(
-                (now - archived.current_started_at).total_seconds()
+                (now - _as_utc(archived.current_started_at)).total_seconds()
             )
         archived.current_started_at = None
         archived.ended_at = now

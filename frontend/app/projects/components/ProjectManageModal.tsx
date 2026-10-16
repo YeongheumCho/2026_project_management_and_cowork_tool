@@ -1,10 +1,11 @@
 ﻿'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../../components/Modal';
 import OrganizationMemberPicker from '../../components/OrganizationMemberPicker';
 import {
   apiFetch,
+  ApiError,
   PROJECT_TYPE_LABEL,
   PROJECT_TYPE_OPTIONS,
   type MajorProject,
@@ -44,9 +45,19 @@ export default function ProjectManageModal({
   const [vehicleSets, setVehicleSets] = useState<ProjectVehicleSet[]>([]);
   const [participantIds, setParticipantIds] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
+  // 창 안에 보여 줄 오류. 바깥 화면으로만 보내면 이 창에 가려 보이지 않았다.
+  const [formError, setFormError] = useState('');
+  const reloadOnCloseRef = useRef(false);
+
+  useEffect(() => {
+    if (open || !reloadOnCloseRef.current) return;
+    reloadOnCloseRef.current = false;
+    void onSaved();
+  }, [open, onSaved]);
 
   useEffect(() => {
     if (!open || !project) return;
+    setFormError('');
     setName(project.name);
     setMajorProjectId(project.major_project_id ?? '');
     setType(project.project_type as ProjectType);
@@ -99,6 +110,7 @@ export default function ProjectManageModal({
     if (disabled || !project) return;
 
     setBusy(true);
+    setFormError('');
     try {
       await apiFetch<Project>(`/projects/${project.id}`, {
         method: 'PUT',
@@ -110,12 +122,23 @@ export default function ProjectManageModal({
           end_date: endDate || null,
           participant_ids: participantIds,
           vehicle_sets: normalizeVehicleSets(vehicleSets),
+          // 창을 연 뒤 다른 사람이 먼저 저장했으면 서버가 409 로 막는다.
+          edit_version: project.edit_version,
         }),
       });
       await onSaved();
       onClose();
     } catch (error) {
-      onError((error as Error).message);
+      const message = (error as Error).message;
+      if (error instanceof ApiError && error.status === 409) {
+        // 다른 사람이 먼저 저장했다. 창을 닫을 때 목록을 새로 읽어 다시 열면 최신 내용이 보이게 한다.
+        // (바로 읽으면 이 창의 입력이 새 값으로 덮일 수 있다.)
+        setFormError(message);
+        reloadOnCloseRef.current = true;
+      } else {
+        setFormError(message);
+        onError(message);
+      }
     } finally {
       setBusy(false);
     }
@@ -269,7 +292,12 @@ export default function ProjectManageModal({
           </div>
         </div>
 
-        <div className="sticky bottom-0 z-10 -mx-6 -mb-6 flex flex-shrink-0 justify-end gap-2 border-t border-border-subtle bg-surface px-6 pb-6 pt-4">
+        <div className="sticky bottom-0 z-10 -mx-6 -mb-6 flex flex-shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border-subtle bg-surface px-6 pb-6 pt-4">
+          {formError && (
+            <p className="mr-auto min-w-0 flex-1 basis-full text-small text-verify-fail-fg sm:basis-0">
+              {formError}
+            </p>
+          )}
           <button
             type="button"
             onClick={onClose}

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
 import { API_BASE_URL, apiFetch, type Me } from '../lib/api';
@@ -20,11 +19,28 @@ function getErrorMessage(data: ApiError | null, defaultMessage: string) {
   return defaultMessage;
 }
 
+/**
+ * 로그인 뒤 갈 곳. 로그인이 만료돼 넘어온 경우 보던 화면(next)으로 돌려보낸다.
+ * 다른 사이트로 보내지 않도록 이 사이트 안의 경로(/ 로 시작, // 아님)만 받는다.
+ */
+function safeNextPath(): string {
+  const next = new URLSearchParams(window.location.search).get('next');
+  if (next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/login')) return next;
+  return '/dashboard';
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [idnum, setIdnum] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  // 안내 색. 예전에는 문구에 '요청'·'실패'·'못'이 있는지로 정해서,
+  // "사번 또는 비밀번호가 올바르지 않습니다"·퇴사자 안내가 오류 색이 아니게 나왔다.
+  const [messageTone, setMessageTone] = useState<'error' | 'info'>('error');
+  const showError = (text: string) => {
+    setMessageTone('error');
+    setMessage(text);
+  };
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(event: FormEvent) {
@@ -32,7 +48,7 @@ export default function LoginPage() {
     setMessage('');
 
     if (!idnum.trim() || !password) {
-      setMessage('사번과 비밀번호를 모두 입력해주세요.');
+      showError('사번과 비밀번호를 모두 입력해주세요.');
       return;
     }
 
@@ -50,11 +66,11 @@ export default function LoginPage() {
       const data: ApiError = await response.json();
 
       if (!response.ok) {
-        setMessage(getErrorMessage(data, '로그인에 실패했습니다.'));
+        showError(getErrorMessage(data, '로그인에 실패했습니다.'));
         return;
       }
       if (!data.access_token) {
-        setMessage('로그인 응답에 access token이 없습니다.');
+        showError('로그인 응답에 access token이 없습니다.');
         return;
       }
 
@@ -64,13 +80,15 @@ export default function LoginPage() {
         await apiFetch<Me>('/auth/me');
       } catch {
         localStorage.removeItem('access_token');
-        setMessage('프로필 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+        showError('프로필 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
         return;
       }
 
-      router.push('/dashboard');
+      router.push(safeNextPath());
     } catch (error) {
-      setMessage(`로그인 요청 중 오류가 발생했습니다: ${String(error)}`);
+      // 서버가 꺼져 있거나 네트워크가 끊긴 경우. 브라우저 오류 문구(TypeError …)를 그대로 보이지 않는다.
+      console.error(error);
+      showError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
       setLoading(false);
     }
@@ -85,7 +103,7 @@ export default function LoginPage() {
           </p>
           <h1 className="mt-2 text-3xl font-bold">로그인</h1>
           <p className="mt-2 text-sm text-text-subtle">
-            사번과 비밀번호로 로그인한 뒤 대시보드로 이동합니다.
+            사번과 비밀번호로 로그인합니다.
           </p>
         </div>
 
@@ -119,9 +137,10 @@ export default function LoginPage() {
             <span>인증 실패 시 관리자에게 비밀번호 초기화를 요청하세요.</span>
             <button
               type="button"
-              onClick={() =>
-                setMessage('비밀번호 분실 시 관리자에게 초기화를 요청해주세요.')
-              }
+              onClick={() => {
+                setMessageTone('info');
+                setMessage('비밀번호 분실 시 관리자에게 초기화를 요청해주세요.');
+              }}
               className="font-semibold text-brand"
             >
               비밀번호 분실
@@ -131,7 +150,7 @@ export default function LoginPage() {
           {message && (
             <p
               className={`rounded-xl px-4 py-3 text-sm ${
-                message.includes('요청') || message.includes('실패') || message.includes('못')
+                messageTone === 'error'
                   ? 'bg-verify-fail-bg text-verify-fail-fg'
                   : 'bg-brand-soft text-brand'
               }`}
@@ -151,10 +170,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-6 text-sm text-text-subtle">
-          아직 계정이 없다면{' '}
-          <Link href="/signup" className="font-semibold text-brand underline">
-            회원가입
-          </Link>
+          계정이 없거나 로그인이 되지 않으면 관리자에게 문의해 주세요.
         </p>
       </div>
     </main>

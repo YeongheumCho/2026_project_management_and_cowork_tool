@@ -16,6 +16,7 @@ from app.models.project import (
 from app.models.user import User
 from app.schemas.project import SubProjectCreate, SubProjectResponse, SubProjectUpdate
 from app.routers.projects._helpers import (
+    _check_edit_version,
     _TEMPLATE_BY_TYPE,
     _apply_kefico_fields,
     _apply_role_assignments,
@@ -190,6 +191,7 @@ def update_subproject(
         .where(Project.id == sp.project_id)
     )
     _ensure_project_participant_write_access(project, current_user)
+    _check_edit_version(sp.edit_version, payload.edit_version, "하위 프로젝트를")
 
     new_start = payload.start_date or sp.start_date
     new_end = payload.end_date or sp.end_date
@@ -242,6 +244,7 @@ def update_subproject(
 
     if project is not None:
         _sync_subproject_execution_history(db, project, sp)
+    sp.edit_version = (sp.edit_version or 1) + 1
     db.commit()
     sp = _load_subproject(db, subproject_id)
     return SubProjectResponse.from_orm_with_custom(sp)

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import { apiFetch, type MajorProject, type Project } from '../../lib/api';
 import ProjectManageModal from '../../projects/components/ProjectManageModal';
 
@@ -101,14 +102,10 @@ export default function ProjectDeletionManager({ enabled }: Props) {
     void load();
   }, [load]);
 
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+
   async function deleteProject(project: Project) {
-    if (
-      !window.confirm(
-        `"${project.name}" 프로젝트를 삭제할까요? 하위 프로젝트와 기록도 함께 삭제됩니다.`,
-      )
-    ) {
-      return;
-    }
+    setDeleteTarget(null);
 
     setDeletingId(project.id);
     setMessage('');
@@ -211,7 +208,7 @@ export default function ProjectDeletionManager({ enabled }: Props) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => void deleteProject(project)}
+                    onClick={() => setDeleteTarget(project)}
                     disabled={deletingId === project.id}
                     className="rounded-lg border border-verify-fail-bg px-3 py-1.5 text-micro font-bold text-verify-fail-fg disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -231,6 +228,19 @@ export default function ProjectDeletionManager({ enabled }: Props) {
         onClose={() => setEditingProject(null)}
         onSaved={load}
         onError={setMessage}
+      />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="프로젝트 삭제"
+        description={
+          deleteTarget
+            ? `"${deleteTarget.name}" 프로젝트를 삭제할까요? 하위 프로젝트와 기록도 함께 삭제됩니다.`
+            : ''
+        }
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={() => deleteTarget && void deleteProject(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
       />
     </section>
   );

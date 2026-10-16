@@ -8,6 +8,7 @@ import {
   type Project,
   type SubProject,
 } from '../../lib/api';
+import { neutralizeCsvFormula } from '../../lib/csvSafety';
 import { SUBPROJECT_STATUS_LABEL } from '../../lib/subprojectStatus';
 
 type ExportCell = string | number;
@@ -178,7 +179,8 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 function csvCell(value: ExportCell) {
-  const text = String(value);
+  // 엑셀이 수식으로 실행하지 않게 (csvSafety 참고)
+  const text = neutralizeCsvFormula(String(value));
   return `"${text.replace(/"/g, '""')}"`;
 }
 

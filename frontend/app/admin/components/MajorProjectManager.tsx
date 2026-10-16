@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import OrganizationMemberPicker from '../../components/OrganizationMemberPicker';
 import {
   apiFetch,
@@ -46,6 +47,8 @@ export default function MajorProjectManager({ users }: Props) {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [messageTone, setMessageTone] = useState<'error' | 'success'>('error');
+  // 저장 중에는 버튼을 잠근다. 빠르게 두 번 누르면 같은 대프로젝트가 두 개 생겼다.
+  const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
 
   const editing = useMemo(
@@ -124,7 +127,7 @@ export default function MajorProjectManager({ users }: Props) {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || saving) return;
     if (form.start_date && form.end_date && form.end_date < form.start_date) {
       setMessageTone('error');
       setMessage('종료일은 시작일 이후여야 합니다.');
@@ -136,6 +139,7 @@ export default function MajorProjectManager({ users }: Props) {
       return;
     }
 
+    setSaving(true);
     try {
       const payload = {
         name: form.name.trim(),
@@ -162,11 +166,15 @@ export default function MajorProjectManager({ users }: Props) {
     } catch (error) {
       setMessageTone('error');
       setMessage((error as Error).message);
+    } finally {
+      setSaving(false);
     }
   }
 
+  const [removeTarget, setRemoveTarget] = useState<MajorProject | null>(null);
+
   async function remove(item: MajorProject) {
-    if (!window.confirm(`"${item.name}" 대프로젝트를 삭제할까요?`)) return;
+    setRemoveTarget(null);
     try {
       await apiFetch<void>(`/major-projects/${item.id}`, { method: 'DELETE' });
       await load();
@@ -265,9 +273,10 @@ export default function MajorProjectManager({ users }: Props) {
           <div className="flex items-end gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-brand px-4 py-2 text-small font-bold text-white"
+              disabled={saving}
+              className="rounded-lg bg-brand px-4 py-2 text-small font-bold text-white disabled:opacity-50"
             >
-              {editing ? '대프로젝트 저장' : '대프로젝트 추가'}
+              {saving ? '저장 중...' : editing ? '대프로젝트 저장' : '대프로젝트 추가'}
             </button>
             {editing && (
               <button
@@ -317,6 +326,7 @@ export default function MajorProjectManager({ users }: Props) {
                 </p>
                 <p className="mt-1 text-small text-text-subtle">
                   {item.start_date ?? '-'} ~ {item.end_date ?? '-'} · 참여 {item.members.length}명 · 중프로젝트 {item.project_count}건
+                  {item.created_by_name ? ` · 생성: ${item.created_by_name}` : ''}
                 </p>
                 <div className="mt-2 flex max-h-[68px] flex-wrap gap-1.5 overflow-y-auto pr-1">
                   {(item.project_types?.length ? item.project_types : PROJECT_TYPE_OPTIONS).map((type) => (
@@ -339,7 +349,7 @@ export default function MajorProjectManager({ users }: Props) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => remove(item)}
+                  onClick={() => setRemoveTarget(item)}
                   disabled={item.is_default || item.project_count > 0}
                   className="rounded-lg border border-verify-fail-bg bg-white px-3 py-1.5 text-small font-bold text-verify-fail-fg disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -349,6 +359,15 @@ export default function MajorProjectManager({ users }: Props) {
             </div>
           ))}
       </div>
+      <ConfirmDialog
+        open={removeTarget !== null}
+        title="대프로젝트 삭제"
+        description={removeTarget ? `"${removeTarget.name}" 대프로젝트를 삭제할까요?` : ''}
+        confirmLabel="삭제"
+        variant="danger"
+        onConfirm={() => removeTarget && void remove(removeTarget)}
+        onClose={() => setRemoveTarget(null)}
+      />
     </section>
   );
 }

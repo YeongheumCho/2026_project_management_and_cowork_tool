@@ -137,6 +137,7 @@ export default function ProjectCard({
 
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-micro text-text-muted">
               <span>생성일 {new Date(project.created_at).toLocaleDateString('ko-KR')}</span>
+              {project.created_by_name && <span>생성: {project.created_by_name}</span>}
               <span>하위 프로젝트 {total}건</span>
               <span>완료 {done}건</span>
               <span>참여 인원 {project.participants.length}명</span>

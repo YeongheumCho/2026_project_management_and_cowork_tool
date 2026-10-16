@@ -42,7 +42,7 @@ def list_major_projects(
 def create_major_project(
     payload: MajorProjectCreate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_admin: User = Depends(require_admin),
 ):
     members = _load_major_project_members(db, payload.member_ids)
     major_project = MajorProject(
@@ -52,6 +52,7 @@ def create_major_project(
         kickoff_date=payload.kickoff_date,
         project_types=json.dumps(payload.project_types, ensure_ascii=False),
         is_default=False,
+        created_by=current_admin.id,
     )
     major_project.members = members
     db.add(major_project)

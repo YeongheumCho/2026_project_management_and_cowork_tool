@@ -36,7 +36,7 @@ export default function KpiGrid({
         label="진행 중 프로젝트"
         value={String(inProgressProjects)}
         tone="indigo"
-        hint="완료되지 않은 소프로젝트 포함"
+        hint="완료되지 않은 하위 프로젝트 포함"
         loading={loading}
       />
       <KpiCard
@@ -50,7 +50,7 @@ export default function KpiGrid({
         label="평균 진척률"
         value={avgProgressText}
         tone="amber"
-        hint="전체 소프로젝트 평균"
+        hint="전체 하위 프로젝트 평균"
         loading={loading}
       />
       <KpiCard

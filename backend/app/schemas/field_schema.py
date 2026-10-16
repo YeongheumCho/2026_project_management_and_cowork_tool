@@ -28,6 +28,8 @@ class ProjectFieldSchemaCreate(BaseModel):
     section_label: str = Field(default="추가 정보", min_length=1, max_length=100)
     fields: list[FieldDefinition] = Field(default_factory=list)
     weight: int = Field(default=5, ge=1, le=10)
+    # 템플릿을 불러올 때 받은 버전. 보내지 않으면(새 템플릿·복사) 확인하지 않는다.
+    edit_version: int | None = None
 
 
 class ProjectFieldSchemaUpdate(BaseModel):
@@ -46,6 +48,7 @@ class ProjectFieldSchemaResponse(BaseModel):
     section_label: str
     fields: list[FieldDefinition] = Field(default_factory=list)
     weight: int = 5
+    edit_version: int = 1
     created_by: int | None = None
     updated_at: datetime
 
@@ -66,6 +69,7 @@ class ProjectFieldSchemaResponse(BaseModel):
             section_label=obj.section_label,
             fields=[FieldDefinition.model_validate(field) for field in parsed],
             weight=obj.weight if obj.weight is not None else 5,
+            edit_version=getattr(obj, "edit_version", None) or 1,
             created_by=obj.created_by,
             updated_at=obj.updated_at,
         )

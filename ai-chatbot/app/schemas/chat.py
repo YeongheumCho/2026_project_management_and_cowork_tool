@@ -40,3 +40,7 @@ class HealthResponse(BaseModel):
     status: str
     api_key_configured: bool
     model: str
+    # Claude 서버에 실제로 연결되는지. 폐쇄망처럼 인터넷이 없으면 False.
+    reachable: bool = False
+    # 화면이 챗봇 버튼을 보여 줄지: 키가 있고 연결도 될 때만 True.
+    available: bool = False

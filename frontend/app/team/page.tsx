@@ -1,8 +1,7 @@
+import { redirect } from 'next/navigation';
+
+// 예전 "팀 관리" 자리표시 화면. 내용 없이 어두운 화면만 보였다.
+// 팀원 관리는 관리 탭(사용자 권한 관리)에 있으므로 그쪽으로 보낸다.
 export default function TeamPage() {
-  return (
-    <main className="min-h-screen bg-surface-strong p-8 text-white">
-      <h1 className="text-3xl font-bold">팀 관리</h1>
-      <p className="mt-4 text-text-faint">팀원 관리 화면 자리</p>
-    </main>
-  );
+  redirect('/admin');
 }

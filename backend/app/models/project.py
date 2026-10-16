@@ -149,6 +149,10 @@ class MajorProject(Base):
         nullable=False,
     )
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # B-84: 만든 사람. 이 칸을 넣기 전에 만든 대프로젝트는 비어 있다.
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -161,6 +165,11 @@ class MajorProject(Base):
         secondary=major_project_members,
         back_populates="major_projects",
     )
+    creator = relationship("User", foreign_keys=[created_by], lazy="selectin")
+
+    @property
+    def created_by_name(self) -> str | None:
+        return self.creator.name if self.creator else None
 
 
 class Project(Base):
@@ -179,6 +188,9 @@ class Project(Base):
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     vehicle_sets: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    # 편집 창에서 저장할 때마다 1씩 오른다. 진행률·검증 시간 기록으로는 오르지 않는다.
+    # 편집 창을 연 뒤 다른 사람이 먼저 저장했으면 덮어쓰지 않고 막는 데 쓴다.
+    edit_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
@@ -204,6 +216,11 @@ class Project(Base):
         secondary=project_participants,
         back_populates="participating_projects",
     )
+    creator = relationship("User", foreign_keys=[created_by], lazy="selectin")
+
+    @property
+    def created_by_name(self) -> str | None:
+        return self.creator.name if self.creator else None
 
 
 class SubProject(Base):
@@ -288,6 +305,10 @@ class SubProject(Base):
 
     # ---------- 커스텀 필드 (자유 형식 JSON) ----------
     custom_fields: Mapped[str] = mapped_column(Text, nullable=True)             # dict[str, Any] as JSON
+
+    # 편집 창에서 저장할 때마다 1씩 오른다. 진행률·검증 시간 기록으로는 오르지 않는다.
+    # 편집 창을 연 뒤 다른 사람이 먼저 저장했으면 덮어쓰지 않고 막는 데 쓴다.
+    edit_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True

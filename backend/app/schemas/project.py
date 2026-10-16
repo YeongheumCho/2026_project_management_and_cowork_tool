@@ -42,6 +42,11 @@ EtcCategory = Literal[
 
 # ---------- Project ----------
 
+
+# 분 단위 입력의 상한. DB 정수 범위를 넘는 값이 들어오면 저장 중 서버 오류(500)가 났다.
+# 100만 분은 약 694일로, 실제 입력으로는 넉넉하다.
+MAX_MINUTES = 1_000_000
+
 class ProjectParticipantBrief(BaseModel):
     id: int
     name: str
@@ -127,6 +132,8 @@ class MajorProjectUpdate(MajorProjectCreate):
 class MajorProjectResponse(MajorProjectBrief):
     members: list[ProjectParticipantBrief] = []
     project_count: int = 0
+    created_by: Optional[int] = None
+    created_by_name: Optional[str] = None
     created_at: datetime
 
 
@@ -173,6 +180,8 @@ class ProjectUpdate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     vehicle_sets: list[ProjectVehicleSet] = Field(default_factory=list)
+    # 편집 창을 열 때 받은 버전. 보내지 않으면(예전 화면) 확인하지 않는다.
+    edit_version: Optional[int] = None
 
     @model_validator(mode="after")
     def _check_dates(self):
@@ -194,7 +203,9 @@ class ProjectResponse(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     vehicle_sets: list[ProjectVehicleSet] = Field(default_factory=list)
+    edit_version: int = 1
     created_by: Optional[int] = None
+    created_by_name: Optional[str] = None
     created_at: datetime
     participants: list[ProjectParticipantBrief] = []
     progress_percent: float = 0
@@ -268,7 +279,7 @@ class ProjectHistoryCreate(BaseModel):
     subproject_name: str = Field(min_length=1, max_length=200)
     started_on: Optional[date] = None
     ended_on: Optional[date] = None
-    worked_minutes: int = Field(default=0, ge=0)
+    worked_minutes: int = Field(default=0, ge=0, le=MAX_MINUTES)
     completion_rate: float = Field(default=100, ge=0, le=100)
     keyword_text: Optional[str] = None
 
@@ -291,7 +302,7 @@ class ProjectHistoryUpdate(BaseModel):
     subproject_name: Optional[str] = None
     started_on: Optional[date] = None
     ended_on: Optional[date] = None
-    worked_minutes: Optional[int] = None
+    worked_minutes: Optional[int] = Field(default=None, ge=0, le=MAX_MINUTES)
     keyword_text: Optional[str] = None
 
 
@@ -370,7 +381,7 @@ class _SubProjectKeficoFields(BaseModel):
     inreviewer_ids: list[int] | None = None
     seat_no: Optional[str] = Field(default=None, max_length=50)
     controller_no: Optional[str] = Field(default=None, max_length=50)
-    avg_expected_minutes: Optional[int] = Field(default=None, ge=0)
+    avg_expected_minutes: Optional[int] = Field(default=None, ge=0, le=MAX_MINUTES)
     issue_note: Optional[str] = None
     upload_done: Optional[bool] = None
     special_note: Optional[str] = None
@@ -378,26 +389,27 @@ class _SubProjectKeficoFields(BaseModel):
 
     # 1차 검증 / InReview 상태·시간
     first_verify_status: Optional[VerifyState] = None
-    first_setup_min: Optional[int] = Field(default=None, ge=0)
-    first_aud_min: Optional[int] = Field(default=None, ge=0)
-    first_review_min: Optional[int] = Field(default=None, ge=0)
+    first_setup_min: Optional[int] = Field(default=None, ge=0, le=MAX_MINUTES)
+    first_aud_min: Optional[int] = Field(default=None, ge=0, le=MAX_MINUTES)
+    first_review_min: Optional[int] = Field(default=None, ge=0, le=MAX_MINUTES)
 
     inreview_status: Optional[VerifyState] = None
-    inreview_setup_min: Optional[int] = Field(default=None, ge=0)
-    inreview_aud_min: Optional[int] = Field(default=None, ge=0)
-    inreview_feedback_min: Optional[int] = Field(default=None, ge=0)
+    inreview_setup_min: Optional[int] = Field(default=None, ge=0, le=MAX_MINUTES)
+    inreview_aud_min: Optional[int] = Field(default=None, ge=0, le=MAX_MINUTES)
+    inreview_feedback_min: Optional[int] = Field(default=None, ge=0, le=MAX_MINUTES)
 
     # 변경점 검증 전용
     cr_no: Optional[str] = Field(default=None, max_length=100)
     ip_addr: Optional[str] = Field(default=None, max_length=100)
-    change_feedback_min: Optional[int] = Field(default=None, ge=0)
-    change_revalidate_min: Optional[int] = Field(default=None, ge=0)
+    change_feedback_min: Optional[int] = Field(default=None, ge=0, le=MAX_MINUTES)
+    change_revalidate_min: Optional[int] = Field(default=None, ge=0, le=MAX_MINUTES)
     lin_std_hold_note: Optional[str] = None
 
     # 기타 업무 전용
     etc_category: Optional[EtcCategory] = None
     etc_month: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}$")
-    etc_days: Optional[float] = Field(default=None, ge=0)
+    # DB 칸이 Numeric(5,2) 라 999.99 를 넘으면 저장 중 오류가 났다.
+    etc_days: Optional[float] = Field(default=None, ge=0, le=999.99)
     etc_note: Optional[str] = None
 
     # 가중치 (1~10, 템플릿에서 상속)
@@ -478,6 +490,8 @@ class SubProjectUpdate(_SubProjectKeficoFields):
     assignee_ids: list[int] | None = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    # 편집 창을 열 때 받은 버전. 보내지 않으면(예전 화면) 확인하지 않는다.
+    edit_version: Optional[int] = None
 
     @model_validator(mode="after")
     def _check_dates(self):
@@ -501,6 +515,7 @@ class SubProjectResponse(BaseModel):
     id: int
     project_id: int
     name: str
+    edit_version: int = 1
     assignee_id: Optional[int] = None
     assignee: Optional[AssigneeBrief] = None
     assignee_ids: list[int] = []

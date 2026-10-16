@@ -31,6 +31,12 @@ export default function ProgressLogModal({
 }: Props) {
   const [logs, setLogs] = useState<ProgressLog[]>([]);
   const [summary, setSummary] = useState<SubProjectProgressSummary | null>(null);
+  // "평균"은 담당자별 최신 기록으로만 계산한다. 기록이 하나도 없는데 스톱워치 완료로
+  // 진행률이 100% 가 된 경우, 예전에는 그 값을 평균이라고 보여 줘 "기록 없음 (0%)"과 어긋났다.
+  const logAverage = summary
+    ? summary.contributions.reduce((sum, item) => sum + item.contributed_percent, 0)
+    : 0;
+  const hasAnyLog = summary ? summary.contributions.some((item) => item.latest_percent != null) : false;
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -122,7 +128,8 @@ export default function ProgressLogModal({
           </h2>
           {subproject && (
             <p className="mt-1 text-xs text-text-subtle">
-              {subproject.start_date} ~ {subproject.end_date} · 현재 {Math.round(subproject.progress)}%
+              {/* 창을 연 뒤(예: 스톱워치 완료 직후) 바뀐 값을 보이도록 서버에서 새로 받은 값을 먼저 쓴다. */}
+              {subproject.start_date} ~ {subproject.end_date} · 현재 {Math.round(summary?.progress ?? subproject.progress)}%
             </p>
           )}
           {appliedTemplateName && (
@@ -193,9 +200,15 @@ export default function ProgressLogModal({
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-sm font-semibold text-text">담당자별 기여</h3>
                 <p className="text-xs font-semibold text-text">
-                  {summary.owner_count}명 평균 → {Math.round(summary.progress)}%
+                  {summary.owner_count}명 평균 → {Math.round(logAverage)}%
                 </p>
               </div>
+              {!hasAnyLog && summary.progress > 0 && (
+                <p className="mt-1 text-xs font-semibold text-verify-warn-fg">
+                  아직 진행률 기록이 없어, 현재 {Math.round(summary.progress)}%는 스톱워치 완료로 정해진 값입니다.
+                  기록을 저장하면 기록 기준으로 다시 계산됩니다.
+                </p>
+              )}
               <p className="mt-1 text-xs text-text-subtle">
                 하위 프로젝트 진행률은 담당자별 최신 기록의 평균입니다. 한 사람이 0%를
                 기록해도 다른 담당자의 기록이 남아 있으면 0%가 되지 않습니다.

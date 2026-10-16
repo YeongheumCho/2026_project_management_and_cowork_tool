@@ -62,11 +62,11 @@ if ([string]::IsNullOrWhiteSpace($OutDir)) {
 }
 
 # 빌드해서 만드는 이미지. 소스가 바뀌면 프론트엔드는 반드시 다시 만들어야 한다.
-# 백엔드·실시간·챗봇은 소스를 컨테이너에 마운트하므로 의존성이 바뀔 때만 영향을 받는다.
+# 백엔드·챗봇은 소스를 컨테이너에 마운트하므로 의존성이 바뀔 때만 영향을 받는다.
+# 실시간(realtime)은 2026-10-16 부터 기본으로 띄우지 않아 싣지 않는다.
 $BUILT = @(
     'surelog-frontend:latest',
     'surelog-backend:latest',
-    'surelog-realtime:latest',
     'surelog-ai-chatbot:latest'
 )
 $OFFICIAL = @('postgres:16-alpine', 'redis:7-alpine', 'caddy:2-alpine')

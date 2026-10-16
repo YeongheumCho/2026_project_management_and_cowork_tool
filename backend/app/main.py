@@ -1,14 +1,17 @@
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
 from app.core.config import settings
+from app.core.validation_messages import validation_exception_handler
 from app.db import engine
 
 # models 패키지 import 시 User / Project / SubProject / SubTask 가 모두 등록된다.
 from app.models import Base  # noqa: F401
 from app.models.project import DEFAULT_PROJECT_TYPES_JSON
 from app.routers.auth import router as auth_router
+from app.routers.equipment import router as equipment_router
 from app.routers.field_schemas import router as field_schemas_router
 from app.routers.projects import router as projects_router
 from app.routers.templates import router as templates_router
@@ -73,6 +76,8 @@ def _ensure_additive_schema_updates() -> None:
         statements.append(
             "ALTER TABLE subprojects ADD COLUMN created_by INTEGER REFERENCES users(id) ON DELETE SET NULL"
         )
+    if "edit_version" not in subproject_columns:
+        statements.append("ALTER TABLE subprojects ADD COLUMN edit_version INTEGER NOT NULL DEFAULT 1")
 
     if "projects" in table_names:
         project_columns = {
@@ -88,6 +93,8 @@ def _ensure_additive_schema_updates() -> None:
             statements.append("ALTER TABLE projects ADD COLUMN end_date DATE")
         if "vehicle_sets" not in project_columns:
             statements.append("ALTER TABLE projects ADD COLUMN vehicle_sets TEXT NOT NULL DEFAULT '[]'")
+        if "edit_version" not in project_columns:
+            statements.append("ALTER TABLE projects ADD COLUMN edit_version INTEGER NOT NULL DEFAULT 1")
 
     if "project_field_schemas" in table_names:
         field_schema_columns = {
@@ -97,6 +104,10 @@ def _ensure_additive_schema_updates() -> None:
             statements.append(
                 "ALTER TABLE project_field_schemas ADD COLUMN weight INTEGER NOT NULL DEFAULT 5"
             )
+        if "edit_version" not in field_schema_columns:
+            statements.append(
+                "ALTER TABLE project_field_schemas ADD COLUMN edit_version INTEGER NOT NULL DEFAULT 1"
+            )
 
     if "major_projects" in table_names:
         major_project_columns = {
@@ -104,6 +115,10 @@ def _ensure_additive_schema_updates() -> None:
         }
         if "project_types" not in major_project_columns:
             statements.append("ALTER TABLE major_projects ADD COLUMN project_types TEXT")
+        if "created_by" not in major_project_columns:
+            statements.append(
+                "ALTER TABLE major_projects ADD COLUMN created_by INTEGER REFERENCES users(id) ON DELETE SET NULL"
+            )
 
     if "project_execution_history" in table_names:
         history_columns = {
@@ -146,6 +161,24 @@ def _ensure_additive_schema_updates() -> None:
     with engine.begin() as connection:
         for statement in statements:
             connection.execute(text(statement))
+        if "project_execution_history" in inspect(engine).get_table_names():
+            # 스톱워치 완료 한 번에 자동 이력이 두 줄씩 쌓이던 문제(2026-10-16 수정)로
+            # 이미 생긴 중복을 정리한다. 자동으로 만든 줄만, 같은 사람·같은 하위 프로젝트에서
+            # 가장 최근 줄 하나만 남긴다. 관리자가 직접 고친 줄(manual_override)은 건드리지 않는다.
+            connection.execute(
+                text(
+                    """
+                    DELETE FROM project_execution_history
+                    WHERE manual_override = FALSE
+                      AND subproject_id IS NOT NULL
+                      AND id NOT IN (
+                        SELECT MAX(id) FROM project_execution_history
+                        WHERE manual_override = FALSE AND subproject_id IS NOT NULL
+                        GROUP BY subproject_id, user_id
+                      )
+                    """
+                )
+            )
         if "major_projects" in inspect(engine).get_table_names():
             connection.execute(
                 text(
@@ -246,6 +279,8 @@ def _ensure_additive_schema_updates() -> None:
 _ensure_additive_schema_updates()
 
 app = FastAPI(title="KPI Collaboration Tool API")
+# 입력 검사(422) 문구를 한국어로 (화면이 그대로 보여 준다)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 
 
@@ -263,6 +298,7 @@ app.include_router(projects_router)
 app.include_router(templates_router)
 app.include_router(field_schemas_router)
 app.include_router(workflow_router)
+app.include_router(equipment_router)
 
 @app.get("/")
 def root():

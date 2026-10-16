@@ -104,6 +104,8 @@ class ProjectFieldSchema(Base):
     )
     fields_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     weight: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    # 템플릿 화면에서 저장할 때마다 1씩 오른다. 두 관리자가 같은 템플릿을 동시에 고칠 때 덮어쓰기를 막는다.
+    edit_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
