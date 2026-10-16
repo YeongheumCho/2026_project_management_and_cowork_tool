@@ -18,6 +18,33 @@ import {
   type TeamGroup,
 } from './groupUsersByTeam';
 
+// B-102: 탭(페이지)을 옮길 때마다 사이드바가 새로 그려지면서
+// 프로젝트 목록이 전부 다시 펼쳐졌다. 사용자가 펼쳐 둔 상태를 저장해 두고 되살린다.
+const EXPANDED_MAJOR_KEY = 'surelog.sidebar.expandedMajorProjects';
+const EXPANDED_PROJECT_KEY = 'surelog.sidebar.expandedProjects';
+
+const EMPTY_IDS: ReadonlySet<number> = new Set();
+
+function readStoredIds(key: string): Set<number> | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (raw == null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return new Set(parsed.filter((id): id is number => typeof id === 'number'));
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredIds(key: string, ids: Set<number>) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify([...ids]));
+  } catch {
+    // 저장소를 쓸 수 없으면 이번 화면에서만 유지한다.
+  }
+}
+
 type Props = {
   majorProjects: MajorProject[];
   projects: Project[];
@@ -122,8 +149,9 @@ export default function Sidebar({
   const [expanded, setExpanded] = useState<Set<string>>(() =>
     initialExpandedKeys(groups, myTeam),
   );
-  const [expandedMajorProjects, setExpandedMajorProjects] = useState<Set<number>>(new Set());
-  const [expandedProjects, setExpandedProjects] = useState<Set<number>>(new Set());
+  // null 은 아직 저장값/기본값을 정하지 않은 상태. 모두 접은 상태(빈 Set)와 구분한다.
+  const [expandedMajorProjects, setExpandedMajorProjects] = useState<Set<number> | null>(null);
+  const [expandedProjects, setExpandedProjects] = useState<Set<number> | null>(null);
 
   useEffect(() => {
     setExpanded((current) => {
@@ -135,14 +163,28 @@ export default function Sidebar({
   useEffect(() => {
     if (projectTree.length === 0) return;
     setExpandedMajorProjects((current) => {
-      if (current.size > 0) return current;
-      return new Set(projectTree.map((item) => item.majorProject.id));
+      if (current) return current;
+      return (
+        readStoredIds(EXPANDED_MAJOR_KEY) ??
+        new Set(projectTree.map((item) => item.majorProject.id))
+      );
     });
     setExpandedProjects((current) => {
-      if (current.size > 0) return current;
-      return new Set(projectTree.flatMap((item) => item.projects.map((project) => project.id)));
+      if (current) return current;
+      return (
+        readStoredIds(EXPANDED_PROJECT_KEY) ??
+        new Set(projectTree.flatMap((item) => item.projects.map((project) => project.id)))
+      );
     });
   }, [projectTree]);
+
+  useEffect(() => {
+    if (expandedMajorProjects) writeStoredIds(EXPANDED_MAJOR_KEY, expandedMajorProjects);
+  }, [expandedMajorProjects]);
+
+  useEffect(() => {
+    if (expandedProjects) writeStoredIds(EXPANDED_PROJECT_KEY, expandedProjects);
+  }, [expandedProjects]);
 
   useEffect(() => {
     if (selectedMemberId == null) return;
@@ -173,7 +215,7 @@ export default function Sidebar({
 
   const toggleProject = (projectId: number) => {
     setExpandedProjects((current) => {
-      const next = new Set(current);
+      const next = new Set(current ?? []);
       if (next.has(projectId)) next.delete(projectId);
       else next.add(projectId);
       return next;
@@ -183,7 +225,7 @@ export default function Sidebar({
 
   const toggleMajorProject = (majorProjectId: number) => {
     setExpandedMajorProjects((current) => {
-      const next = new Set(current);
+      const next = new Set(current ?? []);
       if (next.has(majorProjectId)) next.delete(majorProjectId);
       else next.add(majorProjectId);
       return next;
@@ -204,8 +246,8 @@ export default function Sidebar({
                     majorProject={majorProject}
                     projects={childProjects}
                     subprojectsByProject={subprojectsByProject}
-                    expandedMajorProjects={expandedMajorProjects}
-                    expandedProjects={expandedProjects}
+                    expandedMajorProjects={expandedMajorProjects ?? EMPTY_IDS}
+                    expandedProjects={expandedProjects ?? EMPTY_IDS}
                     selectedProjectId={selectedProjectId}
                     onToggleMajor={() => toggleMajorProject(majorProject.id)}
                     onToggleProject={toggleProject}
@@ -500,8 +542,8 @@ function MajorProjectItem({
   majorProject: MajorProject;
   projects: Project[];
   subprojectsByProject: Map<number, SubProject[]>;
-  expandedMajorProjects: Set<number>;
-  expandedProjects: Set<number>;
+  expandedMajorProjects: ReadonlySet<number>;
+  expandedProjects: ReadonlySet<number>;
   selectedProjectId?: number | null;
   onToggleMajor: () => void;
   onToggleProject: (projectId: number) => void;
