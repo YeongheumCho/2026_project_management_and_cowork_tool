@@ -629,6 +629,8 @@ def _sync_subproject_execution_history(
         history.worked_minutes = worked_minutes
         history.completion_rate = float(subproject.progress)
         history.keyword_text = _build_history_keywords(project, subproject)
+    # 같은 요청에서 다시 불려도 방금 만든 줄을 보도록 바로 반영한다 (중복 이력 방지).
+    db.flush()
 
 
 def _load_stage_minutes_map(

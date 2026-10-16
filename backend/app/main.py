@@ -161,6 +161,24 @@ def _ensure_additive_schema_updates() -> None:
     with engine.begin() as connection:
         for statement in statements:
             connection.execute(text(statement))
+        if "project_execution_history" in inspect(engine).get_table_names():
+            # 스톱워치 완료 한 번에 자동 이력이 두 줄씩 쌓이던 문제(2026-10-16 수정)로
+            # 이미 생긴 중복을 정리한다. 자동으로 만든 줄만, 같은 사람·같은 하위 프로젝트에서
+            # 가장 최근 줄 하나만 남긴다. 관리자가 직접 고친 줄(manual_override)은 건드리지 않는다.
+            connection.execute(
+                text(
+                    """
+                    DELETE FROM project_execution_history
+                    WHERE manual_override = FALSE
+                      AND subproject_id IS NOT NULL
+                      AND id NOT IN (
+                        SELECT MAX(id) FROM project_execution_history
+                        WHERE manual_override = FALSE AND subproject_id IS NOT NULL
+                        GROUP BY subproject_id, user_id
+                      )
+                    """
+                )
+            )
         if "major_projects" in inspect(engine).get_table_names():
             connection.execute(
                 text(

@@ -152,3 +152,13 @@ def test_settings_name_is_trimmed(env):
     assert client.put("/settings/me", json={"name": "   "}).status_code == 422
     r = client.put("/settings/me", json={"name": "  담당자2  "})
     assert r.status_code == 200 and r.json()["name"] == "담당자2"
+
+
+def test_stopwatch_completion_writes_one_history_row(env):
+    """완료 한 번에 수행 이력이 두 줄씩 쌓이던 문제."""
+    client, state, ids = env
+    log = client.post("/work-logs/start", json={"subproject_id": ids["assigned"], "task_name": "a"}).json()
+    client.post(f"/work-logs/{log['id']}/complete", json={"archived_ids": []})
+    state["user"] = "admin"
+    rows = [r for r in client.get("/projects/history").json() if r["subproject_id"] == ids["assigned"]]
+    assert len(rows) == 1

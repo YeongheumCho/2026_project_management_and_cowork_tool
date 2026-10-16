@@ -865,6 +865,9 @@ def _sync_completed_subproject_history(
         history.worked_minutes = worked_minutes
         history.completion_rate = 100
         history.keyword_text = _build_history_keywords(project, subproject)
+    # 세션이 autoflush 를 쓰지 않아, 같은 요청에서 이 함수가 다시 불리면
+    # 방금 만든 줄을 못 보고 한 줄 더 만들었다 (완료 한 번에 이력 두 줄).
+    db.flush()
 
 
 def _complete_linked_subproject(
