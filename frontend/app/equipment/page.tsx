@@ -6,7 +6,7 @@ import AppShell from '../components/AppShell';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { apiFetch, type Equipment, type EquipmentColumn } from '../lib/api';
 import { useMe } from '../lib/useMe';
-import { decodeCsvBytes, parseCsvLine } from '../projects/components/CsvImportModal';
+import { decodeCsvBytes } from '../projects/components/CsvImportModal';
 import ColumnManager from './ColumnManager';
 import HistoryModal from './HistoryModal';
 import {
@@ -14,6 +14,7 @@ import {
   equipmentGroup,
   fromCsv,
   missingHeaders,
+  parseCsvText,
   sameValues,
   toCsv,
   type EquipmentValues,
@@ -22,8 +23,13 @@ import {
 /** 화면의 한 줄. 저장 전 새 줄은 saved 가 없다. */
 type Row = {
   key: string;
+  /** 고치기 시작할 때의 서버 값. 저장할 때 이 버전으로 충돌을 확인한다. */
   saved: Equipment | null;
   draft: EquipmentValues;
+  /** 내가 고치는 사이 다른 사람이 저장한 최신 값 (되돌리기로 불러온다) */
+  latest?: Equipment;
+  /** 내가 고치는 사이 다른 사람이 지운 줄 */
+  gone?: boolean;
 };
 
 /** CSV 를 읽은 뒤 확인창에서 "추가"를 누르기 전까지 들고 있는 내용 */
@@ -34,6 +40,8 @@ let newRowSeq = 0;
 function rowFromSaved(saved: Equipment): Row {
   return { key: `id-${saved.id}`, saved, draft: { ...saved.values } };
 }
+
+const BULK_LIMIT = 500;
 
 const BUTTON_CLASS =
   'rounded-full border border-border bg-white px-3 py-2 text-small font-semibold text-text-muted hover:bg-surface-muted';
@@ -55,6 +63,7 @@ export default function EquipmentPage() {
   const [columnsOpen, setColumnsOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [importing, setImporting] = useState(false);
+  const [historyRow, setHistoryRow] = useState<Row | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const isDirty = useCallback(
@@ -81,9 +90,20 @@ export default function EquipmentPage() {
         );
         const merged = fresh.map((row) => {
           const mine = editing.get(row.key);
-          return mine ? { ...row, draft: mine.draft } : row;
+          if (!mine) return row;
+          // 고치는 사이 다른 사람이 같은 줄을 저장했다. 기준 버전을 최신으로 바꾸면
+          // 저장할 때 상대 변경을 덮어쓰므로, 내 기준은 그대로 두고 최신 값만 따로 둔다.
+          if (mine.saved && row.saved && mine.saved.version !== row.saved.version) {
+            return { ...mine, latest: row.saved };
+          }
+          return { ...row, draft: mine.draft };
         });
-        return [...merged, ...current.filter((row) => row.saved === null)];
+        // 고치는 사이 다른 사람이 지운 줄: 입력한 내용을 버리지 않고 남겨 둔다.
+        const freshKeys = new Set(fresh.map((row) => row.key));
+        const gone = current
+          .filter((row) => row.saved !== null && editing.has(row.key) && !freshKeys.has(row.key))
+          .map((row) => ({ ...row, gone: true }));
+        return [...merged, ...gone, ...current.filter((row) => row.saved === null)];
       });
       setLoaded(true);
       setError('');
@@ -104,6 +124,40 @@ export default function EquipmentPage() {
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
+  }, [dirtyCount]);
+
+  // 팀원들이 함께 쓰는 표라 다른 사람의 변경이 보이도록 30초마다, 그리고 창으로 돌아올 때 다시 읽는다.
+  // 고치던 줄은 load(true) 가 그대로 남긴다.
+  const busyRef = useRef(false);
+  // 열 관리 창·확인창이 떠 있는 동안은 쉰다 (열 이름 입력 중에 덮어쓰지 않게).
+  busyRef.current =
+    savingKey !== null || importing || deleting || columnsOpen || pendingImport !== null || deleteTarget !== null;
+  useEffect(() => {
+    if (!me) return undefined;
+    const refresh = () => {
+      if (document.visibilityState === 'visible' && !busyRef.current) void load(true);
+    };
+    const id = window.setInterval(refresh, 30_000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [me, load]);
+
+  // 상단 탭·사이드바 링크로 옮길 때는 beforeunload 가 뜨지 않으므로 직접 묻는다.
+  useEffect(() => {
+    if (dirtyCount === 0) return undefined;
+    const handler = (event: MouseEvent) => {
+      const link = (event.target as HTMLElement | null)?.closest('a[href]');
+      if (!link || link.getAttribute('target') === '_blank') return;
+      if (!window.confirm(`저장하지 않은 줄 ${dirtyCount}개가 있습니다. 이동하면 입력한 내용이 사라집니다. 이동할까요?`)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    document.addEventListener('click', handler, true);
+    return () => document.removeEventListener('click', handler, true);
   }, [dirtyCount]);
 
   const groups = useMemo(() => {
@@ -142,11 +196,12 @@ export default function EquipmentPage() {
 
   function revertRow(row: Row) {
     clearRowError(row.key);
-    if (row.saved === null) {
+    if (row.saved === null || row.gone) {
       setRows((current) => current.filter((item) => item.key !== row.key));
       return;
     }
-    const saved = row.saved;
+    // 다른 사람이 먼저 고쳤으면 그 최신 값으로 되돌린다.
+    const saved = row.latest ?? row.saved;
     setRows((current) =>
       current.map((item) => (item.key === row.key ? rowFromSaved(saved) : item)),
     );
@@ -162,7 +217,8 @@ export default function EquipmentPage() {
     setSavingKey(row.key);
     setMessage('');
     try {
-      const saved = row.saved
+      // 다른 사람이 지운 줄은 새 줄로 다시 만든다.
+      const saved = row.saved && !row.gone
         ? await apiFetch<Equipment>(`/equipment/${row.saved.id}`, {
             method: 'PUT',
             body: JSON.stringify({ values, version: row.saved.version }),
@@ -193,6 +249,16 @@ export default function EquipmentPage() {
     }, 0);
   }
 
+  function duplicateRow(row: Row) {
+    newRowSeq += 1;
+    const key = `new-${newRowSeq}`;
+    setRows((current) => [...current, { key, saved: null, draft: { ...row.draft } }]);
+    setGroup('전체');
+    window.setTimeout(() => {
+      document.querySelector<HTMLInputElement>(`[data-row="${key}"] input`)?.focus();
+    }, 0);
+  }
+
   function rowName(row: Row): string {
     const first = columns[0];
     return (first && row.saved?.values[first.id]) || '이름 없는 장비';
@@ -201,7 +267,7 @@ export default function EquipmentPage() {
   async function confirmDelete() {
     const target = deleteTarget;
     if (!target) return;
-    if (target.saved === null) {
+    if (target.saved === null || target.gone) {
       revertRow(target);
       setDeleteTarget(null);
       return;
@@ -243,11 +309,7 @@ export default function EquipmentPage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      const text = decodeCsvBytes(reader.result as ArrayBuffer);
-      const lines = text
-        .split(/\r?\n/)
-        .filter((line) => line.trim())
-        .map(parseCsvLine);
+      const lines = parseCsvText(decodeCsvBytes(reader.result as ArrayBuffer));
       const [header, ...body] = lines;
       const rowCount = body.filter((cells) => cells.some((cell) => cell.trim())).length;
       if (!header || rowCount === 0) {
@@ -270,11 +332,17 @@ export default function EquipmentPage() {
       }
       const nextColumns = await apiFetch<EquipmentColumn[]>('/equipment/columns');
       const parsed = fromCsv(pendingImport.lines, nextColumns);
-      const created = await apiFetch<Equipment[]>('/equipment/bulk', {
-        method: 'POST',
-        body: JSON.stringify({ rows: parsed.map((values) => ({ values })) }),
-      });
-      setMessage(`${created.length}줄을 추가했습니다.`);
+      // 서버는 한 번에 500줄까지 받으므로 나눠 보낸다.
+      let createdCount = 0;
+      for (let start = 0; start < parsed.length; start += BULK_LIMIT) {
+        const chunk = parsed.slice(start, start + BULK_LIMIT);
+        const created = await apiFetch<Equipment[]>('/equipment/bulk', {
+          method: 'POST',
+          body: JSON.stringify({ rows: chunk.map((values) => ({ values })) }),
+        });
+        createdCount += created.length;
+      }
+      setMessage(`${createdCount}줄을 추가했습니다.`);
       await load(true);
     } catch (err) {
       setError((err as Error).message);
@@ -373,12 +441,18 @@ export default function EquipmentPage() {
         </p>
       )}
 
-      <div className="mt-3 overflow-x-auto rounded-2xl border border-border bg-white">
+      {/* 열이 많아 옆으로 길다. 머리글은 위에, 첫 열(장비 이름)은 왼쪽에 고정한다. */}
+      <div className="mt-3 max-h-[70vh] overflow-auto rounded-2xl border border-border bg-white">
         <table className="min-w-max border-collapse text-small">
-          <thead className="bg-surface-muted text-left text-tiny font-bold text-text-muted">
+          <thead className="sticky top-0 z-30 bg-surface-muted text-left text-tiny font-bold text-text-muted">
             <tr>
-              {columns.map((column) => (
-                <th key={column.id} className="min-w-[7rem] border-b border-border px-2 py-2">
+              {columns.map((column, index) => (
+                <th
+                  key={column.id}
+                  className={`min-w-[7rem] border-b border-border px-2 py-2 ${
+                    index === 0 ? 'sticky left-0 z-20 border-r bg-surface-muted' : ''
+                  }`}
+                >
                   {column.label}
                 </th>
               ))}
@@ -396,10 +470,18 @@ export default function EquipmentPage() {
                   data-row={row.key}
                   className={`border-b border-border align-top ${dirty ? 'bg-verify-warn-bg/50' : ''}`}
                 >
-                  {columns.map((column) => (
-                    <td key={column.id} className="min-w-[7rem] p-0">
+                  {columns.map((column, index) => (
+                    <td
+                      key={column.id}
+                      className={`min-w-[7rem] p-0 ${
+                        index === 0
+                          ? `sticky left-0 z-10 border-r border-border ${dirty ? 'bg-verify-warn-bg' : 'bg-white'}`
+                          : ''
+                      }`}
+                    >
                       <input
                         value={row.draft[column.id] ?? ''}
+                        title={row.draft[column.id] || undefined}
                         onChange={(event) => setCell(row.key, column.id, event.target.value)}
                         onKeyDown={(event) => handleKeyDown(event, row)}
                         aria-label={column.label}
@@ -435,7 +517,7 @@ export default function EquipmentPage() {
                           >
                             {savingKey === row.key ? '저장 중' : '저장'}
                           </button>
-                          {row.saved && (
+                          {row.saved && !row.gone && (
                             <button
                               type="button"
                               onClick={() => revertRow(row)}
@@ -448,12 +530,39 @@ export default function EquipmentPage() {
                       )}
                       <button
                         type="button"
+                        onClick={() => duplicateRow(row)}
+                        title="이 줄 내용으로 새 줄을 만듭니다. 저장을 눌러야 추가됩니다."
+                        className="shrink-0 rounded-full border border-border px-2.5 py-1 text-tiny text-text-muted hover:bg-surface-muted"
+                      >
+                        복제
+                      </button>
+                      {row.saved && (
+                        <button
+                          type="button"
+                          onClick={() => setHistoryRow(row)}
+                          className="shrink-0 rounded-full border border-border px-2.5 py-1 text-tiny text-text-muted hover:bg-surface-muted"
+                        >
+                          이력
+                        </button>
+                      )}
+                      <button
+                        type="button"
                         onClick={() => setDeleteTarget(row)}
                         className="shrink-0 rounded-full border border-border px-2.5 py-1 text-tiny text-verify-fail-fg hover:bg-verify-fail-bg"
                       >
                         삭제
                       </button>
                     </div>
+                    {row.latest && !rowError && (
+                      <p className="mt-1 max-w-[240px] whitespace-normal text-tiny text-verify-warn-fg">
+                        고치는 사이 {row.latest.updated_by_name ?? '다른 사람'}님이 이 줄을 저장했습니다. 되돌리기를 누르면 최신 내용을 불러옵니다.
+                      </p>
+                    )}
+                    {row.gone && !rowError && (
+                      <p className="mt-1 max-w-[240px] whitespace-normal text-tiny text-verify-warn-fg">
+                        고치는 사이 다른 사람이 이 줄을 삭제했습니다. 저장하면 새 줄로 다시 만듭니다.
+                      </p>
+                    )}
                     {rowError && (
                       <p className="mt-1 max-w-[240px] whitespace-normal text-tiny text-verify-fail-fg">{rowError}</p>
                     )}
@@ -516,6 +625,12 @@ export default function EquipmentPage() {
         onChanged={() => load(true)}
       />
       <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} />
+      <HistoryModal
+        open={historyRow !== null}
+        equipmentId={historyRow?.saved?.id}
+        title={historyRow ? `${rowName(historyRow)} 변경 이력` : undefined}
+        onClose={() => setHistoryRow(null)}
+      />
     </AppShell>
   );
 }

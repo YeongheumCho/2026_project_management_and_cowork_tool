@@ -383,7 +383,7 @@ def update_equipment(
         who = equipment.updated_by_name or "다른 사람"
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"{who}님이 먼저 이 줄을 고쳤습니다. 새로고침한 뒤 다시 입력해 주세요.",
+            detail=f"{who}님이 먼저 이 줄을 고쳤습니다. 되돌리기로 최신 내용을 불러온 뒤 다시 입력해 주세요.",
         )
 
     before = _values(equipment)

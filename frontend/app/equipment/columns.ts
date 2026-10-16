@@ -46,6 +46,45 @@ export function toCsv(columns: EquipmentColumn[], rows: EquipmentValues[]): stri
   return '﻿' + [header, ...body].join('\r\n') + '\r\n';
 }
 
+/**
+ * CSV 전체 → 줄·칸 배열. 큰따옴표 안의 쉼표·줄바꿈을 한 칸으로 읽는다
+ * (줄 단위로 자르면 비고처럼 여러 줄인 칸이 다음 장비로 갈라진다). 빈 줄은 뺀다.
+ */
+export function parseCsvText(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let inQuotes = false;
+  const pushRow = () => {
+    row.push(cell);
+    if (row.some((value) => value.trim())) rows.push(row.map((value) => value.trim()));
+    row = [];
+    cell = '';
+  };
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i + 1] === '"') {
+        cell += '"';
+        i += 1;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        cell += ch;
+      }
+      continue;
+    }
+    if (ch === '"') inQuotes = true;
+    else if (ch === ',') {
+      row.push(cell);
+      cell = '';
+    } else if (ch === '\n') pushRow();
+    else if (ch !== '\r') cell += ch;
+  }
+  if (cell || row.length > 0) pushRow();
+  return rows;
+}
+
 /** CSV 머리글 중 지금 표에 없는 열 이름 (가져오기 전에 새 열로 만든다). */
 export function missingHeaders(header: string[], columns: EquipmentColumn[]): string[] {
   const known = new Set(columns.map((column) => normalizeLabel(column.label)));

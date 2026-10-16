@@ -40,28 +40,32 @@ function isRemoval(action: EquipmentHistory['action']) {
 type Props = {
   open: boolean;
   onClose: () => void;
+  /** 주면 그 장비의 이력만 보여 준다 */
+  equipmentId?: number;
+  title?: string;
 };
 
-export default function HistoryModal({ open, onClose }: Props) {
+export default function HistoryModal({ open, onClose, equipmentId, title }: Props) {
   const [rows, setRows] = useState<EquipmentHistory[] | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!open) return;
     setRows(null);
-    apiFetch<EquipmentHistory[]>('/equipment/history?limit=200')
+    const query = equipmentId ? `&equipment_id=${equipmentId}` : '';
+    apiFetch<EquipmentHistory[]>(`/equipment/history?limit=200${query}`)
       .then((next) => {
         setRows(next);
         setError('');
       })
       .catch((err: Error) => setError(err.message));
-  }, [open]);
+  }, [open, equipmentId]);
 
   return (
     <Modal open={open} onClose={onClose} size="xl" scrollable ariaLabel="장비 변경 이력">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-heading font-bold text-text">변경 이력</h2>
+          <h2 className="text-heading font-bold text-text">{title ?? '변경 이력'}</h2>
           <p className="mt-1 text-small text-text-subtle">
             최근 200건. 지운 장비와 지운 열의 값도 남아 있어 다시 입력할 수 있습니다.
           </p>
