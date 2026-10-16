@@ -108,3 +108,17 @@ def test_project_stale_edit_is_rejected(env):
     assert r.json()["edit_version"] == 2
     r = client.put(f"/projects/{ids['project']}", json={**body, "name": "B", "edit_version": 1})
     assert r.status_code == 409
+
+
+def test_template_stale_edit_is_rejected(env):
+    client, _ = env
+    key = "major_project_1_template_9"
+    body = {"project_type": key, "section_label": "템플릿", "fields": [], "weight": 5}
+    created = client.put(f"/field-schemas/{key}", json=body)
+    assert created.status_code == 200 and created.json()["edit_version"] == 1
+
+    r = client.put(f"/field-schemas/{key}", json={**body, "section_label": "A", "edit_version": 1})
+    assert r.status_code == 200 and r.json()["edit_version"] == 2
+    r = client.put(f"/field-schemas/{key}", json={**body, "section_label": "B", "edit_version": 1})
+    assert r.status_code == 409
+    assert client.get(f"/field-schemas/{key}").json()["section_label"] == "A"

@@ -389,6 +389,8 @@ export default function TemplateManager() {
             section_label: name,
             fields: normalizedFields,
             weight: templateWeight,
+            // 불러온 뒤 다른 관리자가 먼저 저장했으면 서버가 409 로 막는다.
+            edit_version: schemas[activeKey]?.edit_version,
           }),
         },
       );

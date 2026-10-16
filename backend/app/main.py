@@ -102,6 +102,10 @@ def _ensure_additive_schema_updates() -> None:
             statements.append(
                 "ALTER TABLE project_field_schemas ADD COLUMN weight INTEGER NOT NULL DEFAULT 5"
             )
+        if "edit_version" not in field_schema_columns:
+            statements.append(
+                "ALTER TABLE project_field_schemas ADD COLUMN edit_version INTEGER NOT NULL DEFAULT 1"
+            )
 
     if "major_projects" in table_names:
         major_project_columns = {

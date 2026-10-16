@@ -588,6 +588,8 @@ export type ProjectFieldSchema = {
   section_label: string;
   fields: FieldDefinition[];
   weight: number;
+  /** 템플릿 저장 때 보내 두 관리자의 동시 편집 덮어쓰기를 막는다 */
+  edit_version?: number;
   created_by: number | null;
   updated_at: string;
 };
