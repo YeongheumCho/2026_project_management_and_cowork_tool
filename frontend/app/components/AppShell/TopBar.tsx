@@ -48,20 +48,23 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
     };
   }, [menuOpen]);
 
+  // 좁은 화면에서는 메뉴 글자가 한 자씩 세로로 쪼개지고 오른쪽 버튼이 화면 밖으로 밀렸다.
+  // 좁은 화면에서는 메뉴를 둘째 줄로 내려 폭 전체를 쓰고, 넘치면 옆으로 밀어 본다.
+  // 좁은 화면의 로그아웃은 계정 메뉴 안의 것을 쓴다.
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-6 border-b-[1.5px] border-brand bg-surface px-5">
-      <Link href="/dashboard" className="flex items-center">
+    <header className="sticky top-0 z-30 flex flex-wrap items-center gap-x-3 gap-y-1 border-b-[1.5px] border-brand bg-surface px-3 py-2 md:h-14 md:flex-nowrap md:gap-6 md:px-5 md:py-0">
+      <Link href="/dashboard" className="flex shrink-0 items-center">
         <Image
           src="/logo.png"
           alt="SureLog AI"
           width={160}
           height={50}
           priority
-          className="h-10 w-auto"
+          className="h-8 w-auto md:h-10"
         />
       </Link>
 
-      <nav className="flex items-center gap-0.5">
+      <nav className="order-last flex w-full min-w-0 items-center gap-0.5 overflow-x-auto md:order-none md:w-auto">
         {navItems.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -69,7 +72,7 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-lg px-3.5 py-1 text-xs transition ${
+              className={`shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs transition md:px-3.5 ${
                 active
                   ? 'bg-brand font-bold text-white'
                   : 'font-medium text-text-muted hover:bg-surface-subtle'
@@ -81,7 +84,7 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
         })}
       </nav>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         {isAdmin && onNewProject && (
           <Button
             variant="ghost"
@@ -97,6 +100,7 @@ export default function TopBar({ me, onLogout, onNewProject }: Props) {
           variant="secondary"
           size="sm"
           onClick={onLogout}
+          className="hidden sm:inline-flex"
         >
           로그아웃
         </Button>
