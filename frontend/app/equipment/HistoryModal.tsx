@@ -3,19 +3,39 @@
 import { useEffect, useState } from 'react';
 import Modal from '../components/Modal';
 import { apiFetch, type EquipmentHistory } from '../lib/api';
-import { EQUIPMENT_LABEL } from './columns';
 
 const ACTION_LABEL: Record<EquipmentHistory['action'], string> = {
   create: '추가',
   update: '수정',
   delete: '삭제',
+  column_create: '열 추가',
+  column_rename: '열 이름 변경',
+  column_delete: '열 삭제',
+  column_move: '열 순서 변경',
 };
 
+const ADD_CLASS = 'bg-verify-pass-bg text-verify-pass-fg';
+const EDIT_CLASS = 'bg-brand-soft text-brand';
+const DELETE_CLASS = 'bg-verify-fail-bg text-verify-fail-fg';
+
 const ACTION_CLASS: Record<EquipmentHistory['action'], string> = {
-  create: 'bg-verify-pass-bg text-verify-pass-fg',
-  update: 'bg-brand-soft text-brand',
-  delete: 'bg-verify-fail-bg text-verify-fail-fg',
+  create: ADD_CLASS,
+  update: EDIT_CLASS,
+  delete: DELETE_CLASS,
+  column_create: ADD_CLASS,
+  column_rename: EDIT_CLASS,
+  column_delete: DELETE_CLASS,
+  column_move: EDIT_CLASS,
 };
+
+/** 값이 바뀐 이력은 "이전 → 새 값", 추가는 새 값, 삭제는 지운 값을 보여 준다. */
+function isChange(action: EquipmentHistory['action']) {
+  return action === 'update' || action === 'column_rename' || action === 'column_move';
+}
+
+function isRemoval(action: EquipmentHistory['action']) {
+  return action === 'delete' || action === 'column_delete';
+}
 
 type Props = {
   open: boolean;
@@ -43,7 +63,7 @@ export default function HistoryModal({ open, onClose }: Props) {
         <div>
           <h2 className="text-heading font-bold text-text">변경 이력</h2>
           <p className="mt-1 text-small text-text-subtle">
-            최근 200건. 삭제한 장비도 마지막 값이 남아 있어 다시 입력할 수 있습니다.
+            최근 200건. 지운 장비와 지운 열의 값도 남아 있어 다시 입력할 수 있습니다.
           </p>
         </div>
         <button
@@ -75,14 +95,14 @@ export default function HistoryModal({ open, onClose }: Props) {
               <dl className="mt-2 grid gap-1 text-tiny text-text-muted sm:grid-cols-2">
                 {Object.entries(row.changes).map(([field, [before, after]]) => (
                   <div key={field} className="flex min-w-0 gap-1.5">
-                    <dt className="shrink-0 font-semibold text-text">{EQUIPMENT_LABEL[field] ?? field}</dt>
+                    <dt className="shrink-0 font-semibold text-text">{field}</dt>
                     <dd className="min-w-0 break-all">
-                      {row.action === 'update' ? (
+                      {isChange(row.action) ? (
                         <>
                           <span className="line-through">{before ?? '(빈칸)'}</span> → {after ?? '(빈칸)'}
                         </>
                       ) : (
-                        (row.action === 'delete' ? before : after) ?? ''
+                        (isRemoval(row.action) ? before : after) ?? ''
                       )}
                     </dd>
                   </div>

@@ -4,42 +4,43 @@ import type { ChangeEvent, KeyboardEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AppShell from '../components/AppShell';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { apiFetch, type Equipment, type EquipmentFields } from '../lib/api';
+import { apiFetch, type Equipment, type EquipmentColumn } from '../lib/api';
 import { useMe } from '../lib/useMe';
 import { decodeCsvBytes, parseCsvLine } from '../projects/components/CsvImportModal';
+import ColumnManager from './ColumnManager';
 import HistoryModal from './HistoryModal';
 import {
-  EQUIPMENT_COLUMNS,
-  emptyEquipment,
+  cleanValues,
   equipmentGroup,
   fromCsv,
-  pickFields,
-  sameFields,
+  missingHeaders,
+  sameValues,
   toCsv,
-  type EquipmentKey,
+  type EquipmentValues,
 } from './columns';
 
-/** 화면의 한 줄. 저장 전 새 줄은 id 가 없다. */
+/** 화면의 한 줄. 저장 전 새 줄은 saved 가 없다. */
 type Row = {
   key: string;
   saved: Equipment | null;
-  draft: EquipmentFields;
+  draft: EquipmentValues;
 };
 
-type PendingImport = { rows: EquipmentFields[]; skipped: number; unknownHeaders: string[] };
+/** CSV 를 읽은 뒤 확인창에서 "추가"를 누르기 전까지 들고 있는 내용 */
+type PendingImport = { lines: string[][]; rowCount: number; newColumns: string[] };
 
 let newRowSeq = 0;
 
 function rowFromSaved(saved: Equipment): Row {
-  return { key: `id-${saved.id}`, saved, draft: pickFields(saved) };
+  return { key: `id-${saved.id}`, saved, draft: { ...saved.values } };
 }
 
-function isDirty(row: Row): boolean {
-  return row.saved === null || !sameFields(row.saved, row.draft);
-}
+const BUTTON_CLASS =
+  'rounded-full border border-border bg-white px-3 py-2 text-small font-semibold text-text-muted hover:bg-surface-muted';
 
 export default function EquipmentPage() {
   const { me, loading: meLoading } = useMe();
+  const [columns, setColumns] = useState<EquipmentColumn[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
@@ -51,20 +52,33 @@ export default function EquipmentPage() {
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [columnsOpen, setColumnsOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const isDirty = useCallback(
+    (row: Row) => row.saved === null || !sameValues(row.saved.values, row.draft, columns),
+    [columns],
+  );
   const dirtyCount = rows.filter(isDirty).length;
 
   const load = useCallback(async (keepDrafts: boolean) => {
     try {
-      const next = await apiFetch<Equipment[]>('/equipment');
+      const [nextColumns, nextRows] = await Promise.all([
+        apiFetch<EquipmentColumn[]>('/equipment/columns'),
+        apiFetch<Equipment[]>('/equipment'),
+      ]);
+      setColumns(nextColumns);
       setRows((current) => {
-        const fresh = next.map(rowFromSaved);
+        const fresh = nextRows.map(rowFromSaved);
         if (!keepDrafts) return fresh;
         // 고치던 줄과 저장 전 새 줄은 남긴다 (다른 사람 변경만 반영).
-        const editing = new Map(current.filter(isDirty).map((row) => [row.key, row]));
+        const editing = new Map(
+          current
+            .filter((row) => row.saved === null || !sameValues(row.saved.values, row.draft, nextColumns))
+            .map((row) => [row.key, row]),
+        );
         const merged = fresh.map((row) => {
           const mine = editing.get(row.key);
           return mine ? { ...row, draft: mine.draft } : row;
@@ -93,26 +107,26 @@ export default function EquipmentPage() {
   }, [dirtyCount]);
 
   const groups = useMemo(() => {
-    const names = new Set(rows.map((row) => equipmentGroup(row.draft.name || row.saved?.name || '')));
+    const names = new Set(
+      rows.filter((row) => row.saved).map((row) => equipmentGroup(row.saved!.values, columns)),
+    );
     return ['전체', ...Array.from(names).sort((a, b) => a.localeCompare(b, 'ko-KR'))];
-  }, [rows]);
+  }, [rows, columns]);
 
   const visibleRows = useMemo(() => {
     const keyword = search.trim().toLowerCase();
     return rows.filter((row) => {
       if (row.saved === null) return true; // 새 줄은 항상 보인다
-      if (group !== '전체' && equipmentGroup(row.saved.name) !== group) return false;
+      if (group !== '전체' && equipmentGroup(row.saved.values, columns) !== group) return false;
       if (!keyword) return true;
-      return EQUIPMENT_COLUMNS.some(({ key }) =>
-        (row.draft[key] ?? '').toLowerCase().includes(keyword),
-      );
+      return columns.some(({ id }) => (row.draft[id] ?? '').toLowerCase().includes(keyword));
     });
-  }, [rows, search, group]);
+  }, [rows, columns, search, group]);
 
-  function setCell(rowKey: string, key: EquipmentKey, value: string) {
+  function setCell(rowKey: string, columnId: number, value: string) {
     setRows((current) =>
       current.map((row) =>
-        row.key === rowKey ? { ...row, draft: { ...row.draft, [key]: value } } : row,
+        row.key === rowKey ? { ...row, draft: { ...row.draft, [columnId]: value } } : row,
       ),
     );
   }
@@ -140,8 +154,9 @@ export default function EquipmentPage() {
 
   async function saveRow(row: Row) {
     if (!isDirty(row) || savingKey) return;
-    if (!row.draft.name.trim()) {
-      setRowErrors((current) => ({ ...current, [row.key]: '장비 이름을 입력해 주세요.' }));
+    const values = cleanValues(row.draft, columns);
+    if (Object.keys(values).length === 0) {
+      setRowErrors((current) => ({ ...current, [row.key]: '한 칸 이상 입력해 주세요.' }));
       return;
     }
     setSavingKey(row.key);
@@ -150,11 +165,11 @@ export default function EquipmentPage() {
       const saved = row.saved
         ? await apiFetch<Equipment>(`/equipment/${row.saved.id}`, {
             method: 'PUT',
-            body: JSON.stringify({ ...row.draft, version: row.saved.version }),
+            body: JSON.stringify({ values, version: row.saved.version }),
           })
         : await apiFetch<Equipment>('/equipment', {
             method: 'POST',
-            body: JSON.stringify(row.draft),
+            body: JSON.stringify({ values }),
           });
       setRows((current) =>
         current.map((item) => (item.key === row.key ? rowFromSaved(saved) : item)),
@@ -170,12 +185,17 @@ export default function EquipmentPage() {
   function addRow() {
     newRowSeq += 1;
     const key = `new-${newRowSeq}`;
-    setRows((current) => [...current, { key, saved: null, draft: emptyEquipment() }]);
+    setRows((current) => [...current, { key, saved: null, draft: {} }]);
     setGroup('전체');
     // 새 줄의 첫 칸으로 바로 이동
     window.setTimeout(() => {
       document.querySelector<HTMLInputElement>(`[data-row="${key}"] input`)?.focus();
     }, 0);
+  }
+
+  function rowName(row: Row): string {
+    const first = columns[0];
+    return (first && row.saved?.values[first.id]) || '이름 없는 장비';
   }
 
   async function confirmDelete() {
@@ -190,12 +210,11 @@ export default function EquipmentPage() {
     try {
       await apiFetch<void>(`/equipment/${target.saved.id}`, { method: 'DELETE' });
       setRows((current) => current.filter((row) => row.key !== target.key));
-      setMessage(`${target.saved.name} 을(를) 삭제했습니다. 변경 이력에서 지운 값을 볼 수 있습니다.`);
-      setDeleteTarget(null);
+      setMessage(`${rowName(target)} 을(를) 삭제했습니다. 변경 이력에서 지운 값을 볼 수 있습니다.`);
     } catch (err) {
       setError((err as Error).message);
-      setDeleteTarget(null);
     } finally {
+      setDeleteTarget(null);
       setDeleting(false);
     }
   }
@@ -208,8 +227,8 @@ export default function EquipmentPage() {
   }
 
   function exportCsv() {
-    const saved = rows.flatMap((row) => (row.saved ? [row.saved] : []));
-    const blob = new Blob([toCsv(saved)], { type: 'text/csv;charset=utf-8;' });
+    const saved = rows.flatMap((row) => (row.saved ? [row.saved.values] : []));
+    const blob = new Blob([toCsv(columns, saved)], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -229,13 +248,14 @@ export default function EquipmentPage() {
         .split(/\r?\n/)
         .filter((line) => line.trim())
         .map(parseCsvLine);
-      const parsed = fromCsv(lines);
-      if (parsed.rows.length === 0) {
-        setError('가져올 줄이 없습니다. 첫 줄에 "장비" 열이 있고, 장비 이름이 채워져 있는지 확인해 주세요.');
+      const [header, ...body] = lines;
+      const rowCount = body.filter((cells) => cells.some((cell) => cell.trim())).length;
+      if (!header || rowCount === 0) {
+        setError('가져올 줄이 없습니다. 첫 줄은 열 이름, 둘째 줄부터 장비 한 줄씩이어야 합니다.');
         return;
       }
       setError('');
-      setPendingImport(parsed);
+      setPendingImport({ lines, rowCount, newColumns: missingHeaders(header, columns) });
     };
     reader.readAsArrayBuffer(file);
   }
@@ -244,17 +264,22 @@ export default function EquipmentPage() {
     if (!pendingImport) return;
     setImporting(true);
     try {
-      await apiFetch<Equipment[]>('/equipment/bulk', {
+      // 표에 없는 머리글은 새 열로 먼저 만든다.
+      for (const label of pendingImport.newColumns) {
+        await apiFetch('/equipment/columns', { method: 'POST', body: JSON.stringify({ label }) });
+      }
+      const nextColumns = await apiFetch<EquipmentColumn[]>('/equipment/columns');
+      const parsed = fromCsv(pendingImport.lines, nextColumns);
+      const created = await apiFetch<Equipment[]>('/equipment/bulk', {
         method: 'POST',
-        body: JSON.stringify({ rows: pendingImport.rows }),
+        body: JSON.stringify({ rows: parsed.map((values) => ({ values })) }),
       });
-      setMessage(`${pendingImport.rows.length}줄을 추가했습니다.`);
-      setPendingImport(null);
+      setMessage(`${created.length}줄을 추가했습니다.`);
       await load(true);
     } catch (err) {
       setError((err as Error).message);
-      setPendingImport(null);
     } finally {
+      setPendingImport(null);
       setImporting(false);
     }
   }
@@ -273,25 +298,25 @@ export default function EquipmentPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void load(true)}
-            className="rounded-full border border-border bg-white px-3 py-2 text-small font-semibold text-text-muted hover:bg-surface-muted"
-          >
+          <button type="button" onClick={() => void load(true)} className={BUTTON_CLASS}>
             새로고침
           </button>
-          <button
-            type="button"
-            onClick={() => setHistoryOpen(true)}
-            className="rounded-full border border-border bg-white px-3 py-2 text-small font-semibold text-text-muted hover:bg-surface-muted"
-          >
+          <button type="button" onClick={() => setHistoryOpen(true)} className={BUTTON_CLASS}>
             변경 이력
           </button>
           <button
             type="button"
+            onClick={() => setColumnsOpen(true)}
+            title="열 이름 바꾸기, 열 추가·삭제·순서 바꾸기"
+            className={BUTTON_CLASS}
+          >
+            열 관리
+          </button>
+          <button
+            type="button"
             onClick={() => fileRef.current?.click()}
-            title="첫 줄이 열 이름(장비, 장비 번호, 성명 …)인 CSV 를 맨 아래에 추가합니다. 기존 줄은 바뀌지 않습니다."
-            className="rounded-full border border-border bg-white px-3 py-2 text-small font-semibold text-text-muted hover:bg-surface-muted"
+            title="첫 줄이 열 이름인 CSV 를 맨 아래에 추가합니다. 기존 줄은 바뀌지 않고, 표에 없는 열은 새로 만듭니다."
+            className={BUTTON_CLASS}
           >
             CSV 가져오기
           </button>
@@ -299,7 +324,7 @@ export default function EquipmentPage() {
             type="button"
             onClick={exportCsv}
             title="지금 저장된 표를 CSV 로 받습니다. 메모장이나 엑셀로 열 수 있습니다."
-            className="rounded-full border border-border bg-white px-3 py-2 text-small font-semibold text-text-muted hover:bg-surface-muted"
+            className={BUTTON_CLASS}
           >
             CSV 추출
           </button>
@@ -337,7 +362,7 @@ export default function EquipmentPage() {
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="검색 (장비·성명·IP·제어기 …)"
+          placeholder="검색 (모든 칸)"
           className="ml-auto w-64 max-w-full rounded-full border border-border bg-white px-4 py-1.5 text-small"
         />
       </div>
@@ -352,10 +377,9 @@ export default function EquipmentPage() {
         <table className="min-w-max border-collapse text-small">
           <thead className="bg-surface-muted text-left text-tiny font-bold text-text-muted">
             <tr>
-              {EQUIPMENT_COLUMNS.map((column) => (
-                <th key={column.key} className={`${column.width} border-b border-border px-2 py-2`}>
+              {columns.map((column) => (
+                <th key={column.id} className="min-w-[7rem] border-b border-border px-2 py-2">
                   {column.label}
-                  {column.key === 'name' && <span className="text-verify-fail-fg"> *</span>}
                 </th>
               ))}
               <th className="w-36 border-b border-border px-2 py-2">마지막 수정</th>
@@ -372,11 +396,11 @@ export default function EquipmentPage() {
                   data-row={row.key}
                   className={`border-b border-border align-top ${dirty ? 'bg-verify-warn-bg/50' : ''}`}
                 >
-                  {EQUIPMENT_COLUMNS.map((column) => (
-                    <td key={column.key} className={`${column.width} p-0`}>
+                  {columns.map((column) => (
+                    <td key={column.id} className="min-w-[7rem] p-0">
                       <input
-                        value={row.draft[column.key] ?? ''}
-                        onChange={(event) => setCell(row.key, column.key, event.target.value)}
+                        value={row.draft[column.id] ?? ''}
+                        onChange={(event) => setCell(row.key, column.id, event.target.value)}
                         onKeyDown={(event) => handleKeyDown(event, row)}
                         aria-label={column.label}
                         className="w-full bg-transparent px-2 py-2 text-small text-text outline-none focus:bg-white focus:ring-2 focus:ring-brand/40"
@@ -441,7 +465,9 @@ export default function EquipmentPage() {
         </table>
         {loaded && visibleRows.length === 0 && (
           <p className="px-4 py-8 text-center text-small text-text-subtle">
-            {rows.length === 0 ? '아직 등록된 장비가 없습니다. "+ 장비 추가"나 "CSV 가져오기"로 시작하세요.' : '조건에 맞는 장비가 없습니다.'}
+            {rows.length === 0
+              ? '아직 등록된 장비가 없습니다. "+ 장비 추가"나 "CSV 가져오기"로 시작하세요.'
+              : '조건에 맞는 장비가 없습니다.'}
           </p>
         )}
       </div>
@@ -451,7 +477,7 @@ export default function EquipmentPage() {
         title="장비 삭제"
         description={
           deleteTarget?.saved
-            ? `${deleteTarget.saved.name} 줄을 삭제합니다. 모든 팀원의 표에서 사라지며, 지운 값은 변경 이력에서 확인할 수 있습니다.`
+            ? `${rowName(deleteTarget)} 줄을 삭제합니다. 모든 팀원의 표에서 사라지며, 지운 값은 변경 이력에서 확인할 수 있습니다.`
             : '저장하지 않은 새 줄을 지웁니다.'
         }
         confirmLabel="삭제"
@@ -467,10 +493,9 @@ export default function EquipmentPage() {
         description={
           pendingImport
             ? [
-                `${pendingImport.rows.length}줄을 표 맨 아래에 추가합니다. 기존 줄은 바뀌지 않습니다.`,
-                pendingImport.skipped > 0 ? `장비 이름이 빈 ${pendingImport.skipped}줄은 건너뜁니다.` : '',
-                pendingImport.unknownHeaders.length > 0
-                  ? `모르는 열은 무시합니다: ${pendingImport.unknownHeaders.join(', ')}`
+                `${pendingImport.rowCount}줄을 표 맨 아래에 추가합니다. 기존 줄은 바뀌지 않습니다.`,
+                pendingImport.newColumns.length > 0
+                  ? `표에 없는 열 ${pendingImport.newColumns.length}개를 새로 만듭니다: ${pendingImport.newColumns.join(', ')}`
                   : '',
               ]
                 .filter(Boolean)
@@ -484,6 +509,12 @@ export default function EquipmentPage() {
         onClose={() => setPendingImport(null)}
       />
 
+      <ColumnManager
+        open={columnsOpen}
+        columns={columns}
+        onClose={() => setColumnsOpen(false)}
+        onChanged={() => load(true)}
+      />
       <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} />
     </AppShell>
   );

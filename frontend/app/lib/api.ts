@@ -218,25 +218,17 @@ export type MajorProject = MajorProjectBrief & {
   created_at: string;
 };
 
-// 장비 현황표. 누구나 보고 고친다. 비밀번호 칸도 그대로 주고받는다 (폐쇄망 전용).
-export type EquipmentFields = {
-  name: string;
-  equipment_no: string | null;
-  owner_name: string | null;
-  owner_idnum: string | null;
-  ip: string | null;
-  pc_no: string | null;
-  user_name: string | null;
-  controller: string | null;
-  prof: string | null;
-  col_582: string | null;
-  daas_password: string | null;
-  internal_password: string | null;
-  note: string | null;
+// 장비 현황표. 줄과 열(항목) 모두 누구나 고친다. 비밀번호 칸도 그대로 주고받는다 (폐쇄망 전용).
+export type EquipmentColumn = {
+  id: number;
+  label: string;
+  sort_order: number;
 };
 
-export type Equipment = EquipmentFields & {
+export type Equipment = {
   id: number;
+  /** { "<열 id>": 값 }. 빈칸은 키가 없다. */
+  values: Record<string, string>;
   sort_order: number;
   version: number;
   updated_by: number | null;
@@ -247,9 +239,17 @@ export type Equipment = EquipmentFields & {
 
 export type EquipmentHistory = {
   id: number;
-  equipment_id: number;
+  equipment_id: number | null;
   equipment_name: string;
-  action: 'create' | 'update' | 'delete';
+  action:
+    | 'create'
+    | 'update'
+    | 'delete'
+    | 'column_create'
+    | 'column_rename'
+    | 'column_delete'
+    | 'column_move';
+  /** { "열 이름": [이전 값, 새 값] } — 그때의 열 이름으로 남는다. */
   changes: Record<string, [string | null, string | null]>;
   user_name: string | null;
   created_at: string;

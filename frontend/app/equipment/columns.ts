@@ -1,117 +1,85 @@
-import type { EquipmentFields } from '../lib/api';
+import type { EquipmentColumn } from '../lib/api';
 
-export type EquipmentKey = keyof EquipmentFields;
+/** 한 줄의 값. { "<열 id>": 값 } */
+export type EquipmentValues = Record<string, string>;
 
-/** 표·CSV·이력이 함께 쓰는 열 정의. 순서는 시트16 그대로. */
-export const EQUIPMENT_COLUMNS: { key: EquipmentKey; label: string; width: string }[] = [
-  { key: 'name', label: '장비', width: 'w-28' },
-  { key: 'equipment_no', label: '장비 번호', width: 'w-20' },
-  { key: 'owner_name', label: '성명', width: 'w-24' },
-  { key: 'owner_idnum', label: '사번', width: 'w-24' },
-  { key: 'ip', label: 'IP', width: 'w-28' },
-  { key: 'pc_no', label: 'PC번호', width: 'w-24' },
-  { key: 'user_name', label: '사용자', width: 'w-24' },
-  { key: 'controller', label: '제어기', width: 'w-32' },
-  { key: 'prof', label: 'Prof', width: 'w-20' },
-  { key: 'col_582', label: '582', width: 'w-20' },
-  { key: 'daas_password', label: 'Daas', width: 'w-28' },
-  { key: 'internal_password', label: '내부', width: 'w-28' },
-  { key: 'note', label: '비고', width: 'w-40' },
-];
+/** 시트에서 IP 칸 머리글이 '-' 였으므로 CSV 에서는 그것도 IP 로 읽는다. */
+const HEADER_ALIASES: Record<string, string> = { '-': 'IP' };
 
-export const EQUIPMENT_LABEL: Record<string, string> = Object.fromEntries(
-  EQUIPMENT_COLUMNS.map((column) => [column.key, column.label]),
-);
-
-/** CSV 머리글 → 열. 시트에서 IP 칸 머리글이 '-' 였으므로 그것도 받는다. */
-const HEADER_ALIASES: Record<string, EquipmentKey> = {
-  ...Object.fromEntries(EQUIPMENT_COLUMNS.map((column) => [column.label, column.key])),
-  '-': 'ip',
-  장비번호: 'equipment_no',
-  pc번호: 'pc_no',
-  prof: 'prof',
-  daas: 'daas_password',
-};
-
-export function emptyEquipment(): EquipmentFields {
-  return {
-    name: '',
-    equipment_no: null,
-    owner_name: null,
-    owner_idnum: null,
-    ip: null,
-    pc_no: null,
-    user_name: null,
-    controller: null,
-    prof: null,
-    col_582: null,
-    daas_password: null,
-    internal_password: null,
-    note: null,
-  };
+function normalizeLabel(label: string): string {
+  return label.replace(/^﻿/, '').trim().toLowerCase().replace(/\s+/g, '');
 }
 
-export function pickFields(row: EquipmentFields): EquipmentFields {
-  const next = emptyEquipment();
-  for (const { key } of EQUIPMENT_COLUMNS) {
-    (next as Record<EquipmentKey, string | null>)[key] = row[key] ?? null;
+export function sameValues(
+  a: EquipmentValues,
+  b: EquipmentValues,
+  columns: EquipmentColumn[],
+): boolean {
+  return columns.every(({ id }) => (a[id] ?? '').trim() === (b[id] ?? '').trim());
+}
+
+/** 저장할 값: 지금 있는 열만, 빈칸은 뺀다. */
+export function cleanValues(values: EquipmentValues, columns: EquipmentColumn[]): EquipmentValues {
+  const next: EquipmentValues = {};
+  for (const { id } of columns) {
+    const value = (values[id] ?? '').trim();
+    if (value) next[id] = value;
   }
-  next.name = row.name ?? '';
   return next;
 }
 
-export function sameFields(a: EquipmentFields, b: EquipmentFields): boolean {
-  return EQUIPMENT_COLUMNS.every(({ key }) => (a[key] ?? '') === (b[key] ?? ''));
+/** 분류 버튼용: 첫 열 값에서 끝 숫자를 뗀 것. 검증용1 → 검증용 */
+export function equipmentGroup(values: EquipmentValues, columns: EquipmentColumn[]): string {
+  const first = columns[0] ? (values[columns[0].id] ?? '') : '';
+  return first.replace(/\s*\d+\s*$/, '').trim() || '기타';
 }
 
-function csvCell(value: string | null): string {
+function csvCell(value: string | undefined): string {
   const text = value ?? '';
   return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-export function toCsv(rows: EquipmentFields[]): string {
-  const header = EQUIPMENT_COLUMNS.map((column) => column.label).join(',');
-  const body = rows.map((row) => EQUIPMENT_COLUMNS.map(({ key }) => csvCell(row[key])).join(','));
+export function toCsv(columns: EquipmentColumn[], rows: EquipmentValues[]): string {
+  const header = columns.map((column) => csvCell(column.label)).join(',');
+  const body = rows.map((row) => columns.map(({ id }) => csvCell(row[id])).join(','));
   // 엑셀이 한글을 UTF-8 로 읽도록 BOM 을 붙인다.
   return '﻿' + [header, ...body].join('\r\n') + '\r\n';
 }
 
-/**
- * CSV 줄 배열 → 장비 행. 첫 줄은 머리글.
- * 모르는 열은 무시하고, 장비 이름이 빈 줄은 건너뛴다.
- */
-export function fromCsv(
-  lines: string[][],
-): { rows: EquipmentFields[]; skipped: number; unknownHeaders: string[] } {
-  const [header, ...body] = lines;
-  if (!header) return { rows: [], skipped: 0, unknownHeaders: [] };
-  const keys = header.map((cell) => {
-    const raw = cell.replace(/^﻿/, '').trim();
-    return HEADER_ALIASES[raw] ?? HEADER_ALIASES[raw.toLowerCase().replace(/\s+/g, '')] ?? null;
-  });
-  const unknownHeaders = header.filter((cell, index) => cell.trim() && keys[index] === null);
-
-  let skipped = 0;
-  const rows: EquipmentFields[] = [];
-  for (const cells of body) {
-    if (cells.every((cell) => !cell.trim())) continue;
-    const row = emptyEquipment();
-    keys.forEach((key, index) => {
-      if (!key) return;
-      const value = (cells[index] ?? '').trim();
-      (row as Record<EquipmentKey, string | null>)[key] = value || null;
-    });
-    row.name = row.name ?? '';
-    if (!row.name) {
-      skipped += 1;
-      continue;
-    }
-    rows.push(row);
+/** CSV 머리글 중 지금 표에 없는 열 이름 (가져오기 전에 새 열로 만든다). */
+export function missingHeaders(header: string[], columns: EquipmentColumn[]): string[] {
+  const known = new Set(columns.map((column) => normalizeLabel(column.label)));
+  const missing: string[] = [];
+  for (const cell of header) {
+    const label = cell.replace(/^﻿/, '').trim();
+    if (!label) continue;
+    const alias = HEADER_ALIASES[label];
+    if (known.has(normalizeLabel(label)) || (alias && known.has(normalizeLabel(alias)))) continue;
+    if (!missing.includes(label)) missing.push(label);
   }
-  return { rows, skipped, unknownHeaders };
+  return missing;
 }
 
-/** 장비 이름 앞부분(숫자 앞)으로 묶는다. 검증용1 → 검증용 */
-export function equipmentGroup(name: string): string {
-  return name.replace(/\s*\d+\s*$/, '').trim() || '기타';
+/**
+ * CSV 줄 배열 → 줄 값. 첫 줄은 머리글이고, 열 이름으로 맞춘다.
+ * 모든 칸이 빈 줄은 건너뛴다.
+ */
+export function fromCsv(lines: string[][], columns: EquipmentColumn[]): EquipmentValues[] {
+  const [header, ...body] = lines;
+  if (!header) return [];
+  const byLabel = new Map(columns.map((column) => [normalizeLabel(column.label), String(column.id)]));
+  const ids = header.map((cell) => {
+    const label = cell.replace(/^﻿/, '').trim();
+    return byLabel.get(normalizeLabel(label)) ?? byLabel.get(normalizeLabel(HEADER_ALIASES[label] ?? '')) ?? null;
+  });
+  const rows: EquipmentValues[] = [];
+  for (const cells of body) {
+    const row: EquipmentValues = {};
+    ids.forEach((id, index) => {
+      const value = (cells[index] ?? '').trim();
+      if (id && value) row[id] = value;
+    });
+    if (Object.keys(row).length > 0) rows.push(row);
+  }
+  return rows;
 }
