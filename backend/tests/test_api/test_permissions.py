@@ -183,3 +183,24 @@ def test_admin_created_idnum_is_digits(env, idnum, expected):
     assert r.status_code == expected
     if expected == 201:
         assert r.json()["idnum"] == "000123456"
+
+
+def test_new_and_reactivated_users_join_default_major_project(env):
+    """기본 대프로젝트 구성원을 서버 시작 때만 맞추던 문제."""
+    client, state, ids = env
+    db = next(app.dependency_overrides[get_db]())
+    db.add(MajorProject(name="미분류/기본 대프로젝트", project_types='["general"]', is_default=True))
+    db.commit()
+    db.close()
+
+    def default_member_ids():
+        majors = client.get("/major-projects").json()
+        return {m["id"] for m in [mp for mp in majors if mp["is_default"]][0]["members"]}
+
+    state["user"] = "admin"
+    created = client.post("/auth/users", json={"idnum": "777", "name": "신규입사", "password": "abcdefgh1"}).json()
+    assert created["id"] in default_member_ids()
+
+    client.patch("/auth/users/3/active", json={"is_active": False})
+    client.patch("/auth/users/3/active", json={"is_active": True})
+    assert ids["outsider"] in default_member_ids()

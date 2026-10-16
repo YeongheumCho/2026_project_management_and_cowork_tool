@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.security import create_access_token, hash_password, verify_password
 from app.dependencies import INACTIVE_ACCOUNT_DETAIL, get_current_user, get_db, require_admin
 from app.models.progress_log import ProgressLog
+from app.models.project import MajorProject
 from app.models.time_entry import SubProjectTimeEntry
 from app.models.user import User
 from app.models.workflow import ProjectExecutionHistory, WorkLog
@@ -24,6 +25,22 @@ from app.schemas.user import (
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _join_default_major_project(db: Session, user: User) -> None:
+    """기본 대프로젝트는 재직자 전원이 구성원이다.
+
+    예전에는 서버가 시작될 때만 맞춰서, 그 뒤에 만든 계정·동기화로 들어온 신규 입사자·
+    재직으로 되돌린 계정은 서버를 다시 켜기 전까지 기본 대프로젝트의 프로젝트가 보이지 않고
+    참여자로도 넣을 수 없었다.
+    """
+    default = db.scalar(
+        select(MajorProject)
+        .options(selectinload(MajorProject.members))
+        .where(MajorProject.is_default.is_(True))
+    )
+    if default is not None and user not in default.members:
+        default.members.append(user)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -91,6 +108,7 @@ def create_user(
         phone=payload.phone,
     )
     db.add(user)
+    _join_default_major_project(db, user)
     db.commit()
     db.refresh(user)
     return user
@@ -171,6 +189,8 @@ def update_user_active(
         )
 
     target_user.is_active = payload.is_active
+    if payload.is_active:
+        _join_default_major_project(db, target_user)
     db.commit()
     db.refresh(target_user)
     return target_user
@@ -299,6 +319,7 @@ def sync_users(
                 for field in _SYNC_FIELDS:
                     setattr(user, field, getattr(row, field))
                 db.add(user)
+                _join_default_major_project(db, user)
             result.created.append(
                 UserSyncChange(
                     idnum=idnum,
@@ -328,6 +349,7 @@ def sync_users(
             result.reactivated.append(UserSyncChange(idnum=idnum, name=row.name))
             if not payload.dry_run:
                 user.is_active = True
+                _join_default_major_project(db, user)
         elif diffs:
             result.updated.append(
                 UserSyncChange(idnum=idnum, name=row.name, detail=", ".join(diffs))
