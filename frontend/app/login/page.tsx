@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
 import { API_BASE_URL, apiFetch, type Me } from '../lib/api';
@@ -151,10 +150,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-6 text-sm text-text-subtle">
-          아직 계정이 없다면{' '}
-          <Link href="/signup" className="font-semibold text-brand underline">
-            회원가입
-          </Link>
+          계정이 없거나 로그인이 되지 않으면 관리자에게 문의해 주세요.
         </p>
       </div>
     </main>

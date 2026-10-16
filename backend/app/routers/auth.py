@@ -14,7 +14,6 @@ from app.schemas.user import (
     UserProfileUpdate,
     UserResponse,
     UserRoleUpdate,
-    UserSignupCreate,
     UserSyncChange,
     UserSyncRequest,
     UserSyncResult,
@@ -22,32 +21,6 @@ from app.schemas.user import (
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def signup(payload: UserSignupCreate, db: Session = Depends(get_db)):
-    existing_user = db.scalar(select(User).where(User.idnum == payload.idnum))
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="이미 사용 중인 사번입니다.",
-        )
-
-    user = User(
-        idnum=payload.idnum,
-        name=payload.name,
-        password_hash=hash_password(payload.password),
-        role=payload.role,
-        center=payload.center,
-        office=payload.office,
-        team=payload.team,
-        position=payload.position,
-        email=payload.email,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
 
 
 @router.post("/login", response_model=TokenResponse)
