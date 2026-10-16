@@ -42,6 +42,8 @@ function ProjectDetailContent() {
   const [progressPercent, setProgressPercent] = useState('');
   const [comment, setComment] = useState('');
   const [workDate, setWorkDate] = useState(toISODate(new Date()));
+  // 저장 중에는 버튼을 잠근다. 빠르게 두 번 누르면 같은 기록이 두 번 들어갔다.
+  const [saving, setSaving] = useState(false);
 
   const selectedSubproject = useMemo(
     () => subprojects.find((item) => item.id === subprojectId) ?? null,
@@ -84,7 +86,7 @@ function ProjectDetailContent() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!Number.isFinite(projectId)) return;
+    if (!Number.isFinite(projectId) || saving) return;
     const n = Number(progressPercent);
     if (!Number.isFinite(n) || n < 0 || n > 100) {
       setTone('error');
@@ -92,6 +94,7 @@ function ProjectDetailContent() {
       return;
     }
 
+    setSaving(true);
     try {
       const progressPath = isSubprojectMode
         ? `/subprojects/${subprojectId}/progress`
@@ -114,7 +117,10 @@ function ProjectDetailContent() {
       );
       await load();
     } catch (err) {
+      setTone('error');
       setMessage((err as Error).message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -189,9 +195,10 @@ function ProjectDetailContent() {
 
             <button
               type="submit"
-              className="self-start rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
+              disabled={saving}
+              className="self-start rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-50"
             >
-              기록 저장
+              {saving ? '저장 중...' : '기록 저장'}
             </button>
           </form>
         </section>

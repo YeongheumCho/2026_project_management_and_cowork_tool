@@ -47,6 +47,8 @@ export default function MajorProjectManager({ users }: Props) {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [messageTone, setMessageTone] = useState<'error' | 'success'>('error');
+  // 저장 중에는 버튼을 잠근다. 빠르게 두 번 누르면 같은 대프로젝트가 두 개 생겼다.
+  const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
 
   const editing = useMemo(
@@ -125,7 +127,7 @@ export default function MajorProjectManager({ users }: Props) {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || saving) return;
     if (form.start_date && form.end_date && form.end_date < form.start_date) {
       setMessageTone('error');
       setMessage('종료일은 시작일 이후여야 합니다.');
@@ -137,6 +139,7 @@ export default function MajorProjectManager({ users }: Props) {
       return;
     }
 
+    setSaving(true);
     try {
       const payload = {
         name: form.name.trim(),
@@ -163,6 +166,8 @@ export default function MajorProjectManager({ users }: Props) {
     } catch (error) {
       setMessageTone('error');
       setMessage((error as Error).message);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -268,9 +273,10 @@ export default function MajorProjectManager({ users }: Props) {
           <div className="flex items-end gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-brand px-4 py-2 text-small font-bold text-white"
+              disabled={saving}
+              className="rounded-lg bg-brand px-4 py-2 text-small font-bold text-white disabled:opacity-50"
             >
-              {editing ? '대프로젝트 저장' : '대프로젝트 추가'}
+              {saving ? '저장 중...' : editing ? '대프로젝트 저장' : '대프로젝트 추가'}
             </button>
             {editing && (
               <button
