@@ -331,6 +331,7 @@ export default function TimerWidget({
       <Modal
         open={pendingStart !== null}
         onClose={() => setPendingStart(null)}
+        closeOnEsc
         size="sm"
         ariaLabel="동시 진행 선택"
       >

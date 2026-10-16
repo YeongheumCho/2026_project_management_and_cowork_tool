@@ -62,7 +62,7 @@ export default function HistoryModal({ open, onClose, equipmentId, title }: Prop
   }, [open, equipmentId]);
 
   return (
-    <Modal open={open} onClose={onClose} size="xl" scrollable ariaLabel="장비 변경 이력">
+    <Modal open={open} onClose={onClose} size="xl" scrollable closeOnEsc ariaLabel="장비 변경 이력">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-heading font-bold text-text">{title ?? '변경 이력'}</h2>
