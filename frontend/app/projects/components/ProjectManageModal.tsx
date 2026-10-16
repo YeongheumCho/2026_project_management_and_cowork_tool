@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../../components/Modal';
 import OrganizationMemberPicker from '../../components/OrganizationMemberPicker';
 import {
@@ -47,6 +47,13 @@ export default function ProjectManageModal({
   const [busy, setBusy] = useState(false);
   // 창 안에 보여 줄 오류. 바깥 화면으로만 보내면 이 창에 가려 보이지 않았다.
   const [formError, setFormError] = useState('');
+  const reloadOnCloseRef = useRef(false);
+
+  useEffect(() => {
+    if (open || !reloadOnCloseRef.current) return;
+    reloadOnCloseRef.current = false;
+    void onSaved();
+  }, [open, onSaved]);
 
   useEffect(() => {
     if (!open || !project) return;
@@ -124,9 +131,10 @@ export default function ProjectManageModal({
     } catch (error) {
       const message = (error as Error).message;
       if (error instanceof ApiError && error.status === 409) {
-        // 다른 사람이 먼저 저장했다. 목록을 새로 읽어 두면 다시 열 때 최신 내용이 보인다.
+        // 다른 사람이 먼저 저장했다. 창을 닫을 때 목록을 새로 읽어 다시 열면 최신 내용이 보이게 한다.
+        // (바로 읽으면 이 창의 입력이 새 값으로 덮일 수 있다.)
         setFormError(message);
-        await onSaved();
+        reloadOnCloseRef.current = true;
       } else {
         setFormError(message);
         onError(message);

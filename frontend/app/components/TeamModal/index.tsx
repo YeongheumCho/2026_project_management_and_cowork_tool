@@ -185,6 +185,13 @@ export default function TeamModal({
   const derivedName = deriveSubprojectName(f, effectiveSchema);
   // 사용자가 이름을 직접 입력한 뒤에는 템플릿/프로젝트 변경 시 자동 채움으로 덮어쓰지 않는다.
   const nameTouchedRef = useRef(false);
+  const reloadOnCloseRef = useRef(false);
+
+  useEffect(() => {
+    if (open || !reloadOnCloseRef.current) return;
+    reloadOnCloseRef.current = false;
+    onSaved();
+  }, [open, onSaved]);
 
   useEffect(() => {
     if (!open) return;
@@ -469,9 +476,9 @@ export default function TeamModal({
       onSaved();
       onClose();
     } catch (nextError) {
-      // 다른 사람이 먼저 저장했으면(409) 목록을 새로 읽어 둔다.
-      // 창을 닫았다가 다시 열면 최신 내용으로 열린다.
-      if (nextError instanceof ApiError && nextError.status === 409) onSaved();
+      // 다른 사람이 먼저 저장했으면(409) 창을 닫을 때 목록을 새로 읽는다.
+      // 바로 읽으면 이 창이 새 목록으로 다시 채워져 입력한 내용이 지워진다.
+      if (nextError instanceof ApiError && nextError.status === 409) reloadOnCloseRef.current = true;
       setError((nextError as Error).message);
     } finally {
       setSaving(false);
