@@ -194,6 +194,12 @@ def create_progress_log(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="프로젝트를 찾을 수 없습니다.",
         )
+    # 예전에는 참여하지 않은 사람도 아무 프로젝트에나 진행률을 남길 수 있었다.
+    if current_user.role != "admin" and current_user.id not in {u.id for u in project.participants}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="참여 중인 프로젝트에만 진행률을 기록할 수 있습니다.",
+        )
 
     progress_log = ProgressLog(
         project_id=project_id,
