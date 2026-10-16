@@ -7,20 +7,26 @@
     그래서 다 만들어진 도커 이미지를 통째로 싣고 간다.
 
     모드
-      Update  이미 설치된 폐쇄망을 갱신할 때. 만든 이미지 4개 + 소스   (기본값)
-      Full    빈 PC 에 처음 설치할 때. 공식 이미지 3개까지 포함
+      Frontend  화면만 바뀌었을 때. 프론트엔드 이미지 1개 + 소스   (가장 흔한 경우)
+      Update    이미 설치된 폐쇄망을 갱신할 때. 만든 이미지 4개 + 소스   (기본값)
+      Full      빈 PC 에 처음 설치할 때. 공식 이미지 3개까지 포함
 
-    소스만 바뀌고 의존성이 그대로면 Update 로 충분하다.
+    백엔드·실시간·챗봇은 소스를 컨테이너에 마운트하므로 파이썬 코드만 바뀌었으면
+    이미지가 필요 없다. 프론트엔드는 빌드 결과가 이미지 안에 있어 화면이 바뀌면 반드시 싣는다.
     requirements.txt·package-lock.json·Dockerfile 이 바뀌었는지 자동으로 확인해 알려준다.
+
+    -SinceRef 를 주면 그 커밋부터 지금까지를 담은 git 번들도 같이 만든다.
+    폐쇄망 폴더가 git 저장소라면 이 번들을 git pull 하는 것으로 소스를 갱신한다.
 
 .EXAMPLE
     .\scripts\airgap\export-bundle.ps1
     .\scripts\airgap\export-bundle.ps1 -Mode Full -OutDir D:\bundle
     .\scripts\airgap\export-bundle.ps1 -SinceRef 1cf0718      # 폐쇄망에 반영된 커밋
+    .\scripts\airgap\export-bundle.ps1 -Mode Frontend -SinceRef 1cf0718   # 화면만 + git 번들
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('Update', 'Full')]
+    [ValidateSet('Frontend', 'Update', 'Full')]
     [string]$Mode = 'Update',
     # 묶음을 만들 위치. 기본값은 저장소 옆의 surelog-bundle-날짜
     [string]$OutDir = "",
@@ -31,6 +37,22 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# docker·git 은 진행 상황을 stderr 로 쓴다. PowerShell 5.1 은 출력이 리다이렉트되면
+# (로그 파일로 저장하거나 Tee-Object 로 넘길 때) 그 줄을 오류로 바꾸고,
+# ErrorActionPreference 가 Stop 이면 스크립트를 그 자리에서 끝내 버린다.
+# 그래서 여기서는 stderr 를 일반 출력으로 흘려보내고, 성공 여부는 종료 코드로만 판단한다.
+function Invoke-Native {
+    param([Parameter(Mandatory = $true)][scriptblock]$Command)
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $Command 2>&1 | ForEach-Object { "$_" }
+    }
+    finally {
+        $ErrorActionPreference = $previous
+    }
+}
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 Set-Location $repo
 
@@ -51,6 +73,7 @@ $OFFICIAL = @('postgres:16-alpine', 'redis:7-alpine', 'caddy:2-alpine')
 
 $images = $BUILT
 if ($Mode -eq 'Full') { $images = $BUILT + $OFFICIAL }
+if ($Mode -eq 'Frontend') { $images = @('surelog-frontend:latest') }
 
 Write-Host "모드     : $Mode" -ForegroundColor Cyan
 Write-Host "묶음 위치: $OutDir" -ForegroundColor Cyan
@@ -77,6 +100,9 @@ if (-not [string]::IsNullOrWhiteSpace($SinceRef)) {
         Write-Host "  아래 파일이 바뀌었습니다:" -ForegroundColor Yellow
         foreach ($f in $changed) { Write-Host "    $f" -ForegroundColor Yellow }
         Write-Host "  이미지를 다시 빌드해서 싣습니다." -ForegroundColor Yellow
+        if ($Mode -eq 'Frontend') {
+            throw "의존성이 바뀌어 프론트엔드 이미지만으로는 부족합니다. -Mode Update 로 다시 실행하세요."
+        }
     }
 }
 
@@ -85,11 +111,12 @@ New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 # ── 1. 이미지 준비 ────────────────────────────────────────────────
 if (-not $SkipBuild) {
     Write-Host "`n[1/4] 이미지 빌드" -ForegroundColor Cyan
-    docker compose build
+    if ($Mode -eq 'Frontend') { Invoke-Native { docker compose build frontend } }
+    else { Invoke-Native { docker compose build } }
     if ($LASTEXITCODE -ne 0) { throw "빌드 실패" }
     if ($Mode -eq 'Full') {
         Write-Host "공식 이미지 받기"
-        docker compose pull db redis caddy
+        Invoke-Native { docker compose pull db redis caddy }
     }
 }
 else {
@@ -105,7 +132,7 @@ foreach ($img in $images) {
 # ── 2. 이미지 저장 ────────────────────────────────────────────────
 Write-Host "`n[2/4] 이미지 저장 (수 분 걸립니다)" -ForegroundColor Cyan
 $tar = Join-Path $OutDir 'images.tar'
-docker save -o $tar $images
+Invoke-Native { docker save -o $tar $images }
 if ($LASTEXITCODE -ne 0) { throw "docker save 실패" }
 $tarGB = [math]::Round((Get-Item $tar).Length / 1GB, 2)
 Write-Host "  images.tar  $tarGB GB  ($($images.Count) 개)"
@@ -131,6 +158,20 @@ Write-Host "  source/  $srcMB MB"
 Write-Host "`n[4/4] 매니페스트 작성" -ForegroundColor Cyan
 $branch = (git -C $repo rev-parse --abbrev-ref HEAD 2>$null)
 $commit = (git -C $repo rev-parse --short HEAD 2>$null)
+
+# git 번들 — 폐쇄망 폴더가 git 저장소일 때 git pull 로 소스를 갱신한다.
+# 폐쇄망에 SinceRef 가 있어야 적용되므로, 확실하지 않으면 더 이전 커밋을 준다.
+$bundleName = ''
+if (-not [string]::IsNullOrWhiteSpace($SinceRef)) {
+    $bundleName = "${branch}_$stamp.bundle"
+    $bundlePath = Join-Path $OutDir $bundleName
+    Invoke-Native { git -C $repo bundle create $bundlePath "$SinceRef..$branch" }
+    if ($LASTEXITCODE -ne 0) { throw "git 번들 생성 실패" }
+    Invoke-Native { git -C $repo bundle verify $bundlePath } | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "git 번들 검증 실패" }
+    $bundleKB = [math]::Round((Get-Item $bundlePath).Length / 1KB)
+    Write-Host "  $bundleName  $bundleKB KB  ($SinceRef..$commit)"
+}
 $dirty  = (git -C $repo status --porcelain 2>$null)
 $dirtyNote = '없음'
 if (-not [string]::IsNullOrWhiteSpace($dirty)) {
@@ -154,19 +195,49 @@ foreach ($img in $images) {
     $sz = (docker images --format '{{.Size}}' $img | Select-Object -First 1)
     $lines += ("  {0,-30} {1,-14} {2}" -f $img, $id, $sz)
 }
-if ($Mode -eq 'Update') {
+if ($Mode -ne 'Full') {
     $lines += @("", "postgres·redis·caddy 는 넣지 않았습니다. 폐쇄망에 이미 있는 것을 씁니다.")
+}
+if ($Mode -eq 'Frontend') {
+    $lines += @("백엔드·실시간·챗봇 이미지는 넣지 않았습니다. 소스만 바뀌어 기존 이미지를 씁니다.")
+}
+if ($bundleName) {
+    $lines += @(
+        "",
+        "git 번들",
+        "  $bundleName  ($SinceRef..$commit)",
+        "  폐쇄망 저장소에 $SinceRef 가 있어야 적용됩니다.",
+        "",
+        "폐쇄망에서 할 일 (폴더가 git 저장소인 경우)",
+        "  cd <폐쇄망 SureLog 폴더>",
+        "",
+        "  [받기 전 확인] 넷 다 기대한 대로 나와야 진행",
+        "  git branch --show-current                  -> $branch",
+        "  git status --short                         -> 아무것도 안 나와야 함",
+        "  git log --oneline -1                       -> 지난 반영 지점",
+        "  git bundle verify <이 폴더>\$bundleName  -> ... is okay",
+        "",
+        "  [받기] --ff-only 필수. 폐쇄망 커밋이 있으면 병합하지 않고 멈춘다",
+        "  git pull --ff-only <이 폴더>\$bundleName $branch",
+        "  git log --oneline -1                       -> $commit",
+        "",
+        "  [올리기]",
+        "  docker load -i <이 폴더>\images.tar",
+        "  docker compose up -d",
+        "  docker compose ps"
+    )
 }
 $lines += @(
     "",
-    "폐쇄망에서 할 일",
-    "  1. 이 폴더를 통째로 복사",
-    "  2. source\scripts\airgap\import-bundle.ps1 실행",
-    "  3. 자세한 절차는 source\docs\airgap-deploy.md"
+    "폐쇄망 폴더가 git 저장소가 아니면",
+    "  source\scripts\airgap\import-bundle.ps1 을 실행합니다.",
+    "",
+    "자세한 절차는 source\docs\airgap-deploy.md"
 )
 $lines -join "`r`n" | Set-Content (Join-Path $OutDir 'MANIFEST.txt') -Encoding utf8
 
 Write-Host "`n완료" -ForegroundColor Green
 Write-Host "  $OutDir"
 Write-Host "  images.tar $tarGB GB + source $srcMB MB"
+if ($bundleName) { Write-Host "  $bundleName" }
 Write-Host "`n이 폴더를 그대로 폐쇄망으로 옮기세요."

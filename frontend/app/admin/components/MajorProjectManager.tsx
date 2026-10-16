@@ -9,6 +9,7 @@ import {
   type MajorProject,
   type UserBrief,
 } from '../../lib/api';
+import { selectableMembers } from '../../lib/activeMembers';
 import { clampDateYear, MAX_DATE_VALUE } from '../../lib/dateInput';
 
 type Props = {
@@ -50,6 +51,11 @@ export default function MajorProjectManager({ users }: Props) {
   const editing = useMemo(
     () => items.find((item) => item.id === editingId) ?? null,
     [editingId, items],
+  );
+  // 퇴사자는 목록에서 숨긴다. 수정 중인 대프로젝트에 이미 들어 있던 사람은 남긴다.
+  const pickableUsers = useMemo(
+    () => selectableMembers(users, editing?.members.map((member) => member.id) ?? []),
+    [users, editing],
   );
 
   async function load(options: { keepMessage?: boolean } = {}) {
@@ -279,12 +285,12 @@ export default function MajorProjectManager({ users }: Props) {
           <div className="mb-2 flex items-center justify-between">
             <p className="text-small font-bold text-text">참여 인원</p>
             <span className="text-small text-text-subtle">
-              {form.member_ids.length}/{users.length}명
+              {form.member_ids.length}/{pickableUsers.length}명
             </span>
           </div>
           <div className="max-h-[300px] overflow-y-auto pr-1">
             <OrganizationMemberPicker
-              users={users}
+              users={pickableUsers}
               selectedIds={form.member_ids}
               onChange={(member_ids) => setForm((prev) => ({ ...prev, member_ids }))}
             />

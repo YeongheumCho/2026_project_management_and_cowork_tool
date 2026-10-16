@@ -31,6 +31,11 @@ export default function TimerWidget({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [tick, setTick] = useState(Date.now());
+  // B-101: 진행 시간은 "현재 시각 - 서버가 기록한 시작 시각"으로 센다.
+  // PC 시계가 서버보다 빠르면 시작하자마자 그만큼(예: +50초) 더해져 보였다.
+  // 서버 시각과의 차이를 기억해 두고 현재 시각에 더해 서버 기준으로 맞춘다.
+  const [clockOffset, setClockOffset] = useState(0);
+  const now = tick + clockOffset;
   const [pendingStart, setPendingStart] = useState<PendingStart | null>(null);
 
   const projectNameById = useMemo(() => {
@@ -74,6 +79,8 @@ export default function TimerWidget({
   async function loadLogs() {
     try {
       const next = await apiFetch<WorkLog[]>('/work-logs');
+      const serverNow = next[0]?.server_now ? Date.parse(next[0].server_now) : NaN;
+      if (!Number.isNaN(serverNow)) setClockOffset(serverNow - Date.now());
       setLogs(next);
       setError('');
     } catch (err) {
@@ -185,7 +192,7 @@ export default function TimerWidget({
             {candidates.map((candidate) => {
               const activeLog = activeLogBySub.get(candidate.id);
               const elapsed = activeLog
-                ? getElapsedSeconds(activeLog, tick)
+                ? getElapsedSeconds(activeLog, now)
                 : 0;
               const projName = projectNameById.get(candidate.project_id);
               const isRunning = activeLog?.status === 'running';
@@ -292,7 +299,7 @@ export default function TimerWidget({
                   log={log}
                   onDelete={() => mutateLog(log.id, 'delete')}
                   busy={busy}
-                  now={tick}
+                  now={now}
                 />
               )}
             />
@@ -313,7 +320,7 @@ export default function TimerWidget({
                   onComplete={() => mutateLog(log.id, 'complete')}
                   onDelete={() => mutateLog(log.id, 'delete')}
                   busy={busy}
-                  now={tick}
+                  now={now}
                 />
               )}
             />
@@ -340,7 +347,7 @@ export default function TimerWidget({
           <div className="space-y-2 rounded-xl bg-surface-muted p-3">
             {runningLogs.map((log) => (
               <p key={log.id} className="text-sm text-text">
-                {log.task_name} · {formatHMS(getElapsedSeconds(log, tick))}
+                {log.task_name} · {formatHMS(getElapsedSeconds(log, now))}
               </p>
             ))}
           </div>

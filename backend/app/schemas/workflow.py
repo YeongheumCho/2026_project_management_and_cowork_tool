@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -37,6 +37,11 @@ class WorkLogResponse(BaseModel):
     status: WorkLogStatus
     session_group_id: str | None
     created_at: datetime
+    # B-101: 응답을 만든 순간의 서버 시각.
+    # 화면은 진행 중 시간을 "PC 현재 시각 - 서버의 시작 시각"으로 셌는데,
+    # PC 시계가 서버보다 50초 빠르면 시작하자마자 50초부터 셌다.
+    # 이 값으로 PC 와 서버의 시계 차이를 보정한다.
+    server_now: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     model_config = ConfigDict(from_attributes=True)
 

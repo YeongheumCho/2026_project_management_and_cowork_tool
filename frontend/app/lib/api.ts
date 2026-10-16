@@ -440,6 +440,8 @@ export type WorkLog = {
   status: WorkLogStatus;
   session_group_id: string | null;
   created_at: string;
+  // 응답을 만든 순간의 서버 시각 (B-101 시계 차이 보정용)
+  server_now?: string;
 };
 
 export type RecommendationRequest = {

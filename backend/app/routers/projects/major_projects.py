@@ -106,9 +106,13 @@ def update_major_project(
         for project in major_project.projects
         for participant in project.participants
     }
+    # 이미 들어 있던 사람(대프로젝트 참여자 + 아래 프로젝트 참여자)은 퇴사했어도 유지한다.
+    # 그러지 않으면 퇴사자가 한 명이라도 남은 대프로젝트는 재직자를 새로 넣는 것도 막힌다.
+    existing_member_ids = {member.id for member in major_project.members}
     members = _load_major_project_members(
         db,
         list(dict.fromkeys([*payload.member_ids, *required_member_ids])),
+        keep_ids=existing_member_ids | required_member_ids,
     )
 
     major_project.name = payload.name

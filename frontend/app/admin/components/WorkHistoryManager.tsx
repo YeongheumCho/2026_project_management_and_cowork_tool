@@ -11,6 +11,7 @@ import {
   type ProjectHistoryUpdate,
   type SubProject,
 } from '../../lib/api';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 type AdminUser = {
   id: number;
@@ -179,6 +180,8 @@ export default function WorkHistoryManager({
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  // A-31: 삭제 확인창에 띄울 행
+  const [deleteTarget, setDeleteTarget] = useState<ProjectHistoryEntry | null>(null);
 
   const load = useCallback(async () => {
     if (!enabled) return;
@@ -410,10 +413,9 @@ export default function WorkHistoryManager({
     }
   }
 
+  // A-31: 브라우저 기본 confirm 대신 슈어로그 확인창을 띄운다.
   async function deleteRow(row: ProjectHistoryEntry) {
-    if (!window.confirm(`${row.user_name}님의 "${row.subproject_name}" 이력을 삭제할까요?`)) {
-      return;
-    }
+    setDeleteTarget(null);
     setDeletingId(row.id);
     setMessage('');
     try {
@@ -732,7 +734,7 @@ export default function WorkHistoryManager({
               <th className="px-4 py-3 font-semibold">시작일</th>
               <th className="px-4 py-3 font-semibold">종료일</th>
               <th className="px-4 py-3 font-semibold">소요</th>
-              <th className="px-4 py-3 text-right font-semibold">작업</th>
+              <th className="px-4 py-3 font-semibold">작업</th>
             </tr>
           </thead>
           <tbody>
@@ -774,20 +776,21 @@ export default function WorkHistoryManager({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex justify-end gap-2">
+                <td className="px-4 py-3">
+                  {/* A-32: 칸이 좁으면 글자가 한 자씩 줄바꿈돼 '편/집' 처럼 세로로 보였다 */}
+                  <div className="flex gap-2 whitespace-nowrap">
                     <button
                       type="button"
                       onClick={() => openEdit(row)}
-                      className="rounded-lg border border-border px-2.5 py-1 text-small font-semibold text-text transition hover:border-brand hover:text-brand"
+                      className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-small font-semibold text-text transition hover:border-brand hover:text-brand"
                     >
                       편집
                     </button>
                     <button
                       type="button"
-                      onClick={() => void deleteRow(row)}
+                      onClick={() => setDeleteTarget(row)}
                       disabled={deletingId === row.id}
-                      className="rounded-lg border border-verify-fail-bg px-2.5 py-1 text-small font-semibold text-verify-fail-fg transition hover:bg-verify-fail-bg disabled:opacity-50"
+                      className="shrink-0 rounded-lg border border-verify-fail-bg px-2.5 py-1 text-small font-semibold text-verify-fail-fg transition hover:bg-verify-fail-bg disabled:opacity-50"
                     >
                       {deletingId === row.id ? '삭제 중...' : '삭제'}
                     </button>
@@ -802,6 +805,20 @@ export default function WorkHistoryManager({
       <p className="text-small text-text-subtle">
         하위 프로젝트 완료 시 자동 생성된 이력과 관리자가 직접 추가한 수동 이력을 함께 표시합니다.
       </p>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="업무 이력을 삭제할까요?"
+        description={
+          deleteTarget
+            ? `${deleteTarget.user_name}님의 "${deleteTarget.subproject_name}" 이력이 삭제됩니다.\n되돌릴 수 없습니다.`
+            : undefined
+        }
+        confirmLabel="삭제"
+        busy={deleteTarget !== null && deletingId === deleteTarget.id}
+        onConfirm={() => deleteTarget && void deleteRow(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+      />
 
       {editingRow && editDraft && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">

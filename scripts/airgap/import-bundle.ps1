@@ -8,9 +8,8 @@
 
     하는 일
       1. 실어 온 이미지 적재
-      2. DB 백업 (갱신일 때만)
-      3. 소스 덮어쓰기 (.env·uploads·backups 는 보존)
-      4. 컨테이너 재생성
+      2. 소스 덮어쓰기 (.env·uploads·backups 는 보존)
+      3. 컨테이너 재생성
 
 .EXAMPLE
     .\import-bundle.ps1
@@ -24,12 +23,26 @@ param(
     # 서비스가 설치된(또는 설치할) 위치
     [string]$TargetDir = "",
     # 이미지만 적재하고 멈춘다
-    [switch]$LoadOnly,
-    # DB 백업을 건너뛴다
-    [switch]$SkipBackup
+    [switch]$LoadOnly
 )
 
 $ErrorActionPreference = 'Stop'
+
+# docker·git 은 진행 상황을 stderr 로 쓴다. PowerShell 5.1 은 출력이 리다이렉트되면
+# (로그 파일로 저장하거나 Tee-Object 로 넘길 때) 그 줄을 오류로 바꾸고,
+# ErrorActionPreference 가 Stop 이면 스크립트를 그 자리에서 끝내 버린다.
+# 그래서 여기서는 stderr 를 일반 출력으로 흘려보내고, 성공 여부는 종료 코드로만 판단한다.
+function Invoke-Native {
+    param([Parameter(Mandatory = $true)][scriptblock]$Command)
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $Command 2>&1 | ForEach-Object { "$_" }
+    }
+    finally {
+        $ErrorActionPreference = $previous
+    }
+}
 
 if ([string]::IsNullOrWhiteSpace($BundleDir)) {
     # 이 스크립트는 source\scripts\airgap 안에 있으므로 세 단계 위가 묶음 폴더다
@@ -55,8 +68,8 @@ docker version --format '{{.Server.Version}}' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "도커가 실행 중이 아닙니다. Rancher Desktop 을 먼저 켜세요." }
 
 # ── 1. 이미지 적재 ────────────────────────────────────────────────
-Write-Host "`n[1/5] 이미지 적재 (수 분 걸립니다)" -ForegroundColor Cyan
-docker load -i $tar
+Write-Host "`n[1/4] 이미지 적재 (수 분 걸립니다)" -ForegroundColor Cyan
+Invoke-Native { docker load -i $tar }
 if ($LASTEXITCODE -ne 0) { throw "docker load 실패" }
 
 $required = @('surelog-frontend:latest', 'surelog-backend:latest',
@@ -77,32 +90,8 @@ if ($LoadOnly) {
     return
 }
 
-# ── 2. DB 백업 ────────────────────────────────────────────────────
-if ($isUpdate -and -not $SkipBackup) {
-    Write-Host "`n[2/5] DB 백업" -ForegroundColor Cyan
-    Push-Location $TargetDir
-    $running = docker compose ps --format '{{.Name}}' 2>$null
-    if ($running -match 'cowork_db') {
-        $backupDir = Join-Path $TargetDir 'backups'
-        New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
-        $file = Join-Path $backupDir ("full_" + (Get-Date -Format 'yyMMdd_HHmm') + ".sql")
-        docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' | Out-File -FilePath $file -Encoding utf8
-        if (Test-Path $file) {
-            $mb = [math]::Round((Get-Item $file).Length / 1MB, 1)
-            Write-Host "  $file  ($mb MB)"
-        }
-    }
-    else {
-        Write-Host "  DB 컨테이너가 꺼져 있어 건너뜁니다." -ForegroundColor Yellow
-    }
-    Pop-Location
-}
-else {
-    Write-Host "`n[2/5] DB 백업 건너뜀" -ForegroundColor Yellow
-}
-
-# ── 3. 소스 배치 ──────────────────────────────────────────────────
-Write-Host "`n[3/5] 소스 배치" -ForegroundColor Cyan
+# ── 2. 소스 배치 ──────────────────────────────────────────────────
+Write-Host "`n[2/4] 소스 배치" -ForegroundColor Cyan
 New-Item -ItemType Directory -Force -Path $TargetDir | Out-Null
 # .env·업로드 파일·백업은 덮어쓰지 않는다
 $roboArgs = @($src, $TargetDir, '/E', '/NFL', '/NDL', '/NJH', '/NJS', '/NP', '/R:1', '/W:1',
@@ -114,8 +103,8 @@ Write-Host "  완료 (.env, uploads, backups 는 유지)"
 
 Set-Location $TargetDir
 
-# ── 4. 환경 변수 ──────────────────────────────────────────────────
-Write-Host "`n[4/5] 환경 변수 확인" -ForegroundColor Cyan
+# ── 3. 환경 변수 ──────────────────────────────────────────────────
+Write-Host "`n[3/4] 환경 변수 확인" -ForegroundColor Cyan
 if (-not (Test-Path (Join-Path $TargetDir '.env'))) {
     Copy-Item (Join-Path $TargetDir '.env.example') (Join-Path $TargetDir '.env')
     Write-Host "  .env 를 새로 만들었습니다." -ForegroundColor Yellow
@@ -125,10 +114,10 @@ if (-not (Test-Path (Join-Path $TargetDir '.env'))) {
 }
 Write-Host "  기존 .env 사용"
 
-# ── 5. 기동 ───────────────────────────────────────────────────────
-Write-Host "`n[5/5] 서비스 기동" -ForegroundColor Cyan
+# ── 4. 기동 ───────────────────────────────────────────────────────
+Write-Host "`n[4/4] 서비스 기동" -ForegroundColor Cyan
 # --build 를 쓰지 않는다. 폐쇄망에서는 빌드가 불가능하고, 실어 온 이미지를 그대로 쓴다.
-docker compose up -d
+Invoke-Native { docker compose up -d }
 if ($LASTEXITCODE -ne 0) {
     Write-Host "`n기동에 실패했습니다. 컨테이너 이름이 충돌하면 아래를 실행하세요:" -ForegroundColor Red
     Write-Host "  docker compose down --remove-orphans" -ForegroundColor Red

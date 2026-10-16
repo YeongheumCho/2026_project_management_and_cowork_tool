@@ -45,6 +45,24 @@ const LEVEL_ALIASES: Record<string, VerificationLevel> = {
   lv4: 'LV4',
 };
 
+/**
+ * CSV 파일 바이트를 글자로 바꾼다.
+ *
+ * B-99: 엑셀의 "CSV(쉼표로 분리)" 저장이나 오래된 메모장의 기본 저장(ANSI)은
+ * UTF-8 이 아니라 CP949 로 저장한다. 예전에는 UTF-8 로만 읽어서 그런 파일은
+ * 한글 열 이름이 깨져 "열을 찾지 못했습니다" 로 끝났다.
+ * UTF-8 로 엄격하게 읽어 보고, 깨진 바이트가 있으면 CP949(EUC-KR)로 다시 읽는다.
+ */
+function decodeCsvBytes(buffer: ArrayBuffer | null | undefined): string {
+  if (!buffer) return '';
+  const bytes = new Uint8Array(buffer);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder('euc-kr').decode(bytes);
+  }
+}
+
 function parseCsvLine(line: string): string[] {
   const cols: string[] = [];
   let current = '';
@@ -205,7 +223,7 @@ export default function CsvImportModal({
 
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const text = (ev.target?.result as string) ?? '';
+      const text = decodeCsvBytes(ev.target?.result as ArrayBuffer);
       // 먼저 열 이름부터 본다. 자리 번호로 넘겨짚으면 엉뚱한 열을 읽고
       // "숫자로 입력하세요" 같은 엉뚱한 오류가 모든 줄에 뜬다.
       const headerLine = text.replace(/^\uFEFF/, '').split(/\r?\n/)[0] ?? '';
@@ -224,7 +242,8 @@ export default function CsvImportModal({
         setFileError('머리글 아래에 읽을 행이 없습니다. 내용이 비어 있는지 확인해 주세요.');
       }
     };
-    reader.readAsText(file, 'UTF-8');
+    // 인코딩을 직접 판단하려고 글자가 아니라 바이트로 읽는다.
+    reader.readAsArrayBuffer(file);
   };
 
   const handleImport = async () => {
@@ -331,6 +350,8 @@ export default function CsvImportModal({
           </p>
         </div>
 
+        <CsvHelp />
+
         {fileError && <p className="text-small text-verify-fail-fg">{fileError}</p>}
 
         {hasInvalidDefaults && (
@@ -385,6 +406,59 @@ export default function CsvImportModal({
         )}
       </div>
     </Modal>
+  );
+}
+
+/**
+ * B-99: 사용 방법과 적용 예시.
+ * 5층처럼 오피스·구글 시트가 없는 PC 에서도 메모장만으로 쓸 수 있다는 점을 먼저 알린다.
+ */
+function CsvHelp() {
+  return (
+    <details className="rounded-[14px] border border-border bg-white px-4 py-3 text-micro text-text-muted">
+      <summary className="cursor-pointer font-semibold text-text">
+        사용 방법과 예시 (엑셀이 없어도 메모장으로 됩니다)
+      </summary>
+
+      <div className="mt-3 space-y-3 leading-relaxed">
+        <section>
+          <p className="font-semibold text-text">가장 쉬운 방법 — 내보낸 파일을 고쳐서 다시 넣기</p>
+          <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+            <li>프로젝트 카드의 <b>CSV 추출</b>로 파일을 받습니다.</li>
+            <li>파일을 <b>메모장</b>(또는 엑셀)으로 열어 줄을 고치거나 더합니다.</li>
+            <li>이 창에서 <b>CSV 파일 선택</b>으로 넣으면 미리보기가 뜹니다. 확인 후 등록합니다.</li>
+          </ol>
+          <p className="mt-1 text-text-subtle">
+            열 이름은 그대로 두세요. 쓰지 않는 열은 비워 두거나 지워도 됩니다.
+          </p>
+        </section>
+
+        <section>
+          <p className="font-semibold text-text">처음부터 만들 때 — 메모장 예시</p>
+          <pre className="mt-1 overflow-x-auto rounded-lg bg-surface-muted px-3 py-2 font-mono text-tiny text-text">
+{`기능명,평균소요시간(분),가중치,담당자,Lv
+TST+RGR,120,5,홍길동,LV2
+02_Diagnosis,90,3,"김철수, 이영희",LV3
+27_Signal_Interface,,,,`}
+          </pre>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            <li>첫 줄은 열 이름, 다음 줄부터 한 줄에 하위 프로젝트 하나입니다.</li>
+            <li><b>기능명만 필수</b>입니다. 나머지는 비워 두면 나중에 채울 수 있습니다(마지막 줄처럼).</li>
+            <li>담당자가 여럿이면 큰따옴표로 묶고 쉼표로 나눕니다. 이름은 이 프로젝트 참여 인원과 같아야 합니다.</li>
+            <li>Lv 는 기초검증·LV1·LV2·BSW·LV3·LV4 중 하나, 가중치는 1~10 입니다.</li>
+            <li>메모장에서 저장할 때 인코딩은 UTF-8 이 기본이지만, ANSI 로 저장해도 읽힙니다.</li>
+          </ul>
+        </section>
+
+        <section>
+          <p className="font-semibold text-text">CSV 추출과 XLSX 추출의 차이</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            <li><b>CSV</b>: 메모장으로 열고 고칠 수 있습니다. 다시 가져오기에 쓰는 형식입니다.</li>
+            <li><b>XLSX</b>: 엑셀이 있는 PC 에서 보고서·공유용으로 씁니다. 가져오기에는 쓸 수 없습니다.</li>
+          </ul>
+        </section>
+      </div>
+    </details>
   );
 }
 
