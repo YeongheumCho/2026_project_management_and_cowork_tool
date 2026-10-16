@@ -19,6 +19,16 @@ function getErrorMessage(data: ApiError | null, defaultMessage: string) {
   return defaultMessage;
 }
 
+/**
+ * 로그인 뒤 갈 곳. 로그인이 만료돼 넘어온 경우 보던 화면(next)으로 돌려보낸다.
+ * 다른 사이트로 보내지 않도록 이 사이트 안의 경로(/ 로 시작, // 아님)만 받는다.
+ */
+function safeNextPath(): string {
+  const next = new URLSearchParams(window.location.search).get('next');
+  if (next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/login')) return next;
+  return '/dashboard';
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [idnum, setIdnum] = useState('');
@@ -67,7 +77,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/dashboard');
+      router.push(safeNextPath());
     } catch (error) {
       setMessage(`로그인 요청 중 오류가 발생했습니다: ${String(error)}`);
     } finally {
@@ -84,7 +94,7 @@ export default function LoginPage() {
           </p>
           <h1 className="mt-2 text-3xl font-bold">로그인</h1>
           <p className="mt-2 text-sm text-text-subtle">
-            사번과 비밀번호로 로그인한 뒤 대시보드로 이동합니다.
+            사번과 비밀번호로 로그인합니다.
           </p>
         </div>
 
