@@ -317,6 +317,7 @@ export default function MajorProjectManager({ users }: Props) {
                 </p>
                 <p className="mt-1 text-small text-text-subtle">
                   {item.start_date ?? '-'} ~ {item.end_date ?? '-'} · 참여 {item.members.length}명 · 중프로젝트 {item.project_count}건
+                  {item.created_by_name ? ` · 생성: ${item.created_by_name}` : ''}
                 </p>
                 <div className="mt-2 flex max-h-[68px] flex-wrap gap-1.5 overflow-y-auto pr-1">
                   {(item.project_types?.length ? item.project_types : PROJECT_TYPE_OPTIONS).map((type) => (

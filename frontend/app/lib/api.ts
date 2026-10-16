@@ -184,6 +184,7 @@ export type Project = {
   end_date?: string | null;
   vehicle_sets: ProjectVehicleSet[];
   created_by: number | null;
+  created_by_name?: string | null;
   created_at: string;
   participants: UserBrief[];
   progress_percent: number;
@@ -212,6 +213,8 @@ export type MajorProjectBrief = {
 export type MajorProject = MajorProjectBrief & {
   members: UserBrief[];
   project_count: number;
+  created_by?: number | null;
+  created_by_name?: string | null;
   created_at: string;
 };
 

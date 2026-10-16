@@ -127,6 +127,8 @@ class MajorProjectUpdate(MajorProjectCreate):
 class MajorProjectResponse(MajorProjectBrief):
     members: list[ProjectParticipantBrief] = []
     project_count: int = 0
+    created_by: Optional[int] = None
+    created_by_name: Optional[str] = None
     created_at: datetime
 
 
@@ -195,6 +197,7 @@ class ProjectResponse(BaseModel):
     end_date: Optional[date] = None
     vehicle_sets: list[ProjectVehicleSet] = Field(default_factory=list)
     created_by: Optional[int] = None
+    created_by_name: Optional[str] = None
     created_at: datetime
     participants: list[ProjectParticipantBrief] = []
     progress_percent: float = 0

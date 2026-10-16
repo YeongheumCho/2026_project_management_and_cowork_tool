@@ -104,6 +104,10 @@ def _ensure_additive_schema_updates() -> None:
         }
         if "project_types" not in major_project_columns:
             statements.append("ALTER TABLE major_projects ADD COLUMN project_types TEXT")
+        if "created_by" not in major_project_columns:
+            statements.append(
+                "ALTER TABLE major_projects ADD COLUMN created_by INTEGER REFERENCES users(id) ON DELETE SET NULL"
+            )
 
     if "project_execution_history" in table_names:
         history_columns = {

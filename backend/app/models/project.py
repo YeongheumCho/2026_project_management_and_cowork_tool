@@ -149,6 +149,10 @@ class MajorProject(Base):
         nullable=False,
     )
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # B-84: 만든 사람. 이 칸을 넣기 전에 만든 대프로젝트는 비어 있다.
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -161,6 +165,11 @@ class MajorProject(Base):
         secondary=major_project_members,
         back_populates="major_projects",
     )
+    creator = relationship("User", foreign_keys=[created_by], lazy="selectin")
+
+    @property
+    def created_by_name(self) -> str | None:
+        return self.creator.name if self.creator else None
 
 
 class Project(Base):
@@ -204,6 +213,11 @@ class Project(Base):
         secondary=project_participants,
         back_populates="participating_projects",
     )
+    creator = relationship("User", foreign_keys=[created_by], lazy="selectin")
+
+    @property
+    def created_by_name(self) -> str | None:
+        return self.creator.name if self.creator else None
 
 
 class SubProject(Base):

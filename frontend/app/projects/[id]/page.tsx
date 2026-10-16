@@ -126,7 +126,7 @@ function ProjectDetailContent() {
   const subtitle = selectedSubproject
     ? `${project?.name ?? '프로젝트'} · ${selectedSubproject.start_date} ~ ${selectedSubproject.end_date} · 현재 ${Math.round(selectedSubproject.progress)}%`
     : project
-      ? `${new Date(project.created_at).toLocaleDateString('ko-KR')} 생성 · 유형: ${project.project_type}`
+      ? `${new Date(project.created_at).toLocaleDateString('ko-KR')} 생성${project.created_by_name ? `(${project.created_by_name})` : ''} · 유형: ${project.project_type}`
       : '프로젝트 정보를 표시할 수 없습니다.';
 
   return (
