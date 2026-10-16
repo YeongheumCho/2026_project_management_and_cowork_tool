@@ -13,7 +13,8 @@ from app.db import SessionLocal
 from app.models.user import User
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+# auto_error=False: 토큰이 없을 때 FastAPI 기본 문구("Not authenticated") 대신 아래에서 한국어로 알린다.
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 INACTIVE_ACCOUNT_DETAIL = "퇴사(비활성) 처리된 계정이라 사용할 수 없습니다. 관리자에게 문의해 주세요."
 
@@ -27,9 +28,15 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> User:
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="로그인이 필요합니다.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     credentials_exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         # 8시간이 지나 만료되었거나 서버 키가 바뀐 경우. 화면에 그대로 보이므로 한국어로 둔다.

@@ -103,3 +103,9 @@ def test_auth_errors_are_korean(env):
         db.commit()
     r = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 401 and "계정을 찾을 수 없습니다" in r.json()["detail"]
+
+
+def test_missing_token_message_is_korean(env):
+    client, _ = env
+    r = client.get("/auth/me")
+    assert r.status_code == 401 and r.json()["detail"] == "로그인이 필요합니다."
