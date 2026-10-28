@@ -89,6 +89,7 @@ def _recalc_status_and_progress_from_logs(
         ).all()
     )
     progress_owner_ids = sorted(_subproject_assignee_ids(sp) | progress_user_ids)
+    was_completed = sp.status == STATUS_COMPLETED
     if not progress_owner_ids:
         sp.progress = 0
         sp.status = STATUS_PLANNED
@@ -107,9 +108,11 @@ def _recalc_status_and_progress_from_logs(
         )
     ).all()
     latest_by_user: dict[int, int] = {}
+    latest_date_by_user = {}
     for log in logs:
         if log.user_id not in latest_by_user:
             latest_by_user[log.user_id] = log.progress_percent
+            latest_date_by_user[log.user_id] = log.work_date
 
     per_assignee_share = 100 / len(progress_owner_ids)
     contributed_progress = sum(
@@ -119,10 +122,17 @@ def _recalc_status_and_progress_from_logs(
     sp.progress = round(contributed_progress, 2)
     if sp.progress >= 100:
         sp.status = STATUS_COMPLETED
+        # B-104: 진행률 기록으로 100% 가 되면 그 기록 날짜를 완료일로 남긴다.
+        # 예전에는 스톱워치 완료 때만 기록돼, 캘린더가 계획 종료일까지 그렸다.
+        if sp.completed_on is None and latest_date_by_user:
+            sp.completed_on = max(latest_date_by_user.values())
     elif sp.progress > 0:
         sp.status = STATUS_IN_PROGRESS
     else:
         sp.status = STATUS_PLANNED
+    if was_completed and sp.status != STATUS_COMPLETED:
+        # 완료였다가 진행률이 내려가면 완료일도 지운다 (다시 완료되면 새로 기록).
+        sp.completed_on = None
 
 
 def _has_subproject_progress_logs(db: Session, subproject_id: int) -> bool:
