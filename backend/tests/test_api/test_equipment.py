@@ -180,3 +180,16 @@ def test_bulk_appends_in_order_and_skips_empty_rows(env):
 def test_empty_row_rejected(env):
     client, _ = env
     assert client.post("/equipment", json={"values": {}}).status_code == 400
+
+
+def test_bulk_delete_logs_each_row(env):
+    """C-13: 여러 줄 한꺼번에 삭제. 이미 지워진 줄은 건너뛰고, 줄마다 이력이 남는다."""
+    client, _ = env
+    c = _cols(client)
+    ids = [client.post("/equipment", json={"values": {c["장비"]: f"검증용{i}"}}).json()["id"] for i in range(1, 4)]
+    r = client.post("/equipment/bulk-delete", json={"ids": [ids[0], ids[1], 999999]})
+    assert r.status_code == 200 and r.json() == {"deleted": 2, "missing": 1}
+    names = [row["values"].get(c["장비"]) for row in client.get("/equipment").json()]
+    assert names == ["검증용3"]
+    deletes = [h for h in client.get("/equipment/history").json() if h["action"] == "delete"]
+    assert sorted(h["equipment_name"] for h in deletes) == ["검증용1", "검증용2"]

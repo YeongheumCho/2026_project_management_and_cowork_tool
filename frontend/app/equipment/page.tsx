@@ -65,6 +65,10 @@ export default function EquipmentPage() {
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [importing, setImporting] = useState(false);
   const [historyRow, setHistoryRow] = useState<Row | null>(null);
+  // C-13: 여러 줄을 골라 한꺼번에 지운다. 저장된 줄만 고를 수 있다.
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const isDirty = useCallback(
@@ -132,7 +136,23 @@ export default function EquipmentPage() {
   const busyRef = useRef(false);
   // 열 관리 창·확인창이 떠 있는 동안은 쉰다 (열 이름 입력 중에 덮어쓰지 않게).
   busyRef.current =
-    savingKey !== null || importing || deleting || columnsOpen || pendingImport !== null || deleteTarget !== null;
+    savingKey !== null ||
+    importing ||
+    deleting ||
+    columnsOpen ||
+    pendingImport !== null ||
+    deleteTarget !== null ||
+    bulkConfirmOpen ||
+    bulkDeleting;
+
+  // 다른 사람이 지운 줄은 선택에서 뺀다.
+  useEffect(() => {
+    const savedIds = new Set(rows.flatMap((row) => (row.saved && !row.gone ? [row.saved.id] : [])));
+    setSelected((current) => {
+      const next = new Set([...current].filter((id) => savedIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [rows]);
   useEffect(() => {
     if (!me) return undefined;
     const refresh = () => {
@@ -258,6 +278,51 @@ export default function EquipmentPage() {
     window.setTimeout(() => {
       document.querySelector<HTMLTextAreaElement>(`[data-row="${key}"] textarea`)?.focus();
     }, 0);
+  }
+
+  const selectableIds = visibleRows.flatMap((row) => (row.saved && !row.gone ? [row.saved.id] : []));
+  const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selected.has(id));
+  const someVisibleSelected = selectableIds.some((id) => selected.has(id));
+
+  function toggleSelected(id: number) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllVisible() {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) selectableIds.forEach((id) => next.delete(id));
+      else selectableIds.forEach((id) => next.add(id));
+      return next;
+    });
+  }
+
+  async function confirmBulkDelete() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    setMessage('');
+    try {
+      const result = await apiFetch<{ deleted: number; missing: number }>('/equipment/bulk-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+      });
+      const idSet = new Set(ids);
+      setRows((current) => current.filter((row) => !(row.saved && idSet.has(row.saved.id))));
+      setSelected(new Set());
+      const missingNote = result.missing > 0 ? ` (${result.missing}줄은 이미 다른 사람이 지웠습니다)` : '';
+      setMessage(`${result.deleted}줄을 삭제했습니다.${missingNote} 지운 값은 변경 이력에서 볼 수 있습니다.`);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBulkConfirmOpen(false);
+      setBulkDeleting(false);
+    }
   }
 
   function rowName(row: Row): string {
@@ -438,6 +503,26 @@ export default function EquipmentPage() {
         />
       </div>
 
+      {selected.size > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-surface-muted px-3 py-2 text-small">
+          <span className="font-semibold text-text">{selected.size}줄 선택됨</span>
+          <button
+            type="button"
+            onClick={() => setBulkConfirmOpen(true)}
+            className="rounded-full border border-border bg-white px-3 py-1 text-tiny font-bold text-verify-fail-fg hover:bg-verify-fail-bg"
+          >
+            선택 삭제
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="rounded-full border border-border bg-white px-3 py-1 text-tiny text-text-muted hover:bg-surface-muted"
+          >
+            선택 해제
+          </button>
+        </div>
+      )}
+
       {dirtyCount > 0 && (
         <p className="mt-3 text-small font-semibold text-verify-warn-fg">
           저장하지 않은 줄 {dirtyCount}개 (노란 줄). 저장하지 않고 나가면 사라집니다.
@@ -449,11 +534,23 @@ export default function EquipmentPage() {
         <table className="min-w-max border-collapse text-small">
           <thead className="sticky top-0 z-30 bg-surface-muted text-left text-tiny font-bold text-text-muted">
             <tr>
+              <th className="sticky left-0 z-20 w-10 min-w-10 border-b border-border bg-surface-muted px-2 py-2">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = !allVisibleSelected && someVisibleSelected;
+                  }}
+                  onChange={toggleAllVisible}
+                  disabled={selectableIds.length === 0}
+                  aria-label="보이는 장비 모두 선택"
+                />
+              </th>
               {columns.map((column, index) => (
                 <th
                   key={column.id}
                   className={`min-w-[7rem] border-b border-border px-2 py-2 ${
-                    index === 0 ? 'sticky left-0 z-20 border-r bg-surface-muted' : ''
+                    index === 0 ? 'sticky left-10 z-20 border-r bg-surface-muted' : ''
                   }`}
                 >
                   {column.label}
@@ -473,12 +570,24 @@ export default function EquipmentPage() {
                   data-row={row.key}
                   className={`border-b border-border align-top ${dirty ? 'bg-verify-warn-bg/50' : ''}`}
                 >
+                  <td
+                    className={`sticky left-0 z-10 w-10 min-w-10 px-2 py-2.5 ${dirty ? 'bg-verify-warn-bg' : 'bg-white'}`}
+                  >
+                    {row.saved && !row.gone && (
+                      <input
+                        type="checkbox"
+                        checked={selected.has(row.saved.id)}
+                        onChange={() => toggleSelected(row.saved!.id)}
+                        aria-label={`${rowName(row)} 선택`}
+                      />
+                    )}
+                  </td>
                   {columns.map((column, index) => (
                     <td
                       key={column.id}
                       className={`min-w-[7rem] p-0 ${
                         index === 0
-                          ? `sticky left-0 z-10 border-r border-border ${dirty ? 'bg-verify-warn-bg' : 'bg-white'}`
+                          ? `sticky left-10 z-10 border-r border-border ${dirty ? 'bg-verify-warn-bg' : 'bg-white'}`
                           : ''
                       }`}
                     >
@@ -585,6 +694,17 @@ export default function EquipmentPage() {
           </p>
         )}
       </div>
+
+      <ConfirmDialog
+        open={bulkConfirmOpen}
+        title="선택한 장비 삭제"
+        description={`선택한 ${selected.size}줄을 삭제합니다. 모든 팀원의 표에서 사라지며, 지운 값은 변경 이력에서 줄마다 확인할 수 있습니다. 고치던 내용이 있는 줄은 그 내용도 사라집니다.`}
+        confirmLabel={`${selected.size}줄 삭제`}
+        variant="danger"
+        busy={bulkDeleting}
+        onConfirm={() => void confirmBulkDelete()}
+        onClose={() => setBulkConfirmOpen(false)}
+      />
 
       <ConfirmDialog
         open={deleteTarget !== null}

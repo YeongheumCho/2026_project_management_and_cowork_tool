@@ -22,6 +22,8 @@ from app.models.equipment import (
 from app.models.user import User
 from app.schemas.equipment import (
     EquipmentBulkCreate,
+    EquipmentBulkDelete,
+    EquipmentBulkDeleteResult,
     EquipmentColumnCreate,
     EquipmentColumnOrder,
     EquipmentColumnResponse,
@@ -430,6 +432,31 @@ def delete_equipment(
     )
     db.delete(equipment)
     db.commit()
+
+
+@router.post("/bulk-delete", response_model=EquipmentBulkDeleteResult)
+def bulk_delete_equipment(
+    payload: EquipmentBulkDelete,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """C-13: 고른 줄을 한꺼번에 지운다. 줄마다 지운 값을 이력에 남긴다."""
+    columns = _columns(db)
+    ids = list(dict.fromkeys(payload.ids))
+    rows = db.scalars(select(Equipment).where(Equipment.id.in_(ids))).all()
+    for equipment in rows:
+        values = _values(equipment)
+        _log(
+            db,
+            action="delete",
+            name=_row_name(values, columns),
+            changes=_diff(values, {}, columns),
+            user=current_user,
+            equipment_id=equipment.id,
+        )
+        db.delete(equipment)
+    db.commit()
+    return EquipmentBulkDeleteResult(deleted=len(rows), missing=len(ids) - len(rows))
 
 
 @router.get("/history", response_model=list[EquipmentHistoryResponse])

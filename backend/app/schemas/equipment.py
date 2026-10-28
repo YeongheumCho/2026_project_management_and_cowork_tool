@@ -67,6 +67,16 @@ class EquipmentUpdate(EquipmentValues):
     version: int
 
 
+class EquipmentBulkDelete(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=500)
+
+
+class EquipmentBulkDeleteResult(BaseModel):
+    deleted: int
+    # 그 사이 다른 사람이 먼저 지운 줄 (오류로 보지 않는다)
+    missing: int
+
+
 class EquipmentBulkCreate(BaseModel):
     rows: list[EquipmentValues] = Field(min_length=1, max_length=500)
 
