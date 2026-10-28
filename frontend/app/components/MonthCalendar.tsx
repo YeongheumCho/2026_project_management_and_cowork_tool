@@ -11,6 +11,7 @@ import {
   toISODate,
 } from '../lib/calendar';
 import type { SubProject } from '../lib/api';
+import { displayEndDate, displayPeriod } from '../lib/subprojectDates';
 import {
   isSubprojectOverdue,
   subprojectBadgeClass,
@@ -121,7 +122,7 @@ export default function MonthCalendar({
     const last = new Date(year, month + 1, 0);
     return subprojects.some((sp) => {
       const start = parseISODate(sp.start_date);
-      const end = parseISODate(sp.end_date);
+      const end = parseISODate(displayEndDate(sp));
       return !(end < first || start > last);
     });
   }, [subprojects, year, month]);
@@ -132,7 +133,7 @@ export default function MonthCalendar({
     const cursorIndex = year * 12 + month;
     let best: { distance: number; year: number; month: number } | null = null;
     for (const sp of subprojects) {
-      for (const iso of [sp.start_date, sp.end_date]) {
+      for (const iso of [sp.start_date, displayEndDate(sp)]) {
         const date = parseISODate(iso);
         const index = date.getFullYear() * 12 + date.getMonth();
         const distance = Math.abs(index - cursorIndex);
@@ -234,7 +235,8 @@ export default function MonthCalendar({
     const sorted = [...subprojects].sort((a, b) => a.start_date.localeCompare(b.start_date));
     for (const sp of sorted) {
       const spStart = parseISODate(sp.start_date);
-      const spEnd = parseISODate(sp.end_date);
+      // B-104: 계획보다 일찍 끝났으면 실제 완료일까지만 막대를 그린다.
+      const spEnd = parseISODate(displayEndDate(sp));
       for (let wr = 0; wr < WEEKS; wr++) {
         const weekStartIdx = wr * 7;
         const weekStart = days[weekStartIdx];
@@ -370,7 +372,7 @@ export default function MonthCalendar({
                     const inMonth = day.getMonth() === month;
                     const isToday = iso === today;
                     const itemsToday = subprojects.filter((sp) =>
-                      rangeOverlapsDay({ start: parseISODate(sp.start_date), end: parseISODate(sp.end_date) }, day),
+                      rangeOverlapsDay({ start: parseISODate(sp.start_date), end: parseISODate(displayEndDate(sp)) }, day),
                     );
                     const isPopoverOpen = popoverIso === iso;
                     return (
@@ -430,7 +432,7 @@ export default function MonthCalendar({
               const iso = toISODate(day);
               const inMonth = day.getMonth() === month;
               const itemsToday = subprojects.filter((sp) =>
-                rangeOverlapsDay({ start: parseISODate(sp.start_date), end: parseISODate(sp.end_date) }, day),
+                rangeOverlapsDay({ start: parseISODate(sp.start_date), end: parseISODate(displayEndDate(sp)) }, day),
               );
               const isToday = iso === today;
               const isPopoverOpen = popoverIso === iso;
@@ -523,7 +525,7 @@ export default function MonthCalendar({
             <div className="min-w-0 flex-1">
               <p className="text-small font-bold text-text">{hoverTip.sp.name}</p>
               <p className="mt-0.5 text-tiny text-text-subtle">
-                {hoverTip.sp.start_date} ~ {hoverTip.sp.end_date}
+                {displayPeriod(hoverTip.sp)}
               </p>
               <p className="mt-1 text-tiny text-text-muted">담당: {assigneeNames(hoverTip.sp)}</p>
               <div className="mt-1.5 flex items-center gap-1.5">
@@ -598,7 +600,7 @@ const DayPopover = forwardRef<
             <span className="mt-[3px] h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: barColor }} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-small font-semibold text-text">{item.name}</p>
-              <p className="mt-0.5 text-micro text-text-subtle">{item.start_date} ~ {item.end_date}</p>
+              <p className="mt-0.5 text-micro text-text-subtle">{displayPeriod(item)}</p>
               <div className="mt-1 flex items-center gap-1.5">
                 <span className={`rounded-full px-1.5 py-0.5 text-tiny font-bold ${subprojectBadgeClass(item, todayIso)}`}>
                   {subprojectStatusLabel(item, todayIso)}

@@ -12,6 +12,7 @@ import {
   subprojectBadgeClass,
   subprojectStatusLabel,
 } from '../lib/subprojectStatus';
+import { displayPeriod } from '../lib/subprojectDates';
 import { useMe } from '../lib/useMe';
 import { useWorkflowSelection } from '../lib/workflow-selection';
 
@@ -176,7 +177,7 @@ export default function PersonalCalendarPage() {
                     )}
                   </div>
                   <div className="mt-1 text-micro text-text-subtle">
-                    {sp.start_date} ~ {sp.end_date}
+                    {displayPeriod(sp)}
                   </div>
                   <ProgressBar
                     value={sp.progress}

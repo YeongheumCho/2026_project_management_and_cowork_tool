@@ -204,3 +204,19 @@ def test_new_and_reactivated_users_join_default_major_project(env):
     client.patch("/auth/users/3/active", json={"is_active": False})
     client.patch("/auth/users/3/active", json={"is_active": True})
     assert ids["outsider"] in default_member_ids()
+
+
+def test_progress_log_completion_records_completed_on(env):
+    """B-104: 진행률 기록으로 100% 가 되면 그 날짜가 완료일. 계획 종료일은 그대로."""
+    client, _, ids = env
+    path = f"/subprojects/{ids['assigned']}/progress"
+    assert client.post(path, json={"progress_percent": 100, "work_date": "2026-02-20"}).status_code == 201
+    sub = client.get(f"/subprojects/{ids['assigned']}").json()
+    assert sub["status"] == "completed"
+    assert sub["completed_on"] == "2026-02-20"
+    assert sub["end_date"] == "2026-02-28"
+
+    # 다시 내려가면 완료일도 지운다
+    client.post(path, json={"progress_percent": 50, "work_date": "2026-02-21"})
+    sub = client.get(f"/subprojects/{ids['assigned']}").json()
+    assert sub["status"] != "completed" and sub["completed_on"] is None

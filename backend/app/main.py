@@ -161,6 +161,25 @@ def _ensure_additive_schema_updates() -> None:
     with engine.begin() as connection:
         for statement in statements:
             connection.execute(text(statement))
+        if "progress_logs" in inspect(engine).get_table_names():
+            # B-104: 진행률 기록으로 완료된 하위 프로젝트는 완료일이 비어 있었다.
+            # 마지막 진행률 기록 날짜로 채운다 (이미 적힌 완료일은 그대로).
+            connection.execute(
+                text(
+                    """
+                    UPDATE subprojects
+                    SET completed_on = (
+                        SELECT MAX(pl.work_date) FROM progress_logs pl
+                        WHERE pl.subproject_id = subprojects.id
+                    )
+                    WHERE status = 'completed'
+                      AND completed_on IS NULL
+                      AND EXISTS (
+                        SELECT 1 FROM progress_logs pl WHERE pl.subproject_id = subprojects.id
+                      )
+                    """
+                )
+            )
         if "project_execution_history" in inspect(engine).get_table_names():
             # 스톱워치 완료 한 번에 자동 이력이 두 줄씩 쌓이던 문제(2026-10-16 수정)로
             # 이미 생긴 중복을 정리한다. 자동으로 만든 줄만, 같은 사람·같은 하위 프로젝트에서

@@ -24,6 +24,7 @@ import {
   subprojectStatusLabel,
 } from '../lib/subprojectStatus';
 import { compactPosition } from '../lib/display';
+import { displayEndDate, displayPeriod } from '../lib/subprojectDates';
 import { useMe } from '../lib/useMe';
 import { useWorkflowSelection } from '../lib/workflow-selection';
 
@@ -148,9 +149,10 @@ export default function TeamCalendarPage() {
           (earliest, item) => (item.start_date < earliest ? item.start_date : earliest),
           items[0].start_date,
         );
+        // B-104: 일찍 끝난 하위 프로젝트는 실제 완료일 기준
         const endDate = items.reduce(
-          (latest, item) => (item.end_date > latest ? item.end_date : latest),
-          items[0].end_date,
+          (latest, item) => (displayEndDate(item) > latest ? displayEndDate(item) : latest),
+          displayEndDate(items[0]),
         );
         const progress =
           items.reduce((sum, item) => sum + item.progress, 0) / Math.max(items.length, 1);
@@ -339,6 +341,19 @@ function SelectedMemberProjectBoard({
   };
   onOpenSubproject: (subproject: SubProject) => void;
 }) {
+  // B-103: 프로젝트마다 하위 프로젝트 목록을 접고 펼친다. 처음에는 모두 접힌 상태이고,
+  // 펼친 프로젝트는 기억해 두어 다른 담당자를 보거나 화면을 옮겨 와도 그대로 둔다.
+  const [expanded, setExpanded] = useState<Set<number>>(() => readExpandedProjects());
+  const toggleProject = (projectId: number) => {
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      writeExpandedProjects(next);
+      return next;
+    });
+  };
+
   if (!member) {
     return (
       <section className="rounded-2xl border border-dashed border-border-strong bg-surface-muted p-5">
@@ -400,10 +415,25 @@ function SelectedMemberProjectBoard({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`h-2.5 w-2.5 rounded-full ${colorForId(group.project.id)}`} />
-                  <h3 className="min-w-0 truncate text-md font-bold text-text">
-                    {group.project.name}
-                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => toggleProject(group.project.id)}
+                    aria-expanded={expanded.has(group.project.id)}
+                    aria-label={`${group.project.name} 하위 프로젝트 ${expanded.has(group.project.id) ? '접기' : '펼치기'}`}
+                    className="flex min-w-0 items-center gap-2 rounded-lg text-left hover:opacity-80"
+                  >
+                    <span
+                      className={`shrink-0 text-tiny text-text-subtle transition-transform ${
+                        expanded.has(group.project.id) ? 'rotate-90' : ''
+                      }`}
+                    >
+                      ▶
+                    </span>
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorForId(group.project.id)}`} />
+                    <h3 className="min-w-0 truncate text-md font-bold text-text">
+                      {group.project.name}
+                    </h3>
+                  </button>
                   <StatusChip
                     completedCount={group.completedCount}
                     inProgressCount={group.inProgressCount}
@@ -425,6 +455,7 @@ function SelectedMemberProjectBoard({
               </div>
             </div>
 
+            {expanded.has(group.project.id) && (
             <div className="mt-4 space-y-2">
               {group.subprojects.map((subproject) => (
                 <button
@@ -446,7 +477,7 @@ function SelectedMemberProjectBoard({
                       </span>
                     </div>
                     <p className="mt-1 text-micro text-text-subtle">
-                      {subproject.start_date} to {subproject.end_date}
+                      {displayPeriod(subproject)}
                     </p>
                   </div>
 
@@ -459,11 +490,31 @@ function SelectedMemberProjectBoard({
                 </button>
               ))}
             </div>
+            )}
           </article>
         ))}
       </div>
     </section>
   );
+}
+
+const EXPANDED_KEY = 'surelog.teamCalendar.expandedProjects';
+
+function readExpandedProjects(): Set<number> {
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(EXPANDED_KEY) ?? '[]');
+    return new Set(Array.isArray(parsed) ? parsed.filter((id): id is number => typeof id === 'number') : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeExpandedProjects(ids: Set<number>) {
+  try {
+    window.localStorage.setItem(EXPANDED_KEY, JSON.stringify([...ids]));
+  } catch {
+    // 저장소를 쓸 수 없으면 이번 화면에서만 유지한다.
+  }
 }
 
 function MetricCard({ label, value }: { label: string; value: string }) {
