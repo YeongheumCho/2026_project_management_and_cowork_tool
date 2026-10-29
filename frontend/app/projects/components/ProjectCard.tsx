@@ -16,10 +16,16 @@ import {
   isLegacyTemplateForProject,
   isTemplateForMajorProject,
 } from '../../lib/templateScope';
+import {
+  SUBPROJECT_OVERDUE_BADGE,
+  SUBPROJECT_OVERDUE_LABEL,
+  todayISODate,
+} from '../../lib/subprojectStatus';
 import SubProjectListItem from './SubProjectListItem';
 import SubProjectListToolbar, {
   applySubProjectFilter,
   EMPTY_SUBPROJECT_FILTER,
+  splitCompletedSubprojects,
   type SubProjectListFilter,
 } from './SubProjectListToolbar';
 import { exportSubprojectsCsv, exportSubprojectsXlsx } from '../lib/subprojectExport';
@@ -93,12 +99,44 @@ export default function ProjectCard({
     () => applySubProjectFilter(subprojects, subFilter),
     [subprojects, subFilter],
   );
+  // C-14: 상태 필터가 '전체'일 때만 완료된 하위 프로젝트를 아래 묶음으로 뺀다.
+  // 상태를 골랐으면 고른 것만 보이므로 나누지 않는다.
+  const grouped = useMemo(
+    () => (subFilter.status ? null : splitCompletedSubprojects(visibleSubprojects)),
+    [subFilter.status, visibleSubprojects],
+  );
+  const [completedOpen, setCompletedOpen] = useState(() =>
+    readOpenCompletedGroups().has(project.id),
+  );
+  const toggleCompleted = () => {
+    setCompletedOpen((current) => {
+      const next = !current;
+      const ids = readOpenCompletedGroups();
+      if (next) ids.add(project.id);
+      else ids.delete(project.id);
+      writeOpenCompletedGroups(ids);
+      return next;
+    });
+  };
+  const renderItem = (sp: SubProject) => (
+    <SubProjectListItem
+      key={sp.id}
+      sp={sp}
+      onClick={onOpenSubProgress}
+      onOpenTime={onOpenSubTime}
+      canEdit={canManageSubprojects}
+      onEdit={onEditSub}
+    />
+  );
   const total = project.subproject_count ?? subprojects.length;
   const done =
     project.completed_subproject_count ??
     subprojects.filter((sp) => sp.status === 'completed').length;
   const progress = project.progress_percent ?? 0;
   const isCompleted = total > 0 && done >= total;
+  // C-15: 프로젝트 자체도 종료일이 지났는데 끝나지 않았으면 표시한다.
+  const projectOverdue =
+    !isCompleted && !!project.end_date && project.end_date < todayISODate();
   const typeLabel = PROJECT_TYPE_LABEL[project.project_type] ?? project.project_type;
   const topMembers = timeSummary.members.slice(0, 5);
   const topHistoryMembers = historySummary.members.slice(0, 5);
@@ -133,6 +171,14 @@ export default function ProjectCard({
               <span className="rounded-full border border-brand-soft bg-white px-2.5 py-1 text-tiny font-bold text-brand">
                 {typeLabel}
               </span>
+              {projectOverdue && (
+                <span
+                  className={`rounded-full px-2.5 py-1 text-tiny font-bold ${SUBPROJECT_OVERDUE_BADGE}`}
+                  title={`종료일(${project.end_date})이 지났는데 아직 완료되지 않았습니다.`}
+                >
+                  {SUBPROJECT_OVERDUE_LABEL}
+                </span>
+              )}
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-micro text-text-muted">
@@ -286,24 +332,70 @@ export default function ProjectCard({
             <p className="rounded-[18px] border border-dashed border-border-strong bg-white px-5 py-8 text-center text-sm text-text-subtle">
               조건에 맞는 하위 프로젝트가 없습니다.
             </p>
+          ) : grouped ? (
+            <>
+              {grouped.active.length > 0 ? (
+                <ul className="space-y-3">{grouped.active.map(renderItem)}</ul>
+              ) : (
+                <p className="rounded-[18px] border border-dashed border-border-strong bg-white px-5 py-5 text-center text-sm text-text-subtle">
+                  진행 중인 하위 프로젝트가 없습니다. 모두 완료되었습니다.
+                </p>
+              )}
+              {grouped.completed.length > 0 && (
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={toggleCompleted}
+                    aria-expanded={completedOpen}
+                    className="flex w-full items-center gap-2 rounded-[14px] border border-border bg-white px-4 py-2.5 text-left text-small font-semibold text-text-muted transition hover:bg-surface-subtle"
+                  >
+                    <span
+                      aria-hidden
+                      className={`inline-block text-tiny transition-transform ${completedOpen ? 'rotate-90' : ''}`}
+                    >
+                      ▶
+                    </span>
+                    <span>완료된 하위 프로젝트</span>
+                    <span className="rounded-full bg-verify-pass-bg px-2 py-0.5 text-tiny font-bold text-verify-pass-fg">
+                      {grouped.completed.length}건
+                    </span>
+                    <span className="ml-auto text-tiny font-normal text-text-subtle">
+                      {completedOpen ? '접기' : '펼치기'}
+                    </span>
+                  </button>
+                  {completedOpen && (
+                    <ul className="mt-3 space-y-3">{grouped.completed.map(renderItem)}</ul>
+                  )}
+                </div>
+              )}
+            </>
           ) : (
-            <ul className="space-y-3">
-              {visibleSubprojects.map((sp) => (
-                <SubProjectListItem
-                  key={sp.id}
-                  sp={sp}
-                  onClick={onOpenSubProgress}
-                  onOpenTime={onOpenSubTime}
-                  canEdit={canManageSubprojects}
-                  onEdit={onEditSub}
-                />
-              ))}
-            </ul>
+            <ul className="space-y-3">{visibleSubprojects.map(renderItem)}</ul>
           )}
         </div>
       )}
     </section>
   );
+}
+
+// C-14: 완료 묶음을 펼쳐 둔 프로젝트 id. 처음에는 모두 접혀 있다.
+const OPEN_COMPLETED_KEY = 'surelog.projects.openCompletedGroups';
+
+function readOpenCompletedGroups(): Set<number> {
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(OPEN_COMPLETED_KEY) ?? '[]');
+    return new Set(Array.isArray(parsed) ? parsed.filter((id): id is number => typeof id === 'number') : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeOpenCompletedGroups(ids: Set<number>) {
+  try {
+    window.localStorage.setItem(OPEN_COMPLETED_KEY, JSON.stringify([...ids]));
+  } catch {
+    // 저장소를 쓸 수 없으면 이번 화면에서만 유지한다.
+  }
 }
 
 function SummaryPanel({ children }: { children: ReactNode }) {

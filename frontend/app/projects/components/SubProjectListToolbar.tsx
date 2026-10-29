@@ -1,6 +1,7 @@
 'use client';
 
 import type { SubProject } from '../../lib/api';
+import { isSubprojectOverdue, todayISODate } from '../../lib/subprojectStatus';
 
 /**
  * B-92: 하위 프로젝트 목록 정렬·필터.
@@ -16,7 +17,8 @@ export type SubProjectSortKey =
   | 'progress_desc'
   | 'progress_asc';
 
-export type SubProjectStatusFilter = '' | 'in_progress' | 'completed' | 'planned';
+// C-15: overdue 는 상태값이 아니라 '완료 전인데 종료일이 지남' 이다.
+export type SubProjectStatusFilter = '' | 'in_progress' | 'completed' | 'planned' | 'overdue';
 
 export type SubProjectListFilter = {
   sortKey: SubProjectSortKey;
@@ -41,6 +43,7 @@ const STATUS_LABEL: Record<SubProjectStatusFilter, string> = {
   in_progress: '진행중',
   completed: '진행 완료',
   planned: '미진행',
+  overdue: '기한 초과',
 };
 
 const controlClass =
@@ -50,10 +53,14 @@ const controlClass =
 export function applySubProjectFilter(
   subprojects: SubProject[],
   filter: SubProjectListFilter,
+  todayIso: string = todayISODate(),
 ): SubProject[] {
-  const filtered = filter.status
-    ? subprojects.filter((sp) => sp.status === filter.status)
-    : subprojects;
+  const filtered =
+    filter.status === 'overdue'
+      ? subprojects.filter((sp) => isSubprojectOverdue(sp, todayIso))
+      : filter.status
+        ? subprojects.filter((sp) => sp.status === filter.status)
+        : subprojects;
 
   if (filter.sortKey === 'default') return filtered;
 
@@ -73,6 +80,19 @@ export function applySubProjectFilter(
       break;
   }
   return sorted;
+}
+
+/** C-14: 완료된 것과 아닌 것으로 나눈다. 순서(정렬 결과)는 그대로 둔다. */
+export function splitCompletedSubprojects(subprojects: SubProject[]): {
+  active: SubProject[];
+  completed: SubProject[];
+} {
+  const active: SubProject[] = [];
+  const completed: SubProject[] = [];
+  for (const sp of subprojects) {
+    (sp.status === 'completed' ? completed : active).push(sp);
+  }
+  return { active, completed };
 }
 
 type Props = {
