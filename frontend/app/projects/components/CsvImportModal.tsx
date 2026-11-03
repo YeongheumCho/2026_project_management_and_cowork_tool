@@ -313,15 +313,29 @@ export default function CsvImportModal({
   };
 
   return (
-    <Modal open={open} onClose={handleClose} size="lg">
+    <Modal open={open} onClose={handleClose} size="lg" ariaLabel="CSV로 검증 기능 일괄 등록">
       <div className="space-y-4">
-        <div>
-          <h2 className="text-heading font-bold tracking-[-0.2px] text-text">
-            CSV로 검증 기능 일괄 등록
-          </h2>
-          <p className="mt-1 text-micro text-text-subtle">
-            기능명만 있으면 등록됩니다. 평균 소요 시간·가중치·담당자·Lv는 비워 두고 나중에 채울 수 있으며, 기간은 아래 기본값으로 일괄 적용합니다.
-          </p>
+        {/*
+          아래쪽 취소·닫기 버튼은 미리보기나 결과가 있을 때만 나온다.
+          B-94 로 바깥 클릭·Esc 닫기를 막은 뒤로 파일을 고르기 전에는 닫을 방법이 없었다.
+        */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-heading font-bold tracking-[-0.2px] text-text">
+              CSV로 검증 기능 일괄 등록
+            </h2>
+            <p className="mt-1 text-micro text-text-subtle">
+              기능명만 있으면 등록됩니다. 평균 소요 시간·가중치·담당자·Lv는 비워 두고 나중에 채울 수 있으며, 기간은 아래 기본값으로 일괄 적용합니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={importing}
+            className="shrink-0 rounded-lg border border-border bg-white px-3 py-1.5 text-sm font-semibold text-text-muted hover:bg-surface-muted disabled:opacity-50"
+          >
+            닫기
+          </button>
         </div>
 
         <div className="grid gap-3 rounded-[14px] border border-border bg-surface-muted p-4 md:grid-cols-2">
