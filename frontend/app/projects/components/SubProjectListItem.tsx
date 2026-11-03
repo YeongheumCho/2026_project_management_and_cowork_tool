@@ -8,6 +8,7 @@ import {
 import { colorForId } from '../../components/AppShell/colors';
 import ProgressBar from '../../components/ProgressBar';
 import {
+  isSubprojectOverdue,
   subprojectBadgeClass,
   subprojectStatusLabel,
 } from '../../lib/subprojectStatus';
@@ -50,10 +51,16 @@ export default function SubProjectListItem({
   const verifierLabel = roleNames(sp.verifiers, sp.verifier);
   const reviewerLabel = roleNames(sp.reviewers, sp.reviewer);
   const inreviewerLabel = roleNames(sp.inreviewers, sp.inreviewer);
+  // C-15: 완료 전인데 종료일이 지났으면 눈에 띄게 하고 할 일을 알려 준다.
+  const overdue = isSubprojectOverdue(sp);
 
   return (
     <li>
-      <div className="rounded-[20px] border border-border bg-white px-4 py-4 shadow-[0_8px_24px_rgba(28,25,23,0.04)]">
+      <div
+        className={`rounded-[20px] border bg-white px-4 py-4 shadow-[0_8px_24px_rgba(28,25,23,0.04)] ${
+          overdue ? 'border-verify-fail-bg border-l-4 border-l-verify-fail-fg' : 'border-border'
+        }`}
+      >
         <div className="flex flex-wrap items-start gap-3">
           <div className={`mt-1 h-2.5 w-2.5 rounded-full ${colorForId(sp.project_id)}`} />
 
@@ -98,7 +105,10 @@ export default function SubProjectListItem({
 
           <div className="min-w-[150px] text-right">
             <p className="text-micro text-text-muted">
-              {sp.start_date} - {sp.end_date}
+              {sp.start_date} -{' '}
+              <span className={overdue ? 'font-semibold text-verify-fail-fg' : undefined}>
+                {sp.end_date}
+              </span>
             </p>
             <p className="mt-1 text-micro font-semibold text-text-muted">
               {assigneeLabel}
@@ -108,6 +118,15 @@ export default function SubProjectListItem({
             )}
           </div>
         </div>
+
+        {overdue && (
+          <p className="mt-3 rounded-lg bg-verify-fail-bg px-3 py-2 text-micro text-verify-fail-fg">
+            종료일({sp.end_date})이 지났는데 아직 완료되지 않았습니다. 진행률을 기록하거나,
+            {canEdit && onEdit
+              ? " 일정이 바뀌었으면 '하위 프로젝트 수정'에서 종료일을 고쳐 주세요."
+              : ' 일정이 바뀌었으면 관리자에게 종료일 수정을 요청해 주세요.'}
+          </p>
+        )}
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-micro text-text-muted">
           {/*
