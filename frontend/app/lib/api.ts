@@ -227,12 +227,28 @@ export type EquipmentColumn = {
   id: number;
   label: string;
   sort_order: number;
+  /** B-109: 열 너비(px). 없으면 기본 너비. 모두가 같이 본다. */
+  width?: number | null;
+};
+
+/** B-109: 칸 서식. 모두가 같이 본다. */
+export type EquipmentCellFormat = { bg?: string; fg?: string; bold?: boolean };
+
+/** B-112: 장비 그룹. 연결된 대프로젝트가 없으면 모든 사람이 본다. */
+export type EquipmentBoard = {
+  id: number;
+  name: string;
+  is_default: boolean;
+  major_projects: { id: number; name: string }[];
+  row_count: number;
 };
 
 export type Equipment = {
   id: number;
   /** { "<열 id>": 값 }. 빈칸은 키가 없다. */
   values: Record<string, string>;
+  /** { "<열 id>": 서식 }. 서식이 없는 칸은 키가 없다. */
+  formats?: Record<string, EquipmentCellFormat>;
   sort_order: number;
   version: number;
   updated_by: number | null;
@@ -331,6 +347,8 @@ export type HistoryStageMinutes = {
 // ── 담당자별 검증 시간 (B-73 / B-74) ──────────────────────────────
 export type TimeEntryStage = 'first_verify' | 'inreview' | 'change';
 export type TimeEntryRole = 'verifier' | 'reviewer' | 'inreviewer' | 'assignee';
+/** 검증 시간의 칸: 세팅 / AUD / 작성(리뷰·피드백 반영) */
+export type TimeEntryPart = 'setup' | 'aud' | 'work';
 
 export const TIME_ENTRY_STAGES: TimeEntryStage[] = [
   'first_verify',
@@ -483,6 +501,9 @@ export type WorkLog = {
   duration_sec: number;
   status: WorkLogStatus;
   session_group_id: string | null;
+  /** B-111: 잰 시간을 검증 시간의 어느 칸에 자동으로 더할지. 없으면 더하지 않는다. */
+  time_stage?: TimeEntryStage | null;
+  time_part?: TimeEntryPart | null;
   created_at: string;
   // 응답을 만든 순간의 서버 시각 (B-101 시계 차이 보정용)
   server_now?: string;

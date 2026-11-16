@@ -1,4 +1,4 @@
-import type { EquipmentColumn } from '../lib/api';
+import type { EquipmentCellFormat, EquipmentColumn } from '../lib/api';
 import { neutralizeCsvFormula, restoreCsvFormula } from '../lib/csvSafety';
 
 /** 한 줄의 값. { "<열 id>": 값 } */
@@ -17,6 +17,58 @@ export function sameValues(
   columns: EquipmentColumn[],
 ): boolean {
   return columns.every(({ id }) => (a[id] ?? '').trim() === (b[id] ?? '').trim());
+}
+
+/** 한 줄의 칸 서식. { "<열 id>": 서식 } */
+export type EquipmentFormats = Record<string, EquipmentCellFormat>;
+
+function formatKey(format: EquipmentCellFormat | undefined): string {
+  return `${format?.bg ?? ''}|${format?.fg ?? ''}|${format?.bold ? 1 : 0}`;
+}
+
+/** B-109: 지금 있는 열 기준으로 두 서식이 같은지. */
+export function sameFormats(
+  a: EquipmentFormats,
+  b: EquipmentFormats,
+  columns: EquipmentColumn[],
+): boolean {
+  return columns.every(({ id }) => formatKey(a[id]) === formatKey(b[id]));
+}
+
+/** 저장할 서식: 지금 있는 열만, 아무 서식도 없는 칸은 뺀다. */
+export function cleanFormats(formats: EquipmentFormats, columns: EquipmentColumn[]): EquipmentFormats {
+  const next: EquipmentFormats = {};
+  for (const { id } of columns) {
+    const format = formats[id];
+    if (!format) continue;
+    const cell: EquipmentCellFormat = {};
+    if (format.bg) cell.bg = format.bg;
+    if (format.fg) cell.fg = format.fg;
+    if (format.bold) cell.bold = true;
+    if (Object.keys(cell).length > 0) next[id] = cell;
+  }
+  return next;
+}
+
+/** 한 칸의 서식에 바꿀 것만 덮어쓴다. 값이 null 이면 그 서식을 지운다. */
+export function patchFormat(
+  current: EquipmentCellFormat | undefined,
+  patch: { bg?: string | null; fg?: string | null; bold?: boolean },
+): EquipmentCellFormat {
+  const next: EquipmentCellFormat = { ...current };
+  if (patch.bg !== undefined) {
+    if (patch.bg) next.bg = patch.bg;
+    else delete next.bg;
+  }
+  if (patch.fg !== undefined) {
+    if (patch.fg) next.fg = patch.fg;
+    else delete next.fg;
+  }
+  if (patch.bold !== undefined) {
+    if (patch.bold) next.bold = true;
+    else delete next.bold;
+  }
+  return next;
 }
 
 /** 저장할 값: 지금 있는 열만, 빈칸은 뺀다. */

@@ -53,6 +53,9 @@ export default function SubProjectListItem({
   const inreviewerLabel = roleNames(sp.inreviewers, sp.inreviewer);
   // C-15: 완료 전인데 종료일이 지났으면 눈에 띄게 하고 할 일을 알려 준다.
   const overdue = isSubprojectOverdue(sp);
+  // B-111: 일을 시작했는데(진행률이 있거나 완료) 검증 시간이 한 번도 안 남았으면 누락으로 보고 알려 준다.
+  const timeMissing =
+    !!onOpenTime && (sp.total_minutes ?? 0) === 0 && (sp.status === 'completed' || sp.progress > 0);
 
   return (
     <li>
@@ -76,6 +79,14 @@ export default function SubProjectListItem({
               >
                 {subprojectStatusLabel(sp)}
               </span>
+              {timeMissing && (
+                <span
+                  className="rounded-full border border-verify-warn-bg bg-verify-warn-bg px-2.5 py-1 text-tiny font-bold text-verify-warn-fg"
+                  title="세팅·AUD·작성 시간이 아직 한 번도 기록되지 않았습니다. '검증 시간'을 눌러 입력하거나, 개요 탭 스톱워치로 재면 자동으로 기록됩니다."
+                >
+                  검증 시간 미입력
+                </span>
+              )}
               {sp.upload_done && (
                 <span className="rounded-full border border-verify-pass-bg bg-verify-pass-bg px-2.5 py-1 text-tiny font-bold uppercase tracking-[0.08em] text-verify-pass-fg">
                   업로드 완료

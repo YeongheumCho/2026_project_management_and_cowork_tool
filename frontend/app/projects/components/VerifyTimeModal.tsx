@@ -199,6 +199,7 @@ export default function VerifyTimeModal({
           </h2>
           <p className="mt-1 text-xs text-text-subtle">
             검증·리뷰·InReview에 각자 쓴 시간을 남깁니다. 합계는 남긴 기록에서 계산됩니다.
+            개요 탭 스톱워치에서 기록 위치를 고르고 재면 여기에 자동으로 더해집니다.
           </p>
         </div>
         <button

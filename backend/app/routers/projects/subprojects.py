@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.dependencies import get_current_user, get_db, require_admin
+from app.dependencies import get_current_user, get_db
 from app.models.project import (
     DEFAULT_SUBTASK_TEMPLATE,
     Project,
@@ -257,9 +257,20 @@ def update_subproject(
 def delete_subproject(
     subproject_id: int,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ):
+    # B-110: 하위 프로젝트를 만들 수 있는 사람(프로젝트 참여자)은 지울 수도 있다.
     sp = _load_subproject(db, subproject_id)
+    project = db.scalar(
+        select(Project)
+        .options(selectinload(Project.participants))
+        .where(Project.id == sp.project_id)
+    )
+    _ensure_project_participant_write_access(
+        project,
+        current_user,
+        detail="프로젝트 참여자만 하위 프로젝트를 삭제할 수 있습니다.",
+    )
     db.delete(sp)
     db.commit()
     return None

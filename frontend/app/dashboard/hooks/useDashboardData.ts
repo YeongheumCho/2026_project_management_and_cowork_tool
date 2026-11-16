@@ -12,8 +12,8 @@ import { toISODate } from '../../lib/calendar';
 type Summary = {
   inProgressProjects: number;
   completedSubs: number;
+  incompleteSubs: number;
   avgProgress: number;
-  weeklyMinutes: number;
 };
 
 type UseDashboardDataResult = {
@@ -35,8 +35,7 @@ type UseDashboardDataResult = {
  *   - inProgressProjects: 진행 중(소프로젝트 하나라도 in_progress/planned) 프로젝트 수
  *   - completedSubs: 완료된 소프로젝트 총 건수
  *   - avgProgress: 소프로젝트 progress 평균 (빈 배열이면 0)
- *   - weeklyMinutes: 현 달 안에 기간이 걸친 소프로젝트들의 total_minutes 합
- *     (백엔드에 별도 주간 집계 API 가 없어 프런트 근사치로 제공)
+ *   - incompleteSubs: 완료되지 않은 소프로젝트 총 건수 (B-106)
  */
 export function useDashboardData(enabled: boolean): UseDashboardDataResult {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -100,21 +99,13 @@ export function useDashboardData(enabled: boolean): UseDashboardDataResult {
         : subprojects.reduce((sum, sp) => sum + (sp.progress ?? 0), 0) /
           subprojects.length;
 
-    // 이번 달 기간이 겹치는 소프로젝트의 total_minutes 합.
-    const ym = todayIso.slice(0, 7); // "YYYY-MM"
-    const weeklyMinutes = subprojects
-      .filter(
-        (sp) => sp.start_date.startsWith(ym) || sp.end_date.startsWith(ym),
-      )
-      .reduce((acc, sp) => acc + (sp.total_minutes ?? 0), 0);
-
     return {
       inProgressProjects,
       completedSubs,
+      incompleteSubs: subprojects.length - completedSubs,
       avgProgress,
-      weeklyMinutes,
     };
-  }, [projects, subprojects, todayIso]);
+  }, [projects, subprojects]);
 
   return {
     projects,

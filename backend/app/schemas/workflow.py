@@ -19,7 +19,29 @@ class WorkQueueItem(BaseModel):
     priority_hint: str
 
 
-class WorkLogStart(BaseModel):
+TIME_PARTS = {"setup", "aud", "work"}
+
+
+class WorkLogTimeTarget(BaseModel):
+    """B-111: 스톱워치가 잰 시간을 검증 시간의 어느 칸에 더할지. 둘 다 비우면 넣지 않는다."""
+
+    time_stage: str | None = None
+    time_part: str | None = None
+
+    @model_validator(mode="after")
+    def _validate_time_target(self):
+        from app.models.time_entry import STAGE_CHANGE, TIME_ENTRY_STAGES
+
+        if self.time_stage is None and self.time_part is None:
+            return self
+        if self.time_stage not in TIME_ENTRY_STAGES or self.time_part not in TIME_PARTS:
+            raise ValueError("검증 시간 기록 위치가 올바르지 않습니다.")
+        if self.time_stage == STAGE_CHANGE and self.time_part == "aud":
+            raise ValueError("변경점 검증에는 AUD 칸이 없습니다.")
+        return self
+
+
+class WorkLogStart(WorkLogTimeTarget):
     subproject_id: int | None = None
     task_name: str = Field(min_length=1, max_length=200)
     continue_with_ids: list[int] = []
@@ -36,6 +58,9 @@ class WorkLogResponse(BaseModel):
     duration_sec: int
     status: WorkLogStatus
     session_group_id: str | None
+    # B-111: 검증 시간 자동 기록 위치 (없으면 기록하지 않음)
+    time_stage: str | None = None
+    time_part: str | None = None
     created_at: datetime
     # B-101: 응답을 만든 순간의 서버 시각.
     # 화면은 진행 중 시간을 "PC 현재 시각 - 서버의 시작 시각"으로 셌는데,

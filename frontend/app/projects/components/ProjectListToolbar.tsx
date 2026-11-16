@@ -5,6 +5,7 @@ import {
   PROJECT_TYPE_LABEL,
   type MajorProject,
   type Project,
+  type SubProject,
 } from '../../lib/api';
 
 export type ProjectSortKey =
@@ -14,8 +15,12 @@ export type ProjectSortKey =
   | 'end_date'
   | 'progress_desc';
 
+/** B-108: 검색어를 어디에서 찾을지 */
+export type ProjectQueryScope = 'all' | 'project' | 'subproject';
+
 export type ProjectListFilter = {
   query: string;
+  queryScope: ProjectQueryScope;
   projectType: string;
   majorProjectId: number | '';
   sortKey: ProjectSortKey;
@@ -23,9 +28,22 @@ export type ProjectListFilter = {
 
 export const EMPTY_PROJECT_LIST_FILTER: ProjectListFilter = {
   query: '',
+  queryScope: 'all',
   projectType: '',
   majorProjectId: '',
   sortKey: 'default',
+};
+
+const QUERY_SCOPE_LABEL: Record<ProjectQueryScope, string> = {
+  all: '전체',
+  project: '프로젝트',
+  subproject: '하위 프로젝트',
+};
+
+const QUERY_PLACEHOLDER: Record<ProjectQueryScope, string> = {
+  all: '프로젝트·하위 프로젝트 이름 검색',
+  project: '프로젝트 이름 검색',
+  subproject: '하위 프로젝트 이름 검색',
 };
 
 const SORT_LABEL: Record<ProjectSortKey, string> = {
@@ -67,10 +85,25 @@ export default function ProjectListToolbar({
         type="search"
         value={value.query}
         onChange={(event) => onChange({ ...value, query: event.target.value })}
-        placeholder="프로젝트 이름 검색"
-        aria-label="프로젝트 이름 검색"
+        placeholder={QUERY_PLACEHOLDER[value.queryScope]}
+        aria-label={QUERY_PLACEHOLDER[value.queryScope]}
         className={`${controlClass} min-w-[200px] flex-1`}
       />
+      <select
+        value={value.queryScope}
+        onChange={(event) =>
+          onChange({ ...value, queryScope: event.target.value as ProjectQueryScope })
+        }
+        aria-label="검색 대상"
+        title="검색어를 프로젝트 이름에서 찾을지, 하위 프로젝트 이름에서 찾을지 고릅니다."
+        className={controlClass}
+      >
+        {(Object.keys(QUERY_SCOPE_LABEL) as ProjectQueryScope[]).map((scope) => (
+          <option key={scope} value={scope}>
+            {QUERY_SCOPE_LABEL[scope]}
+          </option>
+        ))}
+      </select>
       <select
         value={value.majorProjectId}
         onChange={(event) =>
@@ -122,7 +155,13 @@ export default function ProjectListToolbar({
       {isFiltered && (
         <button
           type="button"
-          onClick={() => onChange({ ...EMPTY_PROJECT_LIST_FILTER, sortKey: value.sortKey })}
+          onClick={() =>
+            onChange({
+              ...EMPTY_PROJECT_LIST_FILTER,
+              sortKey: value.sortKey,
+              queryScope: value.queryScope,
+            })
+          }
           className="text-xs font-semibold text-brand hover:underline"
         >
           필터 초기화
@@ -132,13 +171,31 @@ export default function ProjectListToolbar({
   );
 }
 
+/** B-108: 이름에 검색어가 들어 있는 하위 프로젝트만 돌려준다. 검색어가 비면 빈 배열. */
+export function matchSubprojectsByQuery<T extends Pick<SubProject, 'name'>>(
+  subprojects: T[],
+  rawQuery: string,
+): T[] {
+  const query = rawQuery.trim().toLowerCase();
+  if (!query) return [];
+  return subprojects.filter((subproject) => subproject.name.toLowerCase().includes(query));
+}
+
 export function applyProjectListFilter(
   projects: Project[],
   filter: ProjectListFilter,
+  subprojectsByProject: Map<number, Pick<SubProject, 'name'>[]> = new Map(),
 ): Project[] {
   const query = filter.query.trim().toLowerCase();
+  const scope = filter.queryScope ?? 'all';
   const filtered = projects.filter((project) => {
-    if (query && !project.name.toLowerCase().includes(query)) return false;
+    if (query) {
+      const byName = scope !== 'subproject' && project.name.toLowerCase().includes(query);
+      const bySub =
+        scope !== 'project' &&
+        matchSubprojectsByQuery(subprojectsByProject.get(project.id) ?? [], query).length > 0;
+      if (!byName && !bySub) return false;
+    }
     if (filter.projectType && project.project_type !== filter.projectType) return false;
     if (filter.majorProjectId !== '' && project.major_project_id !== filter.majorProjectId) {
       return false;

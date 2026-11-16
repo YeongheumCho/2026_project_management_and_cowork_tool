@@ -42,6 +42,13 @@ class WorkLog(Base):
         String(20), default=WORKLOG_RUNNING, nullable=False
     )
     session_group_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # B-111: 이 스톱워치가 잰 시간을 '검증 시간'의 어느 칸에 자동으로 더할지.
+    # time_stage: first_verify / inreview / change, time_part: setup / aud / work.
+    # 둘 다 비어 있으면 검증 시간에는 넣지 않는다.
+    time_stage: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    time_part: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    # duration_sec 가운데 이미 검증 시간에 반영한(또는 반영하지 않기로 한) 초
+    credited_sec: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

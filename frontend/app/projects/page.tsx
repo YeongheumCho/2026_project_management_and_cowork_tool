@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AppShell from '../components/AppShell';
 import TeamModal from '../components/TeamModal';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -22,6 +22,7 @@ import VerifyTimeModal from './components/VerifyTimeModal';
 import ProjectListToolbar, {
   EMPTY_PROJECT_LIST_FILTER,
   applyProjectListFilter,
+  matchSubprojectsByQuery,
   type ProjectListFilter,
 } from './components/ProjectListToolbar';
 import { useProjects } from './hooks/useProjects';
@@ -68,9 +69,59 @@ export default function ProjectsPage() {
   const [duplicatingProject, setDuplicatingProject] = useState(false);
   const [listFilter, setListFilter] = useState<ProjectListFilter>(EMPTY_PROJECT_LIST_FILTER);
   const visibleProjects = useMemo(
-    () => applyProjectListFilter(projects, listFilter),
-    [projects, listFilter],
+    () => applyProjectListFilter(projects, listFilter, byProject),
+    [projects, listFilter, byProject],
   );
+
+  // B-108: 하위 프로젝트 이름으로 찾은 프로젝트는 바로 펼쳐서 어디에 있는지 보여 준다.
+  const subprojectQuery = listFilter.queryScope === 'project' ? '' : listFilter.query;
+  const searchHitKey = useMemo(
+    () =>
+      visibleProjects
+        .filter(
+          (project) =>
+            matchSubprojectsByQuery(byProject.get(project.id) ?? [], subprojectQuery).length > 0,
+        )
+        .map((project) => project.id)
+        .join(','),
+    [visibleProjects, byProject, subprojectQuery],
+  );
+  useEffect(() => {
+    if (!searchHitKey) return;
+    const ids = searchHitKey.split(',').map(Number);
+    setExpanded((prev) => {
+      if (ids.every((id) => prev.has(id))) return prev;
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
+  }, [searchHitKey]);
+
+  // B-107: 개요 탭의 프로젝트 카드에서 넘어오면(/projects?focus=id) 그 카드를 펼치고 그 위치로 간다.
+  const [focusId, setFocusId] = useState<number | null>(null);
+  const [highlightId, setHighlightId] = useState<number | null>(null);
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get('focus');
+    const id = raw ? Number(raw) : NaN;
+    if (Number.isInteger(id)) setFocusId(id);
+  }, []);
+  useEffect(() => {
+    // 목록을 못 읽었으면(연결 오류 등) 다시 읽힐 때까지 기다린다.
+    if (focusId === null || loading || projects.length === 0) return;
+    const target = focusId;
+    setFocusId(null);
+    // 주소의 focus 는 한 번만 쓴다 (새로고침할 때마다 다시 옮겨 가지 않게).
+    window.history.replaceState(null, '', window.location.pathname);
+    if (!projects.some((project) => project.id === target)) return;
+    setExpanded((prev) => new Set(prev).add(target));
+    setHighlightId(target);
+    window.setTimeout(() => {
+      document
+        .getElementById(`project-card-${target}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+    window.setTimeout(() => setHighlightId(null), 3000);
+  }, [focusId, loading, projects]);
   const vehicleSuggestions = useMemo(
     () => collectVehicleSuggestions(projects, Array.from(byProject.values()).flat()),
     [projects, byProject],
@@ -277,6 +328,8 @@ export default function ProjectsPage() {
             isAdmin={!!isAdmin}
             canManageSubprojects={canManageProjectSubprojects(project.id)}
             isOpen={expanded.has(project.id)}
+            subprojectQuery={subprojectQuery}
+            highlighted={highlightId === project.id}
             onToggle={toggleExpand}
             onAddSub={openCreateSub}
             onCsvImport={openCsvImport}
@@ -319,7 +372,9 @@ export default function ProjectsPage() {
             ? canManageProjectSubprojects(modalProjectId)
             : !!isAdmin
         }
-        canDelete={!!isAdmin}
+        canDelete={
+          modalProjectId != null ? canManageProjectSubprojects(modalProjectId) : !!isAdmin
+        }
         users={users}
         projects={projects}
         lockedProjectId={modalMode === 'create' ? modalProjectId : undefined}

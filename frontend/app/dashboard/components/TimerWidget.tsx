@@ -5,10 +5,59 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from '../../components/Modal';
 import {
   apiFetch,
+  TIME_ENTRY_FIELD_LABEL,
+  TIME_ENTRY_STAGE_LABEL,
+  TIME_ENTRY_STAGES,
   type Project,
   type SubProject,
+  type TimeEntryPart,
+  type TimeEntryStage,
   type WorkLog,
 } from '../../lib/api';
+
+// B-111: 스톱워치가 잰 시간을 '검증 시간'의 어느 칸에 자동으로 더할지.
+// 값은 "단계:칸" (예: first_verify:setup), 빈 문자열이면 검증 시간에 넣지 않는다.
+const TIME_PARTS: TimeEntryPart[] = ['setup', 'aud', 'work'];
+const TIME_TARGET_OPTIONS: { value: string; label: string }[] = TIME_ENTRY_STAGES.flatMap(
+  (stage) =>
+    TIME_PARTS.flatMap((part) => {
+      const partLabel = TIME_ENTRY_FIELD_LABEL[stage][part];
+      if (!partLabel) return [];
+      return [
+        {
+          value: `${stage}:${part}`,
+          label: `${TIME_ENTRY_STAGE_LABEL[stage]} · ${partLabel.replace('(분)', '')}`,
+        },
+      ];
+    }),
+);
+const DEFAULT_TIME_TARGET = 'first_verify:setup';
+const TIME_TARGET_KEY = 'surelog.timer.timeTarget';
+
+function parseTimeTarget(value: string): {
+  time_stage: TimeEntryStage | null;
+  time_part: TimeEntryPart | null;
+} {
+  const [stage, part] = value.split(':');
+  if (!stage || !part) return { time_stage: null, time_part: null };
+  return { time_stage: stage as TimeEntryStage, time_part: part as TimeEntryPart };
+}
+
+function logTimeTarget(log: WorkLog): string {
+  return log.time_stage && log.time_part ? `${log.time_stage}:${log.time_part}` : '';
+}
+
+function readStoredTimeTarget(): string {
+  try {
+    const stored = window.localStorage.getItem(TIME_TARGET_KEY);
+    if (stored === '' || TIME_TARGET_OPTIONS.some((option) => option.value === stored)) {
+      return stored ?? DEFAULT_TIME_TARGET;
+    }
+  } catch {
+    // 저장소를 쓸 수 없으면 기본값을 쓴다.
+  }
+  return DEFAULT_TIME_TARGET;
+}
 
 type Props = {
   candidates: SubProject[];
@@ -37,6 +86,40 @@ export default function TimerWidget({
   const [clockOffset, setClockOffset] = useState(0);
   const now = tick + clockOffset;
   const [pendingStart, setPendingStart] = useState<PendingStart | null>(null);
+  // B-111: 시작할 때 쓸 기록 위치. 하위 프로젝트마다 고르고, 마지막에 고른 것을 기본으로 기억한다.
+  const [defaultTarget, setDefaultTarget] = useState(DEFAULT_TIME_TARGET);
+  const [targetBySub, setTargetBySub] = useState<Record<number, string>>({});
+  useEffect(() => {
+    setDefaultTarget(readStoredTimeTarget());
+  }, []);
+
+  function chooseTarget(subprojectId: number, value: string) {
+    setTargetBySub((current) => ({ ...current, [subprojectId]: value }));
+    setDefaultTarget(value);
+    try {
+      window.localStorage.setItem(TIME_TARGET_KEY, value);
+    } catch {
+      // 저장소를 쓸 수 없으면 이번 화면에서만 유지한다.
+    }
+  }
+
+  // 재는 도중에 위치를 바꾼다 (세팅 → AUD 등). 그때까지 잰 시간은 이전 위치에 들어간다.
+  async function changeLogTarget(log: WorkLog, value: string) {
+    setBusy(true);
+    try {
+      await apiFetch<WorkLog>(`/work-logs/${log.id}/time-target`, {
+        method: 'PUT',
+        body: JSON.stringify(parseTimeTarget(value)),
+      });
+      if (log.subproject_id !== null) chooseTarget(log.subproject_id, value);
+      await loadLogs();
+      await onChanged?.();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const projectNameById = useMemo(() => {
     if (!projects) return new Map<number, string>();
@@ -97,6 +180,7 @@ export default function TimerWidget({
           subproject_id: candidate.id,
           task_name: candidate.name,
           continue_with_ids: continueWithIds,
+          ...parseTimeTarget(targetBySub[candidate.id] ?? defaultTarget),
         }),
       });
       setPendingStart(null);
@@ -167,7 +251,8 @@ export default function TimerWidget({
               스톱워치 — 오늘 담당 업무
             </h2>
             <p className="mt-1 text-xs text-text-subtle">
-              완료 및 기록을 누르면 진행률 기록 창이 이어서 열립니다.
+              완료 및 기록을 누르면 진행률 기록 창이 이어서 열립니다. 잰 시간은 고른 위치(세팅·AUD·작성)의
+              검증 시간에 자동으로 더해지므로 따로 입력하지 않아도 됩니다.
             </p>
           </div>
           {runningLogs.length > 0 && (
@@ -238,6 +323,34 @@ export default function TimerWidget({
                       진행률 {Math.round(candidate.progress)}%
                     </p>
                   )}
+
+                  <label className="mt-3 block">
+                    <span className="text-tiny font-semibold text-text-subtle">
+                      검증 시간 자동 기록
+                    </span>
+                    <select
+                      value={
+                        activeLog
+                          ? logTimeTarget(activeLog)
+                          : (targetBySub[candidate.id] ?? defaultTarget)
+                      }
+                      disabled={busy}
+                      onChange={(event) =>
+                        activeLog
+                          ? void changeLogTarget(activeLog, event.target.value)
+                          : chooseTarget(candidate.id, event.target.value)
+                      }
+                      title="스톱워치로 잰 시간이 이 하위 프로젝트 '검증 시간'의 어느 칸에 더해질지 고릅니다. 재는 도중에 바꾸면 그때까지 잰 시간은 이전 칸에 들어갑니다."
+                      className="mt-1 w-full rounded-lg border border-border bg-white px-2 py-1.5 text-xs text-text"
+                    >
+                      {TIME_TARGET_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                      <option value="">검증 시간에 기록 안 함</option>
+                    </select>
+                  </label>
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     {!activeLog && (
