@@ -138,9 +138,8 @@ export default function DashboardPage() {
       <KpiGrid
         inProgressProjects={summary.inProgressProjects}
         completedSubs={summary.completedSubs}
+        incompleteSubs={summary.incompleteSubs}
         avgProgress={summary.avgProgress}
-        weeklyMinutes={summary.weeklyMinutes}
-        memberCount={users.length}
         loading={loading}
       />
 

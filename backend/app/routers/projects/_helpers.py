@@ -516,15 +516,13 @@ def _can_edit_subproject_progress(db: Session, sp: SubProject, current_user: Use
 def _ensure_project_participant_write_access(
     project: Project | None,
     current_user: User,
+    detail: str = "프로젝트 참여자만 하위 프로젝트를 추가하거나 수정할 수 있습니다.",
 ) -> None:
     if current_user.role == "admin":
         return
     if project and current_user.id in {user.id for user in project.participants or []}:
         return
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="프로젝트 참여자만 하위 프로젝트를 추가하거나 수정할 수 있습니다.",
-    )
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
 
 def _validate_subproject_dates_within_project(

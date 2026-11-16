@@ -40,12 +40,14 @@ function isRemoval(action: EquipmentHistory['action']) {
 type Props = {
   open: boolean;
   onClose: () => void;
+  /** B-112: 이력을 볼 장비 그룹 */
+  boardId: number;
   /** 주면 그 장비의 이력만 보여 준다 */
   equipmentId?: number;
   title?: string;
 };
 
-export default function HistoryModal({ open, onClose, equipmentId, title }: Props) {
+export default function HistoryModal({ open, onClose, boardId, equipmentId, title }: Props) {
   const [rows, setRows] = useState<EquipmentHistory[] | null>(null);
   const [error, setError] = useState('');
 
@@ -53,13 +55,13 @@ export default function HistoryModal({ open, onClose, equipmentId, title }: Prop
     if (!open) return;
     setRows(null);
     const query = equipmentId ? `&equipment_id=${equipmentId}` : '';
-    apiFetch<EquipmentHistory[]>(`/equipment/history?limit=200${query}`)
+    apiFetch<EquipmentHistory[]>(`/equipment/history?limit=200&board_id=${boardId}${query}`)
       .then((next) => {
         setRows(next);
         setError('');
       })
       .catch((err: Error) => setError(err.message));
-  }, [open, equipmentId]);
+  }, [open, boardId, equipmentId]);
 
   return (
     <Modal open={open} onClose={onClose} size="xl" scrollable closeOnEsc ariaLabel="장비 변경 이력">

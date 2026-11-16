@@ -220,3 +220,12 @@ def test_progress_log_completion_records_completed_on(env):
     client.post(path, json={"progress_percent": 50, "work_date": "2026-02-21"})
     sub = client.get(f"/subprojects/{ids['assigned']}").json()
     assert sub["status"] != "completed" and sub["completed_on"] is None
+
+
+def test_b110_participant_can_delete_subproject_but_outsider_cannot(env):
+    client, state, ids = env
+    state["user"] = "outsider"
+    assert client.delete(f"/subprojects/{ids['unassigned']}").status_code == 403
+    state["user"] = "member"
+    assert client.delete(f"/subprojects/{ids['unassigned']}").status_code == 204
+    assert client.get(f"/subprojects/{ids['unassigned']}").status_code == 404

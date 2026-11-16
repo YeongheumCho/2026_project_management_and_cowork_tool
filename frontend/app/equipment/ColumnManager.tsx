@@ -8,6 +8,8 @@ import { apiFetch, type EquipmentColumn } from '../lib/api';
 
 type Props = {
   open: boolean;
+  /** B-112: 열을 고칠 장비 그룹 */
+  boardId: number;
   columns: EquipmentColumn[];
   onClose: () => void;
   /** 열이 바뀌면 표를 다시 읽는다. 열을 지웠으면 줄 값도 바뀌므로 함께 읽는다. */
@@ -18,7 +20,7 @@ type Props = {
  * 장비 현황표의 열(항목) 관리. 누구나 이름 변경·추가·삭제·순서 변경을 할 수 있다.
  * 바꾼 내용은 바로 서버에 저장되고 모든 팀원의 표에 반영된다.
  */
-export default function ColumnManager({ open, columns, onClose, onChanged }: Props) {
+export default function ColumnManager({ open, boardId, columns, onClose, onChanged }: Props) {
   const [labels, setLabels] = useState<Record<number, string>>({});
   const [newLabel, setNewLabel] = useState('');
   const [busy, setBusy] = useState(false);
@@ -70,7 +72,7 @@ export default function ColumnManager({ open, columns, onClose, onChanged }: Pro
     const ids = columns.map((column) => column.id);
     [ids[index], ids[target]] = [ids[target], ids[index]];
     void run(() =>
-      apiFetch('/equipment/columns/order', {
+      apiFetch(`/equipment/columns/order?board_id=${boardId}`, {
         method: 'PUT',
         body: JSON.stringify({ column_ids: ids }),
       }),
@@ -82,7 +84,10 @@ export default function ColumnManager({ open, columns, onClose, onChanged }: Pro
     const label = newLabel.trim();
     if (!label) return;
     void run(async () => {
-      await apiFetch('/equipment/columns', { method: 'POST', body: JSON.stringify({ label }) });
+      await apiFetch(`/equipment/columns?board_id=${boardId}`, {
+        method: 'POST',
+        body: JSON.stringify({ label }),
+      });
       setNewLabel('');
     });
   }

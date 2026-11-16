@@ -16,8 +16,8 @@ type Props = {
  * 대시보드 상단의 "등록된 프로젝트" 요약 카드 그리드.
  *
  * 각 카드는 프로젝트 이름, 유형, 평균 진행률, 담당자 수, 소프로젝트 개수를
- * 한눈에 보여준다. 카드를 클릭하면 /projects 로 이동해 해당 프로젝트의
- * 전체 상세(소프로젝트 목록 포함)를 확인할 수 있다.
+ * 한눈에 보여준다. 카드를 클릭하면 /projects 로 이동해 그 프로젝트 카드를
+ * 펼치고 그 위치로 화면을 옮긴다 (B-107).
  */
 export default function ProjectSummaryGrid({
   projects,
@@ -39,7 +39,7 @@ export default function ProjectSummaryGrid({
             등록된 프로젝트
           </h2>
           <p className="mt-0.5 text-micro text-text-subtle">
-            카드를 클릭하면 프로젝트별 상세로 이동합니다.
+            카드를 클릭하면 프로젝트 탭의 해당 프로젝트로 이동합니다.
           </p>
         </div>
         <Link
@@ -82,7 +82,7 @@ export default function ProjectSummaryGrid({
             return (
               <Link
                 key={project.id}
-                href={`/projects`}
+                href={`/projects?focus=${project.id}`}
                 className="group flex flex-col gap-2 rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md"
               >
                 <div className="flex items-start gap-2">

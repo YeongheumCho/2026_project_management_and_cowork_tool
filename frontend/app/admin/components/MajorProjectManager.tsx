@@ -1,7 +1,8 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import Modal from '../../components/Modal';
 import OrganizationMemberPicker from '../../components/OrganizationMemberPicker';
 import {
   apiFetch,
@@ -49,7 +50,6 @@ export default function MajorProjectManager({ users }: Props) {
   const [messageTone, setMessageTone] = useState<'error' | 'success'>('error');
   // 저장 중에는 버튼을 잠근다. 빠르게 두 번 누르면 같은 대프로젝트가 두 개 생겼다.
   const [saving, setSaving] = useState(false);
-  const formRef = useRef<HTMLFormElement | null>(null);
 
   const editing = useMemo(
     () => items.find((item) => item.id === editingId) ?? null,
@@ -88,9 +88,7 @@ export default function MajorProjectManager({ users }: Props) {
       project_types: item.project_types?.length ? item.project_types : [...PROJECT_TYPE_OPTIONS],
       member_ids: item.members.map((member) => member.id),
     });
-    window.setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 0);
+    setMessage('');
   }
 
   function reset() {
@@ -185,6 +183,126 @@ export default function MajorProjectManager({ users }: Props) {
     }
   }
 
+  const messageNode = message ? (
+    <p
+      className={`mb-3 rounded-lg px-3 py-2 text-sm ${
+        messageTone === 'success'
+          ? 'bg-verify-pass-bg text-verify-pass-fg'
+          : 'bg-verify-fail-bg text-verify-fail-fg'
+      }`}
+    >
+      {message}
+    </p>
+  ) : null;
+
+  // B-113: 추가는 화면 위쪽 폼에서, 수정은 누른 자리에서 뜨는 창에서 한다.
+  // (예전에는 수정을 누르면 맨 위 폼으로 화면이 올라가 버렸다.)
+  const formNode = (
+    <form
+      onSubmit={submit}
+      className={editing ? 'grid gap-4' : 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]'}
+    >
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block md:col-span-2">
+          <span className="text-small font-semibold text-text-subtle">대프로젝트명</span>
+          <input
+            value={form.name}
+            onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+            className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-body"
+          />
+        </label>
+        <DateField
+          label="시작일"
+          value={form.start_date}
+          onChange={(value) => setForm((prev) => ({ ...prev, start_date: value }))}
+        />
+        <DateField
+          label="종료일"
+          value={form.end_date}
+          onChange={(value) => setForm((prev) => ({ ...prev, end_date: value }))}
+        />
+
+        <div className="md:col-span-2 rounded-xl border border-border bg-surface-muted p-3">
+          <p className="text-small font-bold text-text">프로젝트 유형</p>
+          <div className="mt-2 flex gap-2">
+            <input
+              value={typeDraft}
+              onChange={(event) => setTypeDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                addProjectType();
+              }}
+              placeholder="예: 고객 검증, 양산 대응"
+              className="min-w-0 flex-1 rounded-lg border border-border bg-white px-3 py-2 text-small text-text"
+            />
+            <button
+              type="button"
+              onClick={addProjectType}
+              className="rounded-lg bg-brand px-3 py-2 text-small font-bold text-white"
+            >
+              추가
+            </button>
+          </div>
+          <div className="mt-3 flex max-h-[104px] flex-wrap gap-2 overflow-y-auto pr-1">
+            {form.project_types.map((type) => (
+              <span
+                key={type}
+                className="inline-flex items-center gap-2 rounded-full border border-brand-soft bg-white px-3 py-1.5 text-small font-semibold text-brand"
+              >
+                {typeLabel(type)}
+                <button
+                  type="button"
+                  onClick={() => removeProjectType(type)}
+                  disabled={form.project_types.length <= 1}
+                  className="text-text-subtle transition hover:text-verify-fail-fg disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label={`${typeLabel(type)} 삭제`}
+                >
+                  x
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-end gap-2">
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-lg bg-brand px-4 py-2 text-small font-bold text-white disabled:opacity-50"
+          >
+            {saving ? '저장 중...' : editing ? '대프로젝트 저장' : '대프로젝트 추가'}
+          </button>
+          {editing && (
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-lg border border-border px-4 py-2 text-small font-bold text-brand"
+            >
+              취소
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="min-h-[260px] overflow-hidden rounded-2xl border border-border bg-surface-muted p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-small font-bold text-text">참여 인원</p>
+          <span className="text-small text-text-subtle">
+            {form.member_ids.length}/{pickableUsers.length}명
+          </span>
+        </div>
+        <div className="max-h-[300px] overflow-y-auto pr-1">
+          <OrganizationMemberPicker
+            users={pickableUsers}
+            selectedIds={form.member_ids}
+            onChange={(member_ids) => setForm((prev) => ({ ...prev, member_ids }))}
+          />
+        </div>
+      </div>
+    </form>
+  );
+
   return (
     <section className="rounded-2xl border border-border bg-white p-4">
       <div className="mb-4">
@@ -194,118 +312,9 @@ export default function MajorProjectManager({ users }: Props) {
         </p>
       </div>
 
-      {message && (
-        <p
-          className={`mb-3 rounded-lg px-3 py-2 text-sm ${
-            messageTone === 'success'
-              ? 'bg-verify-pass-bg text-verify-pass-fg'
-              : 'bg-verify-fail-bg text-verify-fail-fg'
-          }`}
-        >
-          {message}
-        </p>
-      )}
+      {!editing && messageNode}
 
-      <form ref={formRef} onSubmit={submit} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="block md:col-span-2">
-            <span className="text-small font-semibold text-text-subtle">대프로젝트명</span>
-            <input
-              value={form.name}
-              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-body"
-            />
-          </label>
-          <DateField
-            label="시작일"
-            value={form.start_date}
-            onChange={(value) => setForm((prev) => ({ ...prev, start_date: value }))}
-          />
-          <DateField
-            label="종료일"
-            value={form.end_date}
-            onChange={(value) => setForm((prev) => ({ ...prev, end_date: value }))}
-          />
-
-          <div className="md:col-span-2 rounded-xl border border-border bg-surface-muted p-3">
-            <p className="text-small font-bold text-text">프로젝트 유형</p>
-            <div className="mt-2 flex gap-2">
-              <input
-                value={typeDraft}
-                onChange={(event) => setTypeDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter') return;
-                  event.preventDefault();
-                  addProjectType();
-                }}
-                placeholder="예: 고객 검증, 양산 대응"
-                className="min-w-0 flex-1 rounded-lg border border-border bg-white px-3 py-2 text-small text-text"
-              />
-              <button
-                type="button"
-                onClick={addProjectType}
-                className="rounded-lg bg-brand px-3 py-2 text-small font-bold text-white"
-              >
-                추가
-              </button>
-            </div>
-            <div className="mt-3 flex max-h-[104px] flex-wrap gap-2 overflow-y-auto pr-1">
-              {form.project_types.map((type) => (
-                <span
-                  key={type}
-                  className="inline-flex items-center gap-2 rounded-full border border-brand-soft bg-white px-3 py-1.5 text-small font-semibold text-brand"
-                >
-                  {typeLabel(type)}
-                  <button
-                    type="button"
-                    onClick={() => removeProjectType(type)}
-                    disabled={form.project_types.length <= 1}
-                    className="text-text-subtle transition hover:text-verify-fail-fg disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label={`${typeLabel(type)} 삭제`}
-                  >
-                    x
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-end gap-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-brand px-4 py-2 text-small font-bold text-white disabled:opacity-50"
-            >
-              {saving ? '저장 중...' : editing ? '대프로젝트 저장' : '대프로젝트 추가'}
-            </button>
-            {editing && (
-              <button
-                type="button"
-                onClick={reset}
-                className="rounded-lg border border-border px-4 py-2 text-small font-bold text-brand"
-              >
-                취소
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="min-h-[260px] overflow-hidden rounded-2xl border border-border bg-surface-muted p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-small font-bold text-text">참여 인원</p>
-            <span className="text-small text-text-subtle">
-              {form.member_ids.length}/{pickableUsers.length}명
-            </span>
-          </div>
-          <div className="max-h-[300px] overflow-y-auto pr-1">
-            <OrganizationMemberPicker
-              users={pickableUsers}
-              selectedIds={form.member_ids}
-              onChange={(member_ids) => setForm((prev) => ({ ...prev, member_ids }))}
-            />
-          </div>
-        </div>
-      </form>
+      {!editing && formNode}
 
       <div className="mt-5 space-y-2">
         {loading && <p className="text-small text-text-subtle">불러오는 중...</p>}
@@ -359,6 +368,23 @@ export default function MajorProjectManager({ users }: Props) {
             </div>
           ))}
       </div>
+      <Modal open={editing !== null} onClose={reset} size="xl" scrollable ariaLabel="대프로젝트 수정">
+        <div className="mb-4 flex items-start justify-between gap-4 border-b border-border pb-4">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold tracking-[0.08em] text-brand">대프로젝트 수정</p>
+            <h3 className="mt-1 truncate text-xl font-bold text-text">{editing?.name}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={reset}
+            className="shrink-0 rounded-lg border border-border bg-white px-3 py-1.5 text-sm font-semibold text-text-muted hover:bg-surface-muted"
+          >
+            닫기
+          </button>
+        </div>
+        {messageNode}
+        {editing && formNode}
+      </Modal>
       <ConfirmDialog
         open={removeTarget !== null}
         title="대프로젝트 삭제"

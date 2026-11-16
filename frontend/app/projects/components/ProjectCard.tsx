@@ -28,6 +28,7 @@ import SubProjectListToolbar, {
   splitCompletedSubprojects,
   type SubProjectListFilter,
 } from './SubProjectListToolbar';
+import { matchSubprojectsByQuery } from './ProjectListToolbar';
 import { exportSubprojectsCsv, exportSubprojectsXlsx } from '../lib/subprojectExport';
 
 const MULTI_ROLE_KEYS = new Set(['verifier_id', 'reviewer_id', 'inreviewer_id']);
@@ -43,6 +44,10 @@ type Props = {
   isAdmin: boolean;
   canManageSubprojects: boolean;
   isOpen: boolean;
+  /** B-108: 프로젝트 목록 검색어. 이름이 맞는 하위 프로젝트가 있으면 그것만 보여 준다. */
+  subprojectQuery?: string;
+  /** B-107: 개요 탭 카드에서 넘어왔을 때 잠깐 강조한다. */
+  highlighted?: boolean;
   onToggle: (projectId: number) => void;
   onAddSub: (projectId: number) => void;
   onCsvImport: (projectId: number) => void;
@@ -65,6 +70,8 @@ export default function ProjectCard({
   isAdmin,
   canManageSubprojects,
   isOpen,
+  subprojectQuery = '',
+  highlighted = false,
   onToggle,
   onAddSub,
   onCsvImport,
@@ -95,15 +102,23 @@ export default function ProjectCard({
   const [subFilter, setSubFilter] = useState<SubProjectListFilter>(
     EMPTY_SUBPROJECT_FILTER,
   );
+  // B-108: 검색어와 이름이 맞는 하위 프로젝트가 있으면 그것만 남긴다.
+  // 프로젝트 이름만 맞은 경우(맞는 하위 프로젝트가 없음)에는 전부 보여 준다.
+  const queryMatches = useMemo(
+    () => matchSubprojectsByQuery(subprojects, subprojectQuery),
+    [subprojects, subprojectQuery],
+  );
+  const searching = queryMatches.length > 0;
   const visibleSubprojects = useMemo(
-    () => applySubProjectFilter(subprojects, subFilter),
-    [subprojects, subFilter],
+    () => applySubProjectFilter(searching ? queryMatches : subprojects, subFilter),
+    [searching, queryMatches, subprojects, subFilter],
   );
   // C-14: 상태 필터가 '전체'일 때만 완료된 하위 프로젝트를 아래 묶음으로 뺀다.
   // 상태를 골랐으면 고른 것만 보이므로 나누지 않는다.
   const grouped = useMemo(
-    () => (subFilter.status ? null : splitCompletedSubprojects(visibleSubprojects)),
-    [subFilter.status, visibleSubprojects],
+    // 검색 중에는 찾은 것이 접힌 묶음에 숨지 않게 나누지 않는다.
+    () => (subFilter.status || searching ? null : splitCompletedSubprojects(visibleSubprojects)),
+    [subFilter.status, searching, visibleSubprojects],
   );
   const [completedOpen, setCompletedOpen] = useState(() =>
     readOpenCompletedGroups().has(project.id),
@@ -147,7 +162,12 @@ export default function ProjectCard({
   const majorProjectName = project.major_project?.name ?? '대프로젝트 미분류';
 
   return (
-    <section className="overflow-hidden rounded-[24px] border border-border bg-white shadow-[0_14px_40px_rgba(28,25,23,0.06)]">
+    <section
+      id={`project-card-${project.id}`}
+      className={`scroll-mt-24 overflow-hidden rounded-[24px] border bg-white shadow-[0_14px_40px_rgba(28,25,23,0.06)] ${
+        highlighted ? 'border-brand ring-2 ring-brand/40' : 'border-border'
+      }`}
+    >
       <header className="border-b border-border-subtle px-5 py-4">
         <div className="flex flex-wrap items-start gap-3">
           <button
@@ -322,6 +342,11 @@ export default function ProjectCard({
               total={subprojects.length}
               visible={visibleSubprojects.length}
             />
+          )}
+          {searching && (
+            <p className="mb-3 rounded-lg bg-brand-soft px-3 py-2 text-micro font-semibold text-brand">
+              검색어 &quot;{subprojectQuery.trim()}&quot; 와 이름이 맞는 하위 프로젝트 {queryMatches.length}건만 보여 줍니다. (전체 {subprojects.length}건)
+            </p>
           )}
           {subprojects.length === 0 ? (
             <p className="rounded-[18px] border border-dashed border-border-strong bg-white px-5 py-8 text-center text-sm text-text-subtle">

@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { EquipmentColumn } from '../app/lib/api';
 import {
+  cleanFormats,
   cleanValues,
   equipmentGroup,
   fromCsv,
   missingHeaders,
   parseCsvText,
+  patchFormat,
+  sameFormats,
   sameValues,
   toCsv,
 } from '../app/equipment/columns';
@@ -61,5 +64,31 @@ describe('값 비교·정리', () => {
   it('CSV 로 내보낸 것을 다시 읽으면 같은 값이 된다', () => {
     const rows = [{ '1': '검증용1', '3': '첫 줄\n둘째 줄, "따옴표"' }];
     expect(fromCsv(parseCsvText(toCsv(columns, rows)), columns)).toEqual(rows);
+  });
+});
+
+describe('B-109: 칸 서식', () => {
+  const cols = [
+    { id: 1, label: '장비', sort_order: 0 },
+    { id: 2, label: 'IP', sort_order: 1 },
+  ];
+
+  it('바꿀 것만 덮어쓰고, null 이면 그 서식을 지운다', () => {
+    const bold = patchFormat(undefined, { bold: true });
+    expect(bold).toEqual({ bold: true });
+    const filled = patchFormat(bold, { bg: '#fff2cc' });
+    expect(filled).toEqual({ bold: true, bg: '#fff2cc' });
+    expect(patchFormat(filled, { bg: null, bold: false })).toEqual({});
+  });
+
+  it('서식이 없는 칸과 지운 열의 서식은 저장하지 않는다', () => {
+    expect(cleanFormats({ 1: { bg: '#fff2cc' }, 2: {}, 9: { bold: true } }, cols)).toEqual({
+      1: { bg: '#fff2cc' },
+    });
+  });
+
+  it('빈 서식과 서식 없음은 같은 것으로 본다', () => {
+    expect(sameFormats({ 1: {} }, {}, cols)).toBe(true);
+    expect(sameFormats({ 1: { bold: true } }, {}, cols)).toBe(false);
   });
 });

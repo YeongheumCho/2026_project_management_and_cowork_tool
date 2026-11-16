@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.security import hash_password, verify_password
 from app.dependencies import get_current_user, get_db, require_admin
 from app.models.project import PROJECT_TYPES, STATUS_COMPLETED, MajorProject, Project, SubProject, SubTask
+from app.models.time_entry import STAGE_INREVIEW, SubProjectTimeEntry
 from app.models.user import User
 from app.models.workflow import (
     ProjectExecutionHistory,
@@ -36,6 +37,7 @@ from app.schemas.workflow import (
     WorkLogComplete,
     WorkLogResponse,
     WorkLogStart,
+    WorkLogTimeTarget,
     WorkLogUserSummary,
     WorkQueueItem,
 )
@@ -679,6 +681,93 @@ def list_work_log_admin_summary(
     ]
 
 
+# ── B-111: 스톱워치 → 검증 시간 자동 기록 ──────────────────────────────
+
+_TIME_PART_COLUMN = {"setup": "setup_min", "aud": "aud_min", "work": "work_min"}
+_MAX_ENTRY_MINUTES = 100_000
+
+
+def _time_entry_role(subproject: SubProject, user_id: int, stage: str) -> str:
+    """이 사람이 그 하위 프로젝트에서 맡은 역할. 여러 역할이면 단계에 맞는 것을 먼저 본다."""
+    if stage == STAGE_INREVIEW and user_id in subproject.inreviewer_ids:
+        return "inreviewer"
+    if user_id in subproject.verifier_ids:
+        return "verifier"
+    if user_id in subproject.reviewer_ids:
+        return "reviewer"
+    if user_id in subproject.inreviewer_ids:
+        return "inreviewer"
+    return "assignee"
+
+
+def _credit_time_entry(db: Session, log: WorkLog, *, final: bool = False) -> None:
+    """스톱워치가 잰 시간 중 아직 반영하지 않은 만큼을 본인의 검증 시간 기록에 더한다.
+
+    분 단위로 더하고 남는 초는 다음 번에 이어서 센다. final(완료·위치 변경)이면
+    남는 초를 반올림해 마무리한다. 기록 위치를 고르지 않은 시간은 반영하지 않고 넘긴다
+    (나중에 위치를 골라도 그 전에 잰 시간이 한꺼번에 들어가지 않게).
+    """
+    pending = log.duration_sec - (log.credited_sec or 0)
+    if pending <= 0:
+        return
+    column = _TIME_PART_COLUMN.get(log.time_part or "")
+    if log.subproject_id is None or not log.time_stage or column is None:
+        log.credited_sec = log.duration_sec
+        return
+
+    minutes = (pending + 30) // 60 if final else pending // 60
+    if minutes > 0:
+        subproject = db.get(SubProject, log.subproject_id)
+        if subproject is None:
+            log.credited_sec = log.duration_sec
+            return
+        entry = db.scalar(
+            select(SubProjectTimeEntry).where(
+                SubProjectTimeEntry.subproject_id == log.subproject_id,
+                SubProjectTimeEntry.user_id == log.user_id,
+                SubProjectTimeEntry.stage == log.time_stage,
+            )
+        )
+        if entry is None:
+            entry = SubProjectTimeEntry(
+                subproject_id=log.subproject_id,
+                user_id=log.user_id,
+                stage=log.time_stage,
+                role=_time_entry_role(subproject, log.user_id, log.time_stage),
+            )
+            db.add(entry)
+        setattr(entry, column, min(_MAX_ENTRY_MINUTES, (getattr(entry, column) or 0) + minutes))
+        entry.worked_on = date.today()
+        db.flush()
+    log.credited_sec = log.duration_sec if final else (log.credited_sec or 0) + minutes * 60
+
+
+@router.put("/work-logs/{log_id}/time-target", response_model=WorkLogResponse)
+def set_work_log_time_target(
+    log_id: int,
+    payload: WorkLogTimeTarget,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """재는 도중에 기록 위치를 바꾼다 (예: 세팅 → AUD). 지금까지 잰 시간은 이전 위치에 넣는다."""
+    log = db.get(WorkLog, log_id)
+    if not log or log.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업 기록을 찾을 수 없습니다.")
+    if log.status == WORKLOG_COMPLETED:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="완료된 작업은 기록 위치를 바꿀 수 없습니다.")
+
+    now = _utcnow()
+    if log.status == WORKLOG_RUNNING and log.current_started_at:
+        log.duration_sec += int((now - _as_utc(log.current_started_at)).total_seconds())
+        log.current_started_at = now
+    _credit_time_entry(db, log, final=True)
+    log.time_stage = payload.time_stage
+    log.time_part = payload.time_part
+    db.commit()
+    db.refresh(log)
+    return log
+
+
 @router.post("/work-logs/start", response_model=WorkLogResponse, status_code=status.HTTP_201_CREATED)
 def start_work_log(
     payload: WorkLogStart,
@@ -721,6 +810,7 @@ def start_work_log(
             )
         running_log.current_started_at = None
         running_log.status = WORKLOG_PAUSED
+        _credit_time_entry(db, running_log)
 
     resumable_log = db.scalar(
         select(WorkLog)
@@ -733,6 +823,11 @@ def start_work_log(
         .order_by(WorkLog.created_at.desc(), WorkLog.id.desc())
     )
     if resumable_log:
+        if payload.time_stage is not None:
+            # 이어서 잴 때 고른 위치로 바꾼다. 그 전에 잰 시간은 이전 위치에 마무리한다.
+            _credit_time_entry(db, resumable_log, final=True)
+            resumable_log.time_stage = payload.time_stage
+            resumable_log.time_part = payload.time_part
         resumable_log.status = WORKLOG_RUNNING
         resumable_log.current_started_at = now
         db.commit()
@@ -748,6 +843,9 @@ def start_work_log(
         duration_sec=0,
         status=WORKLOG_RUNNING,
         session_group_id=uuid4().hex,
+        time_stage=payload.time_stage,
+        time_part=payload.time_part,
+        credited_sec=0,
     )
     db.add(log)
     db.commit()
@@ -772,6 +870,7 @@ def pause_work_log(
         log.duration_sec += int((now - _as_utc(log.current_started_at)).total_seconds())
     log.current_started_at = None
     log.status = WORKLOG_PAUSED
+    _credit_time_entry(db, log)
     db.commit()
     db.refresh(log)
     return log
@@ -980,6 +1079,7 @@ def complete_work_log(
     log.current_started_at = None
     log.ended_at = now
     log.status = WORKLOG_COMPLETED
+    _credit_time_entry(db, log, final=True)
     completed_subproject_user_ids: dict[int | None, set[int]] = {
         log.subproject_id: {current_user.id}
     }
@@ -995,6 +1095,7 @@ def complete_work_log(
         archived.current_started_at = None
         archived.ended_at = now
         archived.status = WORKLOG_COMPLETED
+        _credit_time_entry(db, archived, final=True)
         completed_subproject_user_ids.setdefault(archived.subproject_id, set()).add(
             current_user.id
         )

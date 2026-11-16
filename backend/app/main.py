@@ -9,6 +9,7 @@ from app.db import engine
 
 # models 패키지 import 시 User / Project / SubProject / SubTask 가 모두 등록된다.
 from app.models import Base  # noqa: F401
+from app.models.equipment import DEFAULT_EQUIPMENT_BOARD_NAME
 from app.models.project import DEFAULT_PROJECT_TYPES_JSON
 from app.routers.auth import router as auth_router
 from app.routers.equipment import router as equipment_router
@@ -49,6 +50,49 @@ def _migrate_legacy_project_templates_to_default_major_project(connection) -> No
                 """
             ),
             {"next_key": next_key, "schema_id": schema_id},
+        )
+
+
+def _migrate_equipment_to_default_board(connection) -> None:
+    """B-112: 그룹이 생기기 전의 장비 줄·열·이력을 기본 그룹으로 옮긴다."""
+    orphan_tables = ("equipment_columns", "equipment", "equipment_history")
+    has_orphans = any(
+        connection.execute(
+            text(f"SELECT 1 FROM {table} WHERE board_id IS NULL LIMIT 1")
+        ).first()
+        for table in orphan_tables
+    )
+    if has_orphans:
+        connection.execute(
+            text(
+                """
+                INSERT INTO equipment_boards (name, is_default)
+                SELECT :name, TRUE
+                WHERE NOT EXISTS (SELECT 1 FROM equipment_boards WHERE is_default = TRUE)
+                """
+            ),
+            {"name": DEFAULT_EQUIPMENT_BOARD_NAME},
+        )
+        for table in orphan_tables:
+            connection.execute(
+                text(
+                    f"""
+                    UPDATE {table}
+                    SET board_id = (SELECT id FROM equipment_boards WHERE is_default = TRUE LIMIT 1)
+                    WHERE board_id IS NULL
+                    """
+                )
+            )
+    if engine.dialect.name == "postgresql":
+        # 열 이름은 이제 '그룹 안에서' 고유하다. 예전의 전체 고유 제약을 걷어 낸다.
+        connection.execute(
+            text("ALTER TABLE equipment_columns DROP CONSTRAINT IF EXISTS equipment_columns_label_key")
+        )
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_equipment_columns_board_label "
+                "ON equipment_columns (board_id, label)"
+            )
         )
 
 
@@ -149,8 +193,41 @@ def _ensure_additive_schema_updates() -> None:
                 "ALTER TABLE progress_logs ADD COLUMN subproject_id INTEGER REFERENCES subprojects(id) ON DELETE CASCADE"
             )
 
-    if not statements:
-        statements = []
+    # B-111: 스톱워치가 잰 시간을 검증 시간에 자동으로 더할 위치
+    if "work_logs" in table_names:
+        work_log_columns = {column["name"] for column in inspector.get_columns("work_logs")}
+        if "time_stage" not in work_log_columns:
+            statements.append("ALTER TABLE work_logs ADD COLUMN time_stage VARCHAR(20)")
+        if "time_part" not in work_log_columns:
+            statements.append("ALTER TABLE work_logs ADD COLUMN time_part VARCHAR(10)")
+        if "credited_sec" not in work_log_columns:
+            statements.append("ALTER TABLE work_logs ADD COLUMN credited_sec INTEGER NOT NULL DEFAULT 0")
+
+    # B-112 / B-109: 장비 그룹(board_id), 열 너비, 칸 서식
+    if "equipment_columns" in table_names:
+        equipment_column_columns = {
+            column["name"] for column in inspector.get_columns("equipment_columns")
+        }
+        if "board_id" not in equipment_column_columns:
+            statements.append(
+                "ALTER TABLE equipment_columns ADD COLUMN board_id INTEGER REFERENCES equipment_boards(id) ON DELETE CASCADE"
+            )
+        if "width" not in equipment_column_columns:
+            statements.append("ALTER TABLE equipment_columns ADD COLUMN width INTEGER")
+    if "equipment" in table_names:
+        equipment_columns = {column["name"] for column in inspector.get_columns("equipment")}
+        if "board_id" not in equipment_columns:
+            statements.append(
+                "ALTER TABLE equipment ADD COLUMN board_id INTEGER REFERENCES equipment_boards(id) ON DELETE CASCADE"
+            )
+        if "formats_json" not in equipment_columns:
+            statements.append("ALTER TABLE equipment ADD COLUMN formats_json TEXT")
+    if "equipment_history" in table_names:
+        equipment_history_columns = {
+            column["name"] for column in inspector.get_columns("equipment_history")
+        }
+        if "board_id" not in equipment_history_columns:
+            statements.append("ALTER TABLE equipment_history ADD COLUMN board_id INTEGER")
 
     if engine.dialect.name == "postgresql":
         statements = [
@@ -161,6 +238,8 @@ def _ensure_additive_schema_updates() -> None:
     with engine.begin() as connection:
         for statement in statements:
             connection.execute(text(statement))
+        if "equipment_boards" in inspect(engine).get_table_names():
+            _migrate_equipment_to_default_board(connection)
         if "progress_logs" in inspect(engine).get_table_names():
             # B-104: 진행률 기록으로 완료된 하위 프로젝트는 완료일이 비어 있었다.
             # 마지막 진행률 기록 날짜로 채운다 (이미 적힌 완료일은 그대로).
